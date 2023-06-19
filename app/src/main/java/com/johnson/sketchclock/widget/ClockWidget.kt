@@ -10,6 +10,8 @@ import android.content.Intent
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.widget.RemoteViews
 import com.johnson.sketchclock.MainActivity
@@ -20,6 +22,7 @@ import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import java.lang.ref.WeakReference
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -65,11 +68,35 @@ class ClockWidget : AppWidgetProvider() {
 
     private val visualizer = TemplateVisualizer()
 
+    private var handlerRef: WeakReference<Handler>? = null
+
+    private fun postNextMinuteUpdate(context: Context) {
+        val currentTimeMillis = System.currentTimeMillis()
+        val nextMinuteMillis = (currentTimeMillis / MILLIS_IN_MINUTE + 1) * MILLIS_IN_MINUTE
+        val delayMillis = nextMinuteMillis - currentTimeMillis + 10
+
+        val handler = Handler(Looper.getMainLooper()).apply {
+            postDelayed({ updateWidget(context) }, delayMillis)
+        }
+        handlerRef = WeakReference(handler)
+    }
+
     private fun updateWidget(
         context: Context,
         appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context),
         appWidgetIds: IntArray = appWidgetManager.getAppWidgetIds(ComponentName(context, ClockWidget::class.java))
     ) {
+        Log.v(TAG, "updateWidget: ids = ${appWidgetIds.contentToString()}, this=$this")
+
+        val sharedPreferences = context.getSharedPreferences("widget", Context.MODE_PRIVATE)
+
+        val thisMinuteMillis = System.currentTimeMillis() / MILLIS_IN_MINUTE * MILLIS_IN_MINUTE
+        if (sharedPreferences.getLong("lastUpdate", 0L) == thisMinuteMillis) {
+            Log.w(TAG, "updateWidget: already updated")
+            return
+        }
+        sharedPreferences.edit().putLong("lastUpdate", thisMinuteMillis).apply()
+
         GlobalScope.launch {
             val template = templateRepository.getTemplates().firstOrNull() ?: return@launch
             val font = fontRepository.getFontById(template.fontId) ?: return@launch
@@ -78,7 +105,7 @@ class ClockWidget : AppWidgetProvider() {
             val canvas = Canvas(bitmap)
             canvas.translate(500f, 500f)
             visualizer.loadFont(font)
-            visualizer.draw(canvas, template.elements, font)
+            visualizer.draw(canvas, template.elements, font, thisMinuteMillis)
 
             val intent = Intent(context, MainActivity::class.java).apply {
                 flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK
@@ -111,6 +138,7 @@ class ClockWidget : AppWidgetProvider() {
     override fun onDisabled(context: Context) {
         Log.v(TAG, "onDisabled")
         setupAlarmManager(context)
+        handlerRef?.get()?.removeCallbacksAndMessages(null)
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) {
@@ -123,10 +151,10 @@ class ClockWidget : AppWidgetProvider() {
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
                 setupAlarmManager(context)
-                updateWidget(context)
             }
 
             ACTION_UPDATE_CLOCK -> {
+                postNextMinuteUpdate(context)
                 updateWidget(context)
             }
         }

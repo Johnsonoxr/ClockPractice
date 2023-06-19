@@ -24,7 +24,7 @@ class TemplateVisualizer {
     /**
      * Canvas should be pre-positioned at the center of the drawing region.
      */
-    fun draw(canvas: Canvas, elements: List<TemplateElement>, font: Font) {
+    fun draw(canvas: Canvas, elements: List<TemplateElement>, font: Font, timeMillis: Long? = null) {
         fontBitmaps[font] ?: return
 
         elements.forEach { element ->
@@ -34,16 +34,18 @@ class TemplateVisualizer {
             tmpMatrix.preScale(element.scale, element.scale)
             tmpMatrix.preRotate(element.rotation)
             tmpMatrix.preTranslate(-chType.width / 2f, -chType.height / 2f)
-            findBitmap(element, font)?.let {
+            findBitmap(element, font, timeMillis)?.let {
                 canvas.drawBitmap(it, tmpMatrix, null)
             }
         }
     }
 
-    private fun findBitmap(element: TemplateElement, font: Font): Bitmap? {
+    private fun findBitmap(element: TemplateElement, font: Font, timeMillis: Long? = null): Bitmap? {
         val characterBitmaps = fontBitmaps[font] ?: return null
 
         val calendar = Calendar.getInstance()
+        timeMillis?.let { calendar.timeInMillis = it }
+
         val month = calendar.get(Calendar.MONTH) + 1
         val day = calendar.get(Calendar.DAY_OF_MONTH)
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
