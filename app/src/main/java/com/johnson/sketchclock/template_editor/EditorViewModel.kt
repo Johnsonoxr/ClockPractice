@@ -6,7 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import com.johnson.sketchclock.common.Font
-import com.johnson.sketchclock.common.TemplateElement
+import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.TemplateVisualizer
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -27,8 +27,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     @Inject
     lateinit var fontRepository: FontRepository
 
-    private val _elements = MutableStateFlow<List<TemplateElement>?>(null)
-    val elements: StateFlow<List<TemplateElement>?> = _elements
+    private val _elements = MutableStateFlow<List<Element>?>(null)
+    val elements: StateFlow<List<Element>?> = _elements
 
     private val _font = MutableStateFlow<Font?>(null)
     val font: StateFlow<Font?> = _font
@@ -45,7 +45,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _fontLoaded = MutableSharedFlow<Font>()
     val fontLoaded: SharedFlow<Font> = _fontLoaded
 
-    val visualizer = TemplateVisualizer()
+    @Inject
+    lateinit var visualizer: TemplateVisualizer
 
     val isInitialized: Boolean
         get() = _elements.value != null
@@ -94,13 +95,13 @@ class EditorViewModel @Inject constructor() : ViewModel() {
 
                 is EditorEvent.AddPieces -> {
                     _elements.value?.let {
-                        _elements.value = it + event.templateElements
+                        _elements.value = it + event.elements
                     }
                 }
 
                 is EditorEvent.RemovePieces -> {
                     _elements.value?.let {
-                        _elements.value = it - event.templateElements.toSet()
+                        _elements.value = it - event.elements.toSet()
                     }
                 }
             }

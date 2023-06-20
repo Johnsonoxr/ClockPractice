@@ -33,6 +33,9 @@ class ClockWidget : AppWidgetProvider() {
         private const val TAG = "ClockWidget"
         private const val ACTION_UPDATE_CLOCK = "com.johnson.sketchclock.UPDATE_CLOCK"
         private const val MILLIS_IN_MINUTE = 60000L
+        private const val PREF_LAST_UPDATE_TIME = "last_update_time"
+
+        const val EXTRA_TEMPLATE_ID = "template_id"
 
         fun setupAlarmManager(context: Context) {
 
@@ -49,11 +52,11 @@ class ClockWidget : AppWidgetProvider() {
             if (!isWidgetsExists) return
 
             //  next minute
-            val triggerAtMillis = (System.currentTimeMillis() / MILLIS_IN_MINUTE + 1) * MILLIS_IN_MINUTE
+            val nextMinuteMillis = (System.currentTimeMillis() / MILLIS_IN_MINUTE + 1) * MILLIS_IN_MINUTE
 
             alarmManager.setRepeating(
                 AlarmManager.RTC,
-                triggerAtMillis,
+                nextMinuteMillis,
                 MILLIS_IN_MINUTE,
                 pendingIntent
             )
@@ -66,7 +69,8 @@ class ClockWidget : AppWidgetProvider() {
     @Inject
     lateinit var fontRepository: FontRepository
 
-    private val visualizer = TemplateVisualizer()
+    @Inject
+    lateinit var visualizer: TemplateVisualizer
 
     private var handlerRef: WeakReference<Handler>? = null
 
@@ -91,19 +95,23 @@ class ClockWidget : AppWidgetProvider() {
         val sharedPreferences = context.getSharedPreferences("widget", Context.MODE_PRIVATE)
 
         val thisMinuteMillis = System.currentTimeMillis() / MILLIS_IN_MINUTE * MILLIS_IN_MINUTE
-        if (sharedPreferences.getLong("lastUpdate", 0L) == thisMinuteMillis) {
+        if (sharedPreferences.getLong(PREF_LAST_UPDATE_TIME, 0L) == thisMinuteMillis) {
             Log.w(TAG, "updateWidget: already updated")
             return
         }
-        sharedPreferences.edit().putLong("lastUpdate", thisMinuteMillis).apply()
+        sharedPreferences.edit().putLong(PREF_LAST_UPDATE_TIME, thisMinuteMillis).apply()
 
         GlobalScope.launch {
+
+//            val templateId = sharedPreferences.getInt(EXTRA_TEMPLATE_ID, -1)
+//            val template = templateRepository.getTemplateById(templateId) ?: return@launch
             val template = templateRepository.getTemplates().firstOrNull() ?: return@launch
             val font = fontRepository.getFontById(template.fontId) ?: return@launch
 
-            val bitmap = Bitmap.createBitmap(1000, 1000, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap)
-            canvas.translate(500f, 500f)
+            val drawSize = visualizer.evaluateDrawSize(template.elements)
+            Log.d(TAG, "updateWidget: drawSize = $drawSize")
+            val bitmap = Bitmap.createBitmap(drawSize.width, drawSize.height, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap).apply { translate(drawSize.width / 2f, drawSize.height / 2f) }
             visualizer.loadFont(font)
             visualizer.draw(canvas, template.elements, font, thisMinuteMillis)
 

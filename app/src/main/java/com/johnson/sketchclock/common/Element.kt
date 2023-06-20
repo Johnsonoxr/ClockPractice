@@ -2,8 +2,8 @@ package com.johnson.sketchclock.common
 
 import java.io.Serializable
 
-data class TemplateElement(
-    val elementType: ElementType,
+data class Element(
+    var Type: ElementType,
     var x: Float,
     var y: Float,
     var scale: Float,
@@ -24,7 +24,7 @@ enum class ElementType(val characterType: CharacterType) {
     SEPARATOR(CharacterType.SEPARATOR),
 }
 
-fun createTimeTemplate(): List<TemplateElement> {
+fun createTimeTemplate(): List<Element> {
     return listOf(
         ElementType.HOUR_1,
         ElementType.HOUR_2,
@@ -32,11 +32,11 @@ fun createTimeTemplate(): List<TemplateElement> {
         ElementType.MINUTE_1,
         ElementType.MINUTE_2
     ).mapIndexed { index, pieceType ->
-        TemplateElement(pieceType, index * 180.0f - 360, 0.0f, 0.5f, 0.0f)
+        Element(pieceType, index * 180.0f - 360, 0.0f, 0.5f, 0.0f)
     }
 }
 
-fun createDateTemplate(): List<TemplateElement> {
+fun createDateTemplate(): List<Element> {
     return listOf(
         ElementType.MONTH_1,
         ElementType.MONTH_2,
@@ -44,6 +44,6 @@ fun createDateTemplate(): List<TemplateElement> {
         ElementType.DAY_1,
         ElementType.DAY_2
     ).mapIndexed { index, pieceType ->
-        TemplateElement(pieceType, index * 180.0f - 360, 0.0f, 0.5f, 0.0f)
+        Element(pieceType, index * 180.0f - 360, 0.0f, 0.5f, 0.0f)
     }
 }

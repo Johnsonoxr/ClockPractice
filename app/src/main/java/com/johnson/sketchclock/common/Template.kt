@@ -12,5 +12,5 @@ data class Template(
     @PrimaryKey(autoGenerate = true) val id: Int? = null,
     var name: String,
     var fontId: Int = -1,
-    var elements: MutableList<TemplateElement> = mutableListOf()
+    var elements: MutableList<Element> = mutableListOf()
 ) : Serializable

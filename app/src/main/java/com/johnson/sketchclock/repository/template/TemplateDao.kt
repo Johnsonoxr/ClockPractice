@@ -14,6 +14,9 @@ interface TemplateDao {
     @Query("SELECT * FROM templates")
     fun getTemplateFlow(): Flow<List<Template>>
 
+    @Query("SELECT * FROM templates WHERE id = :id")
+    suspend fun getTemplateById(id: Int): Template?
+
     @Query("SELECT * FROM templates")
     suspend fun getTemplates(): List<Template>
 

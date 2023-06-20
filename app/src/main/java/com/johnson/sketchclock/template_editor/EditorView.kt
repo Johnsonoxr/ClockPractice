@@ -8,7 +8,7 @@ import android.util.Log
 import android.util.Size
 import com.johnson.sketchclock.common.ControlView
 import com.johnson.sketchclock.common.Font
-import com.johnson.sketchclock.common.TemplateElement
+import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.TemplateVisualizer
 
 class EditorView @JvmOverloads constructor(
@@ -36,7 +36,7 @@ class EditorView @JvmOverloads constructor(
         visualizer = null
     }
 
-    var elements: List<TemplateElement>? = null
+    var elements: List<Element>? = null
         set(value) {
             Log.v(TAG, "set elements: $value")
             field = value

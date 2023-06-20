@@ -12,6 +12,10 @@ class TemplateRepositoryImpl @Inject constructor(
         return templateDatabase.templateDao().getTemplateFlow()
     }
 
+    override suspend fun getTemplateById(id: Int): Template? {
+        return templateDatabase.templateDao().getTemplateById(id)
+    }
+
     override suspend fun getTemplates(): List<Template> {
         return templateDatabase.templateDao().getTemplates()
     }
