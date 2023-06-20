@@ -2,6 +2,7 @@ package com.johnson.sketchclock.common
 
 import android.annotation.SuppressLint
 import android.content.Context
+import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Matrix
@@ -37,12 +38,24 @@ open class ControlView @JvmOverloads constructor(
     companion object {
         private const val TAG = "CanvasView"
         private const val MARGIN = 20f
-        private const val BG_COLOR = Color.DKGRAY
+        private const val BG_COLOR = 0xFF5F1F1F.toInt()
+        private const val CANVAS_DARK_COLOR = 0xFF4F4FFF.toInt()
+        private const val CANVAS_LIGHT_COLOR = 0xFF6FFF6F.toInt()
     }
 
-    private val canvasPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = Color.WHITE
+    private val canvasPaint = Paint().apply {
         style = Paint.Style.FILL
+    }
+
+    private val canvasBitmap: Bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888).apply {
+        val canvas = Canvas(this)
+        canvas.drawColor(CANVAS_DARK_COLOR)
+        canvasPaint.color = Color.WHITE
+        for (i in 0..9) {
+            for (j in (i % 2)..9 step 2) {
+                canvas.drawPoint(i.toFloat(), j.toFloat(), canvasPaint)
+            }
+        }
     }
 
     private val matrix = Matrix()
@@ -84,7 +97,16 @@ open class ControlView @JvmOverloads constructor(
             matrix.mapRect(tmpRect)
 
             canvas.drawColor(BG_COLOR)
-            canvas.drawRect(tmpRect, canvasPaint)
+//            canvasPaint.color = CANVAS_DARK_COLOR
+//            canvas.drawRect(tmpRect, canvasPaint)
+//            canvasPaint.color = CANVAS_LIGHT_COLOR
+
+            bgMatrix.set(matrix)
+            bgMatrix.preScale(canvasSize.width.toFloat() / canvasBitmap.width, canvasSize.height.toFloat() / canvasBitmap.height)
+            canvas.save()
+            canvas.concat(bgMatrix)
+            canvas.drawBitmap(canvasBitmap, 0f, 0f, null)
+            canvas.restore()
 
             val idx = canvas.save()
             handleDraw(canvas, matrix)
@@ -93,6 +115,8 @@ open class ControlView @JvmOverloads constructor(
             holder.unlockCanvasAndPost(canvas)
         }
     }
+
+    private val bgMatrix = Matrix()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun surfaceCreated(holder: SurfaceHolder) {

@@ -21,7 +21,6 @@ class CanvasView @JvmOverloads constructor(
         private const val TAG = "CanvasView"
     }
 
-    var canvasColor = Color.WHITE
     var brushColor: Int = Color.BLACK
         set(value) {
             field = value

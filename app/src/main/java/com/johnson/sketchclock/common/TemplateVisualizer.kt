@@ -40,12 +40,11 @@ class TemplateVisualizer @Inject constructor(
         fontBitmaps[font] ?: return
 
         elements.forEach { element ->
-            val chType = element.Type.characterType
             matrix.reset()
             matrix.preTranslate(element.x, element.y)
             matrix.preScale(element.scale, element.scale)
             matrix.preRotate(element.rotation)
-            matrix.preTranslate(-chType.width / 2f, -chType.height / 2f)
+            matrix.preTranslate(-element.width() / 2f, -element.height() / 2f)
             findBitmap(element, font, timeMillis)?.let {
                 canvas.drawBitmap(it, matrix, null)
             }
@@ -63,18 +62,19 @@ class TemplateVisualizer @Inject constructor(
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
         val minute = calendar.get(Calendar.MINUTE)
 
-        return when (element.Type) {
-            ElementType.HOUR_1 -> characterBitmaps[numberToCharacter(hour / 10)]
-            ElementType.HOUR_2 -> characterBitmaps[numberToCharacter(hour % 10)]
-            ElementType.MINUTE_1 -> characterBitmaps[numberToCharacter(minute / 10)]
-            ElementType.MINUTE_2 -> characterBitmaps[numberToCharacter(minute % 10)]
-            ElementType.MONTH_1 -> characterBitmaps[numberToCharacter(month / 10)]
-            ElementType.MONTH_2 -> characterBitmaps[numberToCharacter(month % 10)]
-            ElementType.DAY_1 -> characterBitmaps[numberToCharacter(day / 10)]
-            ElementType.DAY_2 -> characterBitmaps[numberToCharacter(day % 10)]
-            ElementType.SEPARATOR -> characterBitmaps[Character.SEPARATOR]
-            ElementType.AMPM -> if (hour < 12) characterBitmaps[Character.AM] else characterBitmaps[Character.PM]
-            ElementType.COLON -> characterBitmaps[Character.COLON]
+        return when (element.eType) {
+            EType.Hour1 -> characterBitmaps[numberToCharacter(hour / 10)]
+            EType.Hour2 -> characterBitmaps[numberToCharacter(hour % 10)]
+            EType.Minute1 -> characterBitmaps[numberToCharacter(minute / 10)]
+            EType.Minute2 -> characterBitmaps[numberToCharacter(minute % 10)]
+            EType.Month1 -> characterBitmaps[numberToCharacter(month / 10)]
+            EType.Month2 -> characterBitmaps[numberToCharacter(month % 10)]
+            EType.Day1 -> characterBitmaps[numberToCharacter(day / 10)]
+            EType.Day2 -> characterBitmaps[numberToCharacter(day % 10)]
+            EType.Separator -> characterBitmaps[Character.SEPARATOR]
+            EType.AmPm -> if (hour < 12) characterBitmaps[Character.AM] else characterBitmaps[Character.PM]
+            EType.Colon -> characterBitmaps[Character.COLON]
+            EType.Illustration -> null
         }
     }
 
@@ -101,9 +101,8 @@ class TemplateVisualizer @Inject constructor(
         var minY = Float.MAX_VALUE
 
         elements.forEach { element ->
-            val chType = element.Type.characterType
-            val halfWidth = chType.width / 2f
-            val halfHeight = chType.height / 2f
+            val halfWidth = element.width() / 2f
+            val halfHeight = element.height() / 2f
 
             val cornerArray = floatArrayOf(
                 -halfWidth, -halfHeight,

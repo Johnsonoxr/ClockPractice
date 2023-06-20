@@ -53,14 +53,14 @@ class CanvasActivity : AppCompatActivity() {
             listener = {
                 lifecycleScope.launch {
                     viewModel.onEvent(CanvasEvent.Save)
-                    viewModel.onEvent(CanvasEvent.Init(it.characterType.width, it.characterType.height, File(font.getCharacterPath(it))))
+                    viewModel.onEvent(CanvasEvent.Init(it.width(), it.height(), File(font.getCharacterPath(it))))
                 }
             }
         }
 
         if (!viewModel.isInitialized) {
             val ch = Character.ZERO
-            viewModel.onEvent(CanvasEvent.Init(ch.characterType.width, ch.characterType.height, File(font.getCharacterPath(ch))))
+            viewModel.onEvent(CanvasEvent.Init(ch.width(), ch.height(), File(font.getCharacterPath(ch))))
         }
 
         lifecycleScope.launch {

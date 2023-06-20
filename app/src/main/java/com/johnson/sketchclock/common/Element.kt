@@ -3,46 +3,55 @@ package com.johnson.sketchclock.common
 import java.io.Serializable
 
 data class Element(
-    var Type: ElementType,
-    var x: Float,
-    var y: Float,
-    var scale: Float,
-    var rotation: Float
-) : Serializable
+    val eType: EType,
+    var x: Float = 0f,
+    var y: Float = 0f,
+    var scale: Float = 1f,
+    var rotation: Float = 0f,
+    var resId: Int = -1 //  fontId or illustrationId
+) : Serializable {
+    fun width() = eType.width()
+    fun height() = eType.height()
+}
 
-enum class ElementType(val characterType: CharacterType) {
-    HOUR_1(CharacterType.NUMBER),
-    HOUR_2(CharacterType.NUMBER),
-    MINUTE_1(CharacterType.NUMBER),
-    MINUTE_2(CharacterType.NUMBER),
-    MONTH_1(CharacterType.NUMBER),
-    MONTH_2(CharacterType.NUMBER),
-    DAY_1(CharacterType.NUMBER),
-    DAY_2(CharacterType.NUMBER),
-    COLON(CharacterType.COLON),
-    AMPM(CharacterType.AMPM),
-    SEPARATOR(CharacterType.SEPARATOR),
+enum class EType {
+    Hour1,
+    Hour2,
+    Minute1,
+    Minute2,
+    Month1,
+    Month2,
+    Day1,
+    Day2,
+    Colon,
+    AmPm,
+    Separator,
+    Illustration;
+
+    fun width() = when (this) {
+        Hour1, Hour2, Minute1, Minute2, Month1, Month2, Day1, Day2 -> Constants.NUMBER_WIDTH
+        Colon -> Constants.COLON_WIDTH
+        AmPm -> Constants.AMPM_WIDTH
+        Separator -> Constants.SEPARATOR_WIDTH
+        Illustration -> Constants.ILLUSTRATION_WIDTH
+    }
+
+    fun height() = when (this) {
+        Hour1, Hour2, Minute1, Minute2, Month1, Month2, Day1, Day2 -> Constants.NUMBER_HEIGHT
+        Colon -> Constants.COLON_HEIGHT
+        AmPm -> Constants.AMPM_HEIGHT
+        Separator -> Constants.SEPARATOR_HEIGHT
+        Illustration -> Constants.ILLUSTRATION_HEIGHT
+    }
 }
 
 fun createTimeTemplate(): List<Element> {
     return listOf(
-        ElementType.HOUR_1,
-        ElementType.HOUR_2,
-        ElementType.COLON,
-        ElementType.MINUTE_1,
-        ElementType.MINUTE_2
-    ).mapIndexed { index, pieceType ->
-        Element(pieceType, index * 180.0f - 360, 0.0f, 0.5f, 0.0f)
-    }
-}
-
-fun createDateTemplate(): List<Element> {
-    return listOf(
-        ElementType.MONTH_1,
-        ElementType.MONTH_2,
-        ElementType.SEPARATOR,
-        ElementType.DAY_1,
-        ElementType.DAY_2
+        EType.Hour1,
+        EType.Hour2,
+        EType.Colon,
+        EType.Minute1,
+        EType.Minute2
     ).mapIndexed { index, pieceType ->
         Element(pieceType, index * 180.0f - 360, 0.0f, 0.5f, 0.0f)
     }
