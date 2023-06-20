@@ -4,9 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.Color
 import android.graphics.Matrix
-import android.graphics.Paint
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
@@ -38,29 +36,21 @@ open class ControlView @JvmOverloads constructor(
     companion object {
         private const val TAG = "CanvasView"
         private const val MARGIN = 20f
-        private const val BG_COLOR = 0xFF5F1F1F.toInt()
-        private const val CANVAS_DARK_COLOR = 0xFF4F4FFF.toInt()
-        private const val CANVAS_LIGHT_COLOR = 0xFF6FFF6F.toInt()
+        private const val BG_COLOR = 0xFF1F1F1F.toInt()
+        private const val CANVAS_DARK_COLOR = 0xFF8F8F8F.toInt()
+        private const val CANVAS_LIGHT_COLOR = 0xFF9F9F9F.toInt()
     }
 
-    private val canvasPaint = Paint().apply {
-        style = Paint.Style.FILL
-    }
-
-    private val canvasBitmap: Bitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888).apply {
-        val canvas = Canvas(this)
-        canvas.drawColor(CANVAS_DARK_COLOR)
-        canvasPaint.color = Color.WHITE
-        for (i in 0..9) {
-            for (j in (i % 2)..9 step 2) {
-                canvas.drawPoint(i.toFloat(), j.toFloat(), canvasPaint)
-            }
+    private val canvasBitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888).apply {
+        val oddLine = IntArray(width) { if (it % 2 == 0) CANVAS_DARK_COLOR else CANVAS_LIGHT_COLOR }
+        val evenLine = IntArray(height) { if (it % 2 == 0) CANVAS_LIGHT_COLOR else CANVAS_DARK_COLOR }
+        for (i in 0 until height) {
+            setPixels(if (i % 2 == 0) oddLine else evenLine, 0, width, 0, i, width, 1)
         }
     }
 
     private val matrix = Matrix()
     private val invMatrix = Matrix()
-    private val tmpRect = RectF()
 
     private var viewScope: CoroutineScope? = null
 
@@ -93,20 +83,11 @@ open class ControlView @JvmOverloads constructor(
 
             val canvas = holder.lockCanvas() ?: return@launch
 
-            tmpRect.set(0f, 0f, canvasSize.width.toFloat(), canvasSize.height.toFloat())
-            matrix.mapRect(tmpRect)
-
             canvas.drawColor(BG_COLOR)
-//            canvasPaint.color = CANVAS_DARK_COLOR
-//            canvas.drawRect(tmpRect, canvasPaint)
-//            canvasPaint.color = CANVAS_LIGHT_COLOR
 
             bgMatrix.set(matrix)
             bgMatrix.preScale(canvasSize.width.toFloat() / canvasBitmap.width, canvasSize.height.toFloat() / canvasBitmap.height)
-            canvas.save()
-            canvas.concat(bgMatrix)
-            canvas.drawBitmap(canvasBitmap, 0f, 0f, null)
-            canvas.restore()
+            canvas.drawBitmap(canvasBitmap, bgMatrix, null)
 
             val idx = canvas.save()
             handleDraw(canvas, matrix)

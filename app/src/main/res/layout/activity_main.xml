@@ -19,9 +19,19 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:text="Template"
-        app:layout_constraintTop_toBottomOf="@id/btn_font"
+        app:layout_constraintBottom_toTopOf="@+id/btn_illustration"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintBottom_toBottomOf="parent" />
+        app:layout_constraintTop_toBottomOf="@id/btn_font" />
+
+    <Button
+        android:id="@+id/btn_illustration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="Illustration"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/btn_template" />
 
 </androidx.constraintlayout.widget.ConstraintLayout>

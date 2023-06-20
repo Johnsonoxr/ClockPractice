@@ -8,6 +8,8 @@ import com.johnson.sketchclock.repository.template.TemplateRepository
 import com.johnson.sketchclock.repository.template.TemplateRepositoryImpl
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.font.FontRepositoryImpl
+import com.johnson.sketchclock.repository.illustration.IllustrationRepository
+import com.johnson.sketchclock.repository.illustration.IllustrationRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -44,5 +46,11 @@ class AppModule {
     @Singleton
     fun provideTemplateRepository(templateDatabase: TemplateDatabase): TemplateRepository {
         return TemplateRepositoryImpl(templateDatabase)
+    }
+
+    @Provides
+    @Singleton
+    fun provideIllustrationRepository(context: Context): IllustrationRepository {
+        return IllustrationRepositoryImpl(context)
     }
 }
