@@ -4,9 +4,7 @@ import android.content.Intent
 import android.os.Bundle
 import androidx.appcompat.app.AppCompatActivity
 import com.johnson.sketchclock.databinding.ActivityMainBinding
-import com.johnson.sketchclock.font_picker.FontPickerActivity
-import com.johnson.sketchclock.illustration_picker.IllustrationPickerActivity
-import com.johnson.sketchclock.template_picker.TemplatePickerActivity
+import com.johnson.sketchclock.pickers.PickersActivity
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -19,16 +17,8 @@ class MainActivity : AppCompatActivity() {
         vb = ActivityMainBinding.inflate(layoutInflater)
         setContentView(vb.root)
 
-        vb.btnFont.setOnClickListener {
-            startActivity(Intent(this, FontPickerActivity::class.java))
-        }
-
-        vb.btnTemplate.setOnClickListener {
-            startActivity(Intent(this, TemplatePickerActivity::class.java))
-        }
-
-        vb.btnIllustration.setOnClickListener {
-            startActivity(Intent(this, IllustrationPickerActivity::class.java))
+        vb.fab.setOnClickListener {
+            startActivity(Intent(this, PickersActivity::class.java))
         }
     }
 }

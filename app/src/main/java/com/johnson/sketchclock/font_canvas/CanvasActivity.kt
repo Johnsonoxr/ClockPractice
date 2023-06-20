@@ -1,19 +1,19 @@
 package com.johnson.sketchclock.font_canvas
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.johnson.sketchclock.common.Font
+import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Character
+import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.databinding.ActivityCanvasBinding
+import com.johnson.sketchclock.databinding.ItemCharacterBinding
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
@@ -55,7 +55,9 @@ class CanvasActivity : AppCompatActivity() {
                     viewModel.onEvent(CanvasEvent.Save)
                     viewModel.onEvent(CanvasEvent.Init(it.width(), it.height(), File(font.getCharacterPath(it))))
                 }
+                selection = it
             }
+            selection = Character.ZERO
         }
 
         if (!viewModel.isInitialized) {
@@ -79,25 +81,38 @@ class CanvasActivity : AppCompatActivity() {
         viewModel.onEvent(CanvasEvent.Save)
     }
 
-    private class ItemAdapter : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
+    private inner class ItemAdapter : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
 
         var listener: ((Character) -> Unit)? = null
 
+        var selection: Character? = null
+            set(value) {
+                val old = field
+                field = value
+                if (old != null) {
+                    notifyItemChanged(Character.values().indexOf(old))
+                }
+                if (value != null) {
+                    notifyItemChanged(Character.values().indexOf(value))
+                }
+            }
+
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
-            return ItemViewHolder(Button(parent.context))
+            return ItemViewHolder(ItemCharacterBinding.inflate(layoutInflater, parent, false))
         }
 
         override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
-            (holder.itemView as Button).text = Character.values()[position].representation
+            holder.vb.tv.text = Character.values()[position].representation
+            holder.vb.iv.alpha = if (selection == Character.values()[position]) 1f else 0.5f
         }
 
         override fun getItemCount(): Int {
             return Character.values().size
         }
 
-        inner class ItemViewHolder(itemView: View) : RecyclerView.ViewHolder(itemView) {
+        inner class ItemViewHolder(val vb: ItemCharacterBinding) : RecyclerView.ViewHolder(vb.root) {
             init {
-                itemView.setOnClickListener {
+                vb.root.setOnClickListener {
                     listener?.invoke(Character.values()[adapterPosition])
                 }
             }

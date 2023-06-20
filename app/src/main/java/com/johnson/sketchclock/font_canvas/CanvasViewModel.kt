@@ -58,6 +58,8 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
         strokeJoin = Paint.Join.ROUND
     }
 
+    private val singleDispatcher = Dispatchers.Default.limitedParallelism(1)
+
     init {
         viewModelScope.launch {
             bitmap.collectLatest { bmp -> canvas.setBitmap(bmp) }
@@ -75,7 +77,7 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
 
     fun onEvent(event: CanvasEvent) {
         Log.v(TAG, "onEvent: $event")
-        viewModelScope.launch(Dispatchers.Default) {
+        viewModelScope.launch(singleDispatcher) {
             when (event) {
                 is CanvasEvent.Init -> {
                     val loadedBmp = BitmapFactory.decodeFile(event.saveFile.absolutePath, BitmapFactory.Options().apply { inMutable = true })
