@@ -78,7 +78,7 @@ class EditorFragment : Fragment() {
             EType.Minute1,
             EType.Minute2
         ).mapIndexed { index, pieceType ->
-            Element(eType = pieceType, x = index * 180.0f - 360, y = 0.0f, scale = 0.5f, rotation = 0.0f, resId = 0)
+            Element(eType = pieceType, x = index * 108.0f - 216, y = 0.0f, scale = 0.3f, rotation = 0.0f, resId = 0)
         }
     }
 
