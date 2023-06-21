@@ -16,11 +16,11 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
+import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.databinding.DialogEdittextBinding
-import com.johnson.sketchclock.databinding.FragmentFontPickerBinding
+import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemFontBinding
 import com.johnson.sketchclock.font_canvas.CanvasActivity
 import com.johnson.sketchclock.repository.font.FontRepository
@@ -36,7 +36,7 @@ class FontPickerFragment : Fragment() {
     @Inject
     lateinit var fontRepository: FontRepository
 
-    private lateinit var vb: FragmentFontPickerBinding
+    private lateinit var vb: FragmentPickerBinding
 
     private val viewModel: FontPickerViewModel by activityViewModels()
 
@@ -58,7 +58,7 @@ class FontPickerFragment : Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        return FragmentFontPickerBinding.inflate(inflater, container, false).apply { vb = this }.root
+        return FragmentPickerBinding.inflate(inflater, container, false).apply { vb = this }.root
     }
 
     private inner class FontAdapter : RecyclerView.Adapter<FontAdapter.ViewHolder>() {
@@ -94,11 +94,9 @@ class FontPickerFragment : Fragment() {
 
             fun bind(font: Font) {
                 vb.tvFontName.text = font.name
-                Glide.with(vb.root).apply {
-                    load(font.getCharacterPath(Character.ZERO)).into(vb.ivPreview0)
-                    load(font.getCharacterPath(Character.ONE)).into(vb.ivPreview1)
-                    load(font.getCharacterPath(Character.TWO)).into(vb.ivPreview2)
-                }
+                GlideHelper.load(vb.ivPreview0, font.getCharacterFile(Character.ZERO))
+                GlideHelper.load(vb.ivPreview1, font.getCharacterFile(Character.ONE))
+                GlideHelper.load(vb.ivPreview2, font.getCharacterFile(Character.TWO))
             }
 
             override fun onClick(v: View) {

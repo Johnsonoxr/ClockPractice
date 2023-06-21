@@ -8,7 +8,7 @@ sealed class EditorEvent {
     data class Init(val template: Template) : EditorEvent()
     data class AddPieces(val elements: List<Element>) : EditorEvent()
     data class RemovePieces(val elements: List<Element>) : EditorEvent()
-    data class ChangeFont(val font: Font) : EditorEvent()
+    data class ChangeFont(val elements: Element, val font: Font) : EditorEvent()
     object Save : EditorEvent()
     object Reset : EditorEvent()
 }

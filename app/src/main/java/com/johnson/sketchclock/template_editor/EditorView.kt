@@ -7,7 +7,6 @@ import android.util.AttributeSet
 import android.util.Log
 import android.util.Size
 import com.johnson.sketchclock.common.ControlView
-import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.TemplateVisualizer
 
@@ -43,25 +42,17 @@ class EditorView @JvmOverloads constructor(
             render()
         }
 
-    var font: Font? = null
-        set(value) {
-            Log.v(TAG, "set font: $value")
-            field = value
-            render()
-        }
-
     override fun handleClick(x: Float, y: Float) {
     }
 
     override fun handleDraw(canvas: Canvas, matrix: Matrix) {
         val elements = elements ?: return
         val visualizer = visualizer ?: return
-        val font = font ?: return
 
         canvas.concat(matrix)
         canvas.translate(canvasSize.width / 2f, canvasSize.height / 2f)
 
-        visualizer.draw(canvas, elements, font)
+        visualizer.draw(canvas, elements)
     }
 
     override fun handleTouchDown(x: Float, y: Float) {

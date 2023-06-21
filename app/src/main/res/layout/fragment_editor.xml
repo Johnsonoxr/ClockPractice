@@ -19,6 +19,16 @@
         app:layout_constraintEnd_toEndOf="parent" />
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fab_add_illustration"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:text="Illustration"
+        app:icon="@drawable/fab_add"
+        app:layout_constraintBottom_toTopOf="@+id/fab_add_time"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/fab_add_time"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"

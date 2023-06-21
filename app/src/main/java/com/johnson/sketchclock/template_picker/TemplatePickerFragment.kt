@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.johnson.sketchclock.template_editor.EditorActivity
-import com.johnson.sketchclock.databinding.FragmentFontPickerBinding
+import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemTemplateBinding
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.repository.template.TemplateRepository
@@ -33,12 +33,12 @@ class TemplatePickerFragment : Fragment() {
     @Inject
     lateinit var fontRepository: FontRepository
 
-    private lateinit var vb: FragmentFontPickerBinding
+    private lateinit var vb: FragmentPickerBinding
 
     private val viewModel: TemplatePickerViewModel by activityViewModels()
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        return FragmentFontPickerBinding.inflate(inflater, container, false).also { vb = it }.root
+        return FragmentPickerBinding.inflate(inflater, container, false).also { vb = it }.root
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -67,7 +67,7 @@ class TemplatePickerFragment : Fragment() {
         }
 
         vb.fab.setOnClickListener {
-            viewModel.onEvent(TemplatePickerEvent.AddTemplate(Template(name = "new template", fontId = defaultFont?.id ?: 0)))
+            viewModel.onEvent(TemplatePickerEvent.AddTemplate(Template(name = "new template")))
         }
     }
 

@@ -3,14 +3,12 @@ package com.johnson.sketchclock.template_editor
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.johnson.sketchclock.common.Template
-import com.johnson.sketchclock.repository.template.TemplateRepository
-import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.Element
+import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
 import com.johnson.sketchclock.repository.font.FontRepository
+import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -30,9 +28,6 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _elements = MutableStateFlow<List<Element>?>(null)
     val elements: StateFlow<List<Element>?> = _elements
 
-    private val _font = MutableStateFlow<Font?>(null)
-    val font: StateFlow<Font?> = _font
-
     private val _templateId = MutableStateFlow<Int?>(null)
     val templateId: StateFlow<Int?> = _templateId
 
@@ -42,8 +37,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _templateSaved = MutableSharedFlow<Template>()
     val templateSaved: SharedFlow<Template> = _templateSaved
 
-    private val _fontLoaded = MutableSharedFlow<Font>()
-    val fontLoaded: SharedFlow<Font> = _fontLoaded
+    private val _resUpdated = MutableSharedFlow<Unit>()
+    val resUpdated: SharedFlow<Unit> = _resUpdated
 
     @Inject
     lateinit var visualizer: TemplateVisualizer
@@ -58,27 +53,22 @@ class EditorViewModel @Inject constructor() : ViewModel() {
             when (event) {
                 is EditorEvent.Init -> {
                     _elements.value = event.template.elements
-                    _font.value = fontRepository.getFontById(event.template.fontId)
                     _templateId.value = event.template.id
                     _name.value = event.template.name
-                    _font.value?.let { onEvent(EditorEvent.ChangeFont(it)) }
                 }
 
                 is EditorEvent.Reset -> {
                     _elements.value = null
-                    _font.value = null
                     _templateId.value = null
                     _name.value = null
                 }
 
                 is EditorEvent.Save -> {
                     val elements = _elements.value ?: return@launch
-                    val font = _font.value ?: return@launch
                     val templateId = _templateId.value ?: return@launch
                     val template = Template(
                         id = templateId,
                         name = _name.value ?: "",
-                        fontId = font.id,
                         elements = elements.toMutableList()
                     )
                     templateRepository.upsertTemplate(template)
@@ -86,11 +76,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.ChangeFont -> {
-                    _font.value = event.font
-                    launch(Dispatchers.IO) {
-                        visualizer.loadFont(event.font)
-                        _fontLoaded.emit(event.font)
-                    }
+                    event.elements.resId = event.font.id
+                    _resUpdated.emit(Unit)
                 }
 
                 is EditorEvent.AddPieces -> {
@@ -107,5 +94,4 @@ class EditorViewModel @Inject constructor() : ViewModel() {
             }
         }
     }
-
 }

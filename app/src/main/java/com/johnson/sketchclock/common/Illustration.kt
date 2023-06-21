@@ -10,6 +10,10 @@ data class Illustration(
     val rootDir: String? = null
 ): Serializable {
     fun getPath(): String {
-        return File(rootDir, "$id.png").absolutePath
+        return getFile().absolutePath
+    }
+
+    fun getFile(): File {
+        return File(rootDir, "$id.png")
     }
 }

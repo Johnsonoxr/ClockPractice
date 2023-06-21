@@ -8,6 +8,8 @@ sealed class CanvasEvent {
     data class AddPath(val path: Path) : CanvasEvent()
     data class SetBrushColor(val color: Int) : CanvasEvent()
     data class SetBrushSize(val size: Float) : CanvasEvent()
+    data class SetIsEraseMode(val isEraseMode: Boolean) : CanvasEvent()
+    data class SetEraseSize(val size: Float) : CanvasEvent()
     object Undo : CanvasEvent()
     object Redo : CanvasEvent()
     object Clear : CanvasEvent()

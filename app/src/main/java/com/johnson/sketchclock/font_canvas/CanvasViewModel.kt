@@ -8,6 +8,7 @@ import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
 import android.util.Log
+import androidx.core.graphics.toXfermode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -51,11 +52,24 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     private val _file = MutableStateFlow<File?>(null)
     val file: StateFlow<File?> = _file
 
+    private val _eraseSize = MutableStateFlow(30f)
+    val eraseSize: StateFlow<Float> = _eraseSize
+
+    private val _isEraseMode = MutableStateFlow(false)
+    val isEraseMode: StateFlow<Boolean> = _isEraseMode
+
     private val canvas: Canvas = Canvas()
     private val brushPaint: Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
         strokeCap = Paint.Cap.ROUND
         strokeJoin = Paint.Join.ROUND
+    }
+
+    private val erasePaint: Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        style = Paint.Style.STROKE
+        strokeCap = Paint.Cap.ROUND
+        strokeJoin = Paint.Join.ROUND
+        xfermode = PorterDuff.Mode.CLEAR.toXfermode()
     }
 
     private val singleDispatcher = Dispatchers.Default.limitedParallelism(1)
@@ -69,6 +83,9 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
         }
         viewModelScope.launch {
             brushSize.collectLatest { size -> brushPaint.strokeWidth = size }
+        }
+        viewModelScope.launch {
+            eraseSize.collectLatest { size -> erasePaint.strokeWidth = size }
         }
     }
 
@@ -90,8 +107,28 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is CanvasEvent.AddPath -> {
-                    drawPath(canvas, brushPaint, event.path)
+                    if (isEraseMode.value) {
+                        drawPath(canvas, erasePaint, event.path)
+                    } else {
+                        drawPath(canvas, brushPaint, event.path)
+                    }
                     _bmpUpdated.emit(Unit)
+                }
+
+                is CanvasEvent.SetBrushColor -> {
+                    _brushColor.emit(event.color)
+                }
+
+                is CanvasEvent.SetBrushSize -> {
+                    _brushSize.emit(event.size)
+                }
+
+                is CanvasEvent.SetIsEraseMode -> {
+                    _isEraseMode.emit(event.isEraseMode)
+                }
+
+                is CanvasEvent.SetEraseSize -> {
+                    _eraseSize.emit(event.size)
                 }
 
                 is CanvasEvent.Clear -> {

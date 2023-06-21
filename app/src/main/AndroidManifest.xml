@@ -22,15 +22,6 @@
             android:name=".illustration_canvas.IllustrationCanvasActivity"
             android:exported="false" />
         <activity
-            android:name=".illustration_picker.IllustrationPickerActivity"
-            android:exported="false" />
-        <activity
-            android:name=".template_picker.TemplatePickerActivity"
-            android:exported="false" />
-        <activity
-            android:name=".font_picker.FontPickerActivity"
-            android:exported="false" />
-        <activity
             android:name=".template_editor.EditorActivity"
             android:exported="false" />
         <activity

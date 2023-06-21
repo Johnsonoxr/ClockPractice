@@ -14,7 +14,7 @@ import java.io.FileFilter
 import javax.inject.Inject
 
 class IllustrationRepositoryImpl @Inject constructor(
-    context: Context
+    private val context: Context
 ) : IllustrationRepository {
 
     private val rootDir = File(context.filesDir, ILLUSTRATIONS_DIR)
@@ -71,7 +71,8 @@ class IllustrationRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteIllustration(illustration: Illustration) {
-        File(rootDir, illustration.id.toString()).deleteRecursively()
+        illustration.getFile().delete()
+        File(rootDir, "${illustration.id}.txt").delete()
         _illustrations.value = loadIllustrationList()
     }
 

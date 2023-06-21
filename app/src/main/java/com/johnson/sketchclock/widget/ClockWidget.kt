@@ -16,12 +16,11 @@ import android.util.Log
 import android.widget.RemoteViews
 import com.johnson.sketchclock.MainActivity
 import com.johnson.sketchclock.R
+import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
-import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.lang.ref.WeakReference
 import javax.inject.Inject
 
@@ -67,9 +66,6 @@ class ClockWidget : AppWidgetProvider() {
     lateinit var templateRepository: TemplateRepository
 
     @Inject
-    lateinit var fontRepository: FontRepository
-
-    @Inject
     lateinit var visualizer: TemplateVisualizer
 
     private var handlerRef: WeakReference<Handler>? = null
@@ -101,31 +97,32 @@ class ClockWidget : AppWidgetProvider() {
         }
         sharedPreferences.edit().putLong(PREF_LAST_UPDATE_TIME, thisMinuteMillis).apply()
 
-        GlobalScope.launch {
+        var widgetTemplate: Template?
+
+        runBlocking {
 
 //            val templateId = sharedPreferences.getInt(EXTRA_TEMPLATE_ID, -1)
-//            val template = templateRepository.getTemplateById(templateId) ?: return@launch
-            val template = templateRepository.getTemplates().firstOrNull() ?: return@launch
-            val font = fontRepository.getFontById(template.fontId) ?: return@launch
-
-            val drawSize = visualizer.evaluateDrawSize(template.elements)
-            Log.d(TAG, "updateWidget: drawSize = $drawSize")
-            val bitmap = Bitmap.createBitmap(drawSize.width, drawSize.height, Bitmap.Config.ARGB_8888)
-            val canvas = Canvas(bitmap).apply { translate(drawSize.width / 2f, drawSize.height / 2f) }
-            visualizer.loadFont(font)
-            visualizer.draw(canvas, template.elements, font, thisMinuteMillis)
-
-            val intent = Intent(context, MainActivity::class.java).apply {
-                flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK
-            }
-
-            val remoteViews = RemoteViews(context.packageName, R.layout.widget_clock).apply {
-                setImageViewBitmap(R.id.iv, bitmap)
-                setOnClickPendingIntent(R.id.iv, PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE))
-            }
-
-            AppWidgetManager.getInstance(context).updateAppWidget(appWidgetIds, remoteViews)
+//            val template = templateRepository.getTemplateById(templateId) ?: return@runBlocking
+            widgetTemplate = templateRepository.getTemplates().firstOrNull()
         }
+
+        val template = widgetTemplate ?: return
+
+        val drawSize = visualizer.evaluateDrawSize(template.elements)
+        val bitmap = Bitmap.createBitmap(drawSize.width, drawSize.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap).apply { translate(drawSize.width / 2f, drawSize.height / 2f) }
+        visualizer.draw(canvas, template.elements, thisMinuteMillis)
+
+        val intent = Intent(context, MainActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK
+        }
+
+        val remoteViews = RemoteViews(context.packageName, R.layout.widget_clock).apply {
+            setImageViewBitmap(R.id.iv, bitmap)
+            setOnClickPendingIntent(R.id.iv, PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE))
+        }
+
+        AppWidgetManager.getInstance(context).updateAppWidget(appWidgetIds, remoteViews)
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {

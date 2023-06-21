@@ -9,9 +9,10 @@ import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
-import com.johnson.sketchclock.databinding.FragmentEditorBinding
+import com.johnson.sketchclock.common.EType
+import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Template
-import com.johnson.sketchclock.common.createTimeTemplate
+import com.johnson.sketchclock.databinding.FragmentEditorBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -41,8 +42,8 @@ class EditorFragment : Fragment() {
         }
 
         viewLifecycleOwner.lifecycleScope.launch {
-            viewModel.fontLoaded.collectLatest { font ->
-                vb.controlView.font = font
+            viewModel.resUpdated.collectLatest {
+                vb.controlView.render()
             }
         }
 
@@ -59,10 +60,30 @@ class EditorFragment : Fragment() {
         vb.fabAddTime.setOnClickListener {
             viewModel.onEvent(EditorEvent.AddPieces(createTimeTemplate()))
         }
+
+        vb.fabAddIllustration.setOnClickListener {
+            viewModel.onEvent(EditorEvent.AddPieces(listOf(createIllustrationTemplate())))
+        }
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return FragmentEditorBinding.inflate(inflater, container, false).also { vb = it }.root
+    }
+
+    private fun createTimeTemplate(): List<Element> {
+        return listOf(
+            EType.Hour1,
+            EType.Hour2,
+            EType.Colon,
+            EType.Minute1,
+            EType.Minute2
+        ).mapIndexed { index, pieceType ->
+            Element(eType = pieceType, x = index * 180.0f - 360, y = 0.0f, scale = 0.5f, rotation = 0.0f, resId = 0)
+        }
+    }
+
+    private fun createIllustrationTemplate(): Element {
+        return Element(eType = EType.Illustration, resId = 0)
     }
 
     companion object {

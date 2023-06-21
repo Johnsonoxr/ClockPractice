@@ -44,15 +44,3 @@ enum class EType {
         Illustration -> Constants.ILLUSTRATION_HEIGHT
     }
 }
-
-fun createTimeTemplate(): List<Element> {
-    return listOf(
-        EType.Hour1,
-        EType.Hour2,
-        EType.Colon,
-        EType.Minute1,
-        EType.Minute2
-    ).mapIndexed { index, pieceType ->
-        Element(pieceType, index * 180.0f - 360, 0.0f, 0.5f, 0.0f)
-    }
-}

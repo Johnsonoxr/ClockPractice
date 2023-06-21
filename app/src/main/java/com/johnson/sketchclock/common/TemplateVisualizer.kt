@@ -5,7 +5,11 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Matrix
 import android.util.Size
-import com.bumptech.glide.Glide
+import com.johnson.sketchclock.repository.font.FontRepository
+import com.johnson.sketchclock.repository.illustration.IllustrationRepository
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import java.io.File
 import java.util.Calendar
 import javax.inject.Inject
 import kotlin.math.max
@@ -13,47 +17,39 @@ import kotlin.math.min
 import kotlin.math.roundToInt
 
 class TemplateVisualizer @Inject constructor(
-    private val context: Context
+    private val context: Context,
+    private val fontRepository: FontRepository,
+    private val illustrationRepository: IllustrationRepository
 ) {
 
-    private var fontBitmaps: MutableMap<Font, Map<Character, Bitmap?>?> = mutableMapOf()
-
+    private val bitmaps = mutableMapOf<String, Bitmap?>()
     private val matrix = Matrix()
-
-    fun loadFont(font: Font) {
-        if (fontBitmaps.contains(font)) return
-
-        fontBitmaps[font] = Character.values().associateWith { ch ->
-            val path = font.getCharacterPath(ch)
-            return@associateWith try {
-                Glide.with(context).asBitmap().load(path).submit().get()
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
 
     /**
      * Canvas should be pre-positioned at the center of the drawing region.
      */
-    fun draw(canvas: Canvas, elements: List<Element>, font: Font, timeMillis: Long? = null) {
-        fontBitmaps[font] ?: return
-
+    fun draw(canvas: Canvas, elements: List<Element>, timeMillis: Long? = null) {
         elements.forEach { element ->
             matrix.reset()
             matrix.preTranslate(element.x, element.y)
             matrix.preScale(element.scale, element.scale)
             matrix.preRotate(element.rotation)
             matrix.preTranslate(-element.width() / 2f, -element.height() / 2f)
-            findBitmap(element, font, timeMillis)?.let {
+            loadBitmap(element, timeMillis)?.let {
                 canvas.drawBitmap(it, matrix, null)
             }
         }
     }
 
-    private fun findBitmap(element: Element, font: Font, timeMillis: Long? = null): Bitmap? {
-        val characterBitmaps = fontBitmaps[font] ?: return null
+    private fun bitmapKey(fontId: Int, character: Character): String {
+        return "Font_${fontId}_${character.name}"
+    }
 
+    private fun bitmapKey(illustrationId: Int): String {
+        return "Illustration_${illustrationId}"
+    }
+
+    private fun loadBitmap(element: Element, timeMillis: Long? = null): Bitmap? {
         val calendar = Calendar.getInstance()
         timeMillis?.let { calendar.timeInMillis = it }
 
@@ -62,20 +58,39 @@ class TemplateVisualizer @Inject constructor(
         val hour = calendar.get(Calendar.HOUR_OF_DAY)
         val minute = calendar.get(Calendar.MINUTE)
 
-        return when (element.eType) {
-            EType.Hour1 -> characterBitmaps[numberToCharacter(hour / 10)]
-            EType.Hour2 -> characterBitmaps[numberToCharacter(hour % 10)]
-            EType.Minute1 -> characterBitmaps[numberToCharacter(minute / 10)]
-            EType.Minute2 -> characterBitmaps[numberToCharacter(minute % 10)]
-            EType.Month1 -> characterBitmaps[numberToCharacter(month / 10)]
-            EType.Month2 -> characterBitmaps[numberToCharacter(month % 10)]
-            EType.Day1 -> characterBitmaps[numberToCharacter(day / 10)]
-            EType.Day2 -> characterBitmaps[numberToCharacter(day % 10)]
-            EType.Separator -> characterBitmaps[Character.SEPARATOR]
-            EType.AmPm -> if (hour < 12) characterBitmaps[Character.AM] else characterBitmaps[Character.PM]
-            EType.Colon -> characterBitmaps[Character.COLON]
+        val char: Character? = when (element.eType) {
+            EType.Hour1 -> numberToCharacter(hour / 10)
+            EType.Hour2 -> numberToCharacter(hour % 10)
+            EType.Minute1 -> numberToCharacter(minute / 10)
+            EType.Minute2 -> numberToCharacter(minute % 10)
+            EType.Month1 -> numberToCharacter(month / 10)
+            EType.Month2 -> numberToCharacter(month % 10)
+            EType.Day1 -> numberToCharacter(day / 10)
+            EType.Day2 -> numberToCharacter(day % 10)
+            EType.Separator -> Character.SEPARATOR
+            EType.AmPm -> if (hour < 12) Character.AM else Character.PM
+            EType.Colon -> Character.COLON
             EType.Illustration -> null
         }
+
+        val key = when (char) {
+            null -> bitmapKey(element.resId)
+            else -> bitmapKey(element.resId, char)
+        }
+
+        bitmaps[key]?.let { return it }
+
+        var bitmap: Bitmap?
+
+        runBlocking(Dispatchers.IO) {
+            val bitmapPath = when (char) {
+                null -> illustrationRepository.getIllustrationById(element.resId)?.getPath()
+                else -> fontRepository.getFontById(element.resId)?.getCharacterPath(char)
+            }
+            bitmap = bitmapPath?.let { GlideHelper.loadBitmap(context, File(it)) }
+        }
+
+        return bitmap
     }
 
     private fun numberToCharacter(number: Int): Character {

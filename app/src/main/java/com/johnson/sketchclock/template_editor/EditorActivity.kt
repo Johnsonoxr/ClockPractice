@@ -2,22 +2,18 @@ package com.johnson.sketchclock.template_editor
 
 import android.content.Context
 import android.content.Intent
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
-import androidx.activity.viewModels
-import androidx.lifecycle.lifecycleScope
-import com.johnson.sketchclock.databinding.ContainerLayoutBinding
+import androidx.appcompat.app.AppCompatActivity
 import com.johnson.sketchclock.common.Template
+import com.johnson.sketchclock.databinding.ContainerLayoutBinding
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
-
-private const val TEMPLATE = "template"
 
 @AndroidEntryPoint
 class EditorActivity : AppCompatActivity() {
 
     companion object {
+        private const val TEMPLATE = "template"
+
         fun createIntent(context: Context, template: Template): Intent {
             return Intent(context, EditorActivity::class.java).apply {
                 putExtra(TEMPLATE, template)
@@ -25,22 +21,12 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    private val viewModel: EditorViewModel by viewModels()
-
     lateinit var vb: ContainerLayoutBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vb = ContainerLayoutBinding.inflate(layoutInflater)
         setContentView(vb.root)
-
-        lifecycleScope.launch {
-            viewModel.templateSaved.collectLatest {
-                intent.putExtra(TEMPLATE, it)
-                setResult(RESULT_OK)
-                finish()
-            }
-        }
 
         val template = intent.getSerializableExtra(TEMPLATE) as? Template
         if (template != null) {

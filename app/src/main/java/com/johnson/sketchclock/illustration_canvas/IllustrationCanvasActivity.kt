@@ -48,7 +48,7 @@ class IllustrationCanvasActivity : AppCompatActivity() {
         }
 
         if (!viewModel.isInitialized) {
-            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, File(illustration.getPath())))
+            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, illustration.getFile()))
         }
 
         lifecycleScope.launch {

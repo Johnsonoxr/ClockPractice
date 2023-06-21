@@ -11,6 +11,10 @@ data class Font(
     val rootDir: String? = null
 ) : Serializable {
     fun getCharacterPath(character: Character): String {
-        return File(rootDir, "$character.png").absolutePath
+        return getCharacterFile(character).absolutePath
+    }
+
+    fun getCharacterFile(character: Character): File {
+        return File(rootDir, "$character.png")
     }
 }

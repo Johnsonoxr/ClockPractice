@@ -16,10 +16,10 @@ import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
+import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Illustration
 import com.johnson.sketchclock.databinding.DialogEdittextBinding
-import com.johnson.sketchclock.databinding.FragmentFontPickerBinding
+import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemIllustrationBinding
 import com.johnson.sketchclock.illustration_canvas.IllustrationCanvasActivity
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
@@ -35,7 +35,7 @@ class IllustrationPickerFragment : Fragment() {
     @Inject
     lateinit var illustrationRepository: IllustrationRepository
 
-    private lateinit var vb: FragmentFontPickerBinding
+    private lateinit var vb: FragmentPickerBinding
 
     private val viewModel: IllustrationPickerViewModel by activityViewModels()
 
@@ -57,7 +57,7 @@ class IllustrationPickerFragment : Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        return FragmentFontPickerBinding.inflate(inflater, container, false).apply { vb = this }.root
+        return FragmentPickerBinding.inflate(inflater, container, false).apply { vb = this }.root
     }
 
     private inner class IllustrationAdapter : RecyclerView.Adapter<IllustrationAdapter.ViewHolder>() {
@@ -93,9 +93,7 @@ class IllustrationPickerFragment : Fragment() {
 
             fun bind(illustration: Illustration) {
                 vb.tvName.text = illustration.name
-                Glide.with(vb.root).apply {
-                    load(illustration.getPath()).into(vb.ivPreview)
-                }
+                GlideHelper.load(vb.ivPreview, illustration.getFile())
             }
 
             override fun onClick(v: View) {

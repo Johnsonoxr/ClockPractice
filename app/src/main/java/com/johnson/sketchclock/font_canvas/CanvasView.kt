@@ -7,8 +7,10 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
 import android.util.AttributeSet
 import android.util.Size
+import androidx.core.graphics.toXfermode
 import com.johnson.sketchclock.common.ControlView
 
 class CanvasView @JvmOverloads constructor(
@@ -33,6 +35,29 @@ class CanvasView @JvmOverloads constructor(
             brushPaint.strokeWidth = value
         }
 
+    private val brushPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        strokeWidth = brushSize
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
+
+    var eraseSize = 30f
+        set(value) {
+            field = value
+            erasePaint.strokeWidth = value
+        }
+
+    private val erasePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+        strokeWidth = eraseSize
+        color = Color.RED
+        style = Paint.Style.STROKE
+        strokeJoin = Paint.Join.ROUND
+        strokeCap = Paint.Cap.ROUND
+    }
+
+    var isEraseMode = false
+
     private var bmpCanvas: Canvas? = null
     var bitmap: Bitmap? = null
         set(value) {
@@ -41,11 +66,6 @@ class CanvasView @JvmOverloads constructor(
             value?.let { canvasSize = Size(it.width, it.height) }
             render()
         }
-
-    private val brushPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-        style = Paint.Style.STROKE
-        strokeCap = Paint.Cap.ROUND
-    }
 
     var addPathListener: ((Path) -> Unit)? = null
 
@@ -62,7 +82,11 @@ class CanvasView @JvmOverloads constructor(
         path?.let {
             canvas.save()
             canvas.concat(matrix)
-            CanvasViewModel.drawPath(canvas, brushPaint, it)
+            if (isEraseMode) {
+                CanvasViewModel.drawPath(canvas, erasePaint, it)
+            } else {
+                CanvasViewModel.drawPath(canvas, brushPaint, it)
+            }
             canvas.restore()
         }
     }
