@@ -58,6 +58,9 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     private val _isEraseMode = MutableStateFlow(false)
     val isEraseMode: StateFlow<Boolean> = _isEraseMode
 
+    private val _primaryColor = MutableStateFlow(Color.WHITE)
+    val primaryColor: StateFlow<Int> = _primaryColor
+
     private val canvas: Canvas = Canvas()
     private val brushPaint: Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -129,6 +132,10 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
 
                 is CanvasEvent.SetEraseSize -> {
                     _eraseSize.emit(event.size)
+                }
+
+                is CanvasEvent.SetPrimaryColor -> {
+                    _primaryColor.emit(event.color)
                 }
 
                 is CanvasEvent.Clear -> {

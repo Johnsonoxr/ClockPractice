@@ -11,31 +11,12 @@
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_done"
+        style="?attr/floatingActionButtonSmallSecondaryStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:src="@drawable/fab_checked"
-        app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_paint"
-        style="?attr/floatingActionButtonSmallSecondaryStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:src="@drawable/fab_brush"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_erase"
-        style="?attr/floatingActionButtonSmallSecondaryStyle"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_margin="16dp"
-        android:src="@drawable/fab_edit_off"
-        app:layout_constraintEnd_toStartOf="@+id/fab_paint"
         app:layout_constraintTop_toTopOf="parent" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -45,7 +26,87 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:src="@drawable/fab_layer_clear"
-        app:layout_constraintEnd_toStartOf="@+id/fab_erase"
+        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_paint"
+        style="?attr/floatingActionButtonPrimaryStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@drawable/fab_brush"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_erase"
+        style="?attr/floatingActionButtonPrimaryStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@drawable/fab_edit_off"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/fab_paint" />
+
+    <FrameLayout
+        android:id="@+id/stroke_width_container"
+        android:layout_width="240dp"
+        android:layout_height="40dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/round_corners_primary"
+        android:backgroundTint="?attr/colorPrimaryContainer"
+        android:padding="5dp"
+        app:layout_constraintBottom_toTopOf="@+id/fab_paint"
+        app:layout_constraintEnd_toEndOf="@+id/fab_paint">
+
+        <com.jaygoo.widget.RangeSeekBar
+            android:id="@+id/seekbar_stroke_width"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_gravity="center"
+            app:rsb_gravity="center"
+            app:rsb_max="50"
+            app:rsb_min="5"
+            app:rsb_mode="single"
+            app:rsb_progress_color="?attr/colorPrimary"
+            app:rsb_thumb_height="30dp"
+            app:rsb_thumb_width="30dp" />
+
+    </FrameLayout>
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/color_container"
+        android:layout_width="215dp"
+        android:layout_height="80dp"
+        android:layout_marginBottom="16dp"
+        android:background="@drawable/round_corners_primary"
+        android:backgroundTint="?attr/colorPrimaryContainer"
+        android:orientation="horizontal"
+        android:padding="5dp"
+        app:layout_constraintBottom_toTopOf="@+id/stroke_width_container"
+        app:layout_constraintEnd_toEndOf="@+id/stroke_width_container">
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_color_secondary"
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            app:layout_constraintTop_toTopOf="parent" />
+
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_color_primary"
+            android:layout_width="match_parent"
+            android:layout_height="30dp"
+            app:layout_constraintBottom_toBottomOf="parent" />
+
+        <View
+            android:layout_width="match_parent"
+            android:layout_height="1dp"
+            android:background="?attr/colorPrimary"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
+
+    </androidx.constraintlayout.widget.ConstraintLayout>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

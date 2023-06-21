@@ -103,9 +103,7 @@ class IllustrationPickerFragment : Fragment() {
                     }
 
                     vb.ivEdit -> {
-                        startActivity(Intent(context, IllustrationCanvasActivity::class.java).apply {
-                            putExtra(IllustrationCanvasActivity.KEY_ILLUSTRATION, illustration)
-                        })
+                        startActivity(IllustrationCanvasActivity.createIntent(requireContext(), illustration))
                     }
 
                     vb.ivDelete -> {

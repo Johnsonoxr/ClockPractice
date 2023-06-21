@@ -1,11 +1,12 @@
 package com.johnson.sketchclock.illustration_canvas
 
-import androidx.appcompat.app.AppCompatActivity
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.viewModels
+import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Illustration
 import com.johnson.sketchclock.databinding.ActivityIllustrationCanvasBinding
@@ -16,14 +17,19 @@ import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class IllustrationCanvasActivity : AppCompatActivity() {
 
     companion object {
-        const val KEY_ILLUSTRATION = "illustration"
+        private const val KEY_ILLUSTRATION = "illustration"
+
+        fun createIntent(context: Context, illustration: Illustration): Intent {
+            return Intent(context, IllustrationCanvasActivity::class.java).apply {
+                putExtra(KEY_ILLUSTRATION, illustration)
+            }
+        }
     }
 
     @Inject

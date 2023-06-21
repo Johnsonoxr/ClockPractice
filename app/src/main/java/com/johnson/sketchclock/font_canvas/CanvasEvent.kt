@@ -10,6 +10,7 @@ sealed class CanvasEvent {
     data class SetBrushSize(val size: Float) : CanvasEvent()
     data class SetIsEraseMode(val isEraseMode: Boolean) : CanvasEvent()
     data class SetEraseSize(val size: Float) : CanvasEvent()
+    data class SetPrimaryColor(val color: Int) : CanvasEvent()
     object Undo : CanvasEvent()
     object Redo : CanvasEvent()
     object Clear : CanvasEvent()
