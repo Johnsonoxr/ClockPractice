@@ -1,15 +1,17 @@
 package com.johnson.sketchclock.font_canvas
 
+import android.annotation.SuppressLint
+import android.content.Context
 import android.content.res.ColorStateList
-import android.content.res.Resources
 import android.graphics.Color
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.ViewGroup.MarginLayoutParams
-import android.widget.ImageView
+import androidx.annotation.AttrRes
 import androidx.appcompat.app.AlertDialog
+import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -21,17 +23,12 @@ import com.jaygoo.widget.OnRangeChangedListener
 import com.jaygoo.widget.RangeSeekBar
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.databinding.FragmentCanvasBinding
-import com.skydoves.colorpickerview.ColorPickerDialog
-import com.skydoves.colorpickerview.listeners.ColorEnvelopeListener
+import com.johnson.sketchclock.databinding.ItemCanvasColorSelectorBinding
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 
 private const val TAG = "CanvasFragment"
-
-private fun dpToPx(dp: Int): Int {
-    return (dp * Resources.getSystem().displayMetrics.density).toInt()
-}
 
 class CanvasFragment : Fragment() {
 
@@ -39,6 +36,7 @@ class CanvasFragment : Fragment() {
 
     private lateinit var vb: FragmentCanvasBinding
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
         vb.rvColorPrimary.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
@@ -56,6 +54,7 @@ class CanvasFragment : Fragment() {
         lifecycleScope.launch {
             viewModel.brushColor.collectLatest { color ->
                 vb.fabPaint.imageTintList = ColorStateList.valueOf(color)
+                (vb.rvColorSecondary.adapter as ColorSecondaryAdapter).notifyDataSetChanged()
                 vb.canvasView.brushColor = color
             }
         }
@@ -67,8 +66,12 @@ class CanvasFragment : Fragment() {
         }
         lifecycleScope.launch {
             viewModel.isEraseMode.collectLatest { isEraseMode ->
-                vb.fabErase.alpha = if (isEraseMode) 1f else 0.5f
-                vb.fabPaint.alpha = if (isEraseMode) 0.5f else 1f
+                val fab1View = if (isEraseMode) vb.fabErase else vb.fabPaint
+                val fab2View = if (isEraseMode) vb.fabPaint else vb.fabErase
+                vb.fab1Container.removeAllViews()
+                vb.fab2Container.removeAllViews()
+                vb.fab1Container.addView(fab1View)
+                vb.fab2Container.addView(fab2View)
                 vb.canvasView.isEraseMode = isEraseMode
             }
         }
@@ -83,20 +86,33 @@ class CanvasFragment : Fragment() {
         }
 
         vb.fabPaint.setOnClickListener {
-            when {
-                viewModel.isEraseMode.value -> viewModel.onEvent(CanvasEvent.SetIsEraseMode(false))
-                vb.seekbarStrokeWidth.isVisible -> {
-                    vb.seekbarStrokeWidth.visibility = View.GONE
-                }
-
-                else -> {
-                    vb.seekbarStrokeWidth.visibility = View.VISIBLE
-                }
+            if (viewModel.isEraseMode.value) {
+                showStrokeWidthSeekbar(false)
+                showColorPanel(false)
+                showFab2(false)
+                viewModel.onEvent(CanvasEvent.SetIsEraseMode(false))
+                return@setOnClickListener
             }
+
+            val isShowingControlPanels = vb.fab2Container.isVisible
+            showFab2(!isShowingControlPanels)
+            showStrokeWidthSeekbar(!isShowingControlPanels)
+            showColorPanel(!isShowingControlPanels)
         }
 
         vb.fabErase.setOnClickListener {
-            viewModel.onEvent(CanvasEvent.SetIsEraseMode(true))
+            if (!viewModel.isEraseMode.value) {
+                showFab2(false)
+                showStrokeWidthSeekbar(false)
+                showColorPanel(false)
+                viewModel.onEvent(CanvasEvent.SetIsEraseMode(true))
+                return@setOnClickListener
+            }
+
+            val isShowingControlPanels = vb.fab2Container.isVisible
+            showFab2(!isShowingControlPanels)
+            showStrokeWidthSeekbar(!isShowingControlPanels)
+            showColorPanel(false)
         }
 
         vb.fabClear.setOnClickListener {
@@ -125,25 +141,37 @@ class CanvasFragment : Fragment() {
             override fun onStartTrackingTouch(view: RangeSeekBar?, isLeft: Boolean) {}
             override fun onStopTrackingTouch(view: RangeSeekBar?, isLeft: Boolean) {}
         })
+
+        showStrokeWidthSeekbar(false)
+        showColorPanel(false)
+        showFab2(false)
     }
 
     private fun showStrokeWidthSeekbar(show: Boolean) {
-        vb.seekbarStrokeWidth.visibility = if (show) View.VISIBLE else View.GONE
+        vb.strokeWidthContainer.visibility = if (show) View.VISIBLE else View.GONE
     }
 
-    private fun showColorPickerDialog() {
-        ColorPickerDialog.Builder(requireContext())
-            .setTitle("Color")
-            .attachAlphaSlideBar(false)
-            .attachBrightnessSlideBar(true)
-            .setBottomSpace(12)
-            .apply { colorPickerView.setInitialColor(viewModel.brushColor.value) }
-            .setNegativeButton(android.R.string.cancel, null)
-            .setPositiveButton(android.R.string.ok, ColorEnvelopeListener { envelope, _ ->
-                viewModel.onEvent(CanvasEvent.SetBrushColor(envelope.color))
-            })
-            .show()
+    private fun showColorPanel(show: Boolean) {
+        vb.colorContainer.visibility = if (show) View.VISIBLE else View.GONE
     }
+
+    private fun showFab2(show: Boolean) {
+        vb.fab2Container.visibility = if (show) View.VISIBLE else View.GONE
+    }
+
+//    private fun showColorPickerDialog() {
+//        ColorPickerDialog.Builder(requireContext())
+//            .setTitle("Color")
+//            .attachAlphaSlideBar(false)
+//            .attachBrightnessSlideBar(true)
+//            .setBottomSpace(12)
+//            .apply { colorPickerView.setInitialColor(viewModel.brushColor.value) }
+//            .setNegativeButton(android.R.string.cancel, null)
+//            .setPositiveButton(android.R.string.ok, ColorEnvelopeListener { envelope, _ ->
+//                viewModel.onEvent(CanvasEvent.SetBrushColor(envelope.color))
+//            })
+//            .show()
+//    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return FragmentCanvasBinding.inflate(inflater, container, false).also { vb = it }.root
@@ -157,12 +185,12 @@ class CanvasFragment : Fragment() {
             Color.GREEN,
             Color.BLUE,
             Color.YELLOW,
-            Color.CYAN
+            getAttrColor(requireContext(), android.R.attr.colorPrimary),
         )
 
-        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view), View.OnClickListener {
+        inner class ViewHolder(val binding: ItemCanvasColorSelectorBinding) : RecyclerView.ViewHolder(binding.root), View.OnClickListener {
             init {
-                view.setOnClickListener(this)
+                binding.root.setOnClickListener(this)
             }
 
             override fun onClick(v: View?) {
@@ -171,26 +199,26 @@ class CanvasFragment : Fragment() {
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            return ViewHolder(ImageView(parent.context).apply {
-                layoutParams = MarginLayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                setImageResource(R.drawable.seekbar_indicator)
-            })
+            return ViewHolder(ItemCanvasColorSelectorBinding.inflate(LayoutInflater.from(parent.context), parent, false))
         }
 
         override fun getItemCount() = colors.size
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            (holder.itemView as ImageView).imageTintList = ColorStateList.valueOf(colors[position])
-            (holder.itemView.layoutParams as MarginLayoutParams).let {
-                it.marginStart = if (position == 0) 0 else dpToPx(5)
-                holder.itemView.layoutParams = it
-            }
+            holder.binding.iv.imageTintList = ColorStateList.valueOf(colors[position])
+        }
+
+        private fun getAttrColor(context: Context, @AttrRes attr: Int): Int {
+            val typedValue = TypedValue()
+            context.theme.resolveAttribute(attr, typedValue, true)
+            return typedValue.data
         }
     }
 
     private inner class ColorSecondaryAdapter : RecyclerView.Adapter<ColorSecondaryAdapter.ViewHolder>() {
 
         var colorTint: Int = 0
+            @SuppressLint("NotifyDataSetChanged")
             set(value) {
                 field = value
                 val lightnessArray = when (field) {
@@ -205,27 +233,25 @@ class CanvasFragment : Fragment() {
 
         val tintList: IntArray = IntArray(6)
 
-        inner class ViewHolder(view: View) : RecyclerView.ViewHolder(view), View.OnClickListener {
-            override fun onClick(v: View?) {
+        inner class ViewHolder(val binding: ItemCanvasColorSelectorBinding) : RecyclerView.ViewHolder(binding.root), View.OnClickListener {
+            init {
+                binding.root.setOnClickListener(this)
+            }
 
+            override fun onClick(v: View?) {
+                viewModel.onEvent(CanvasEvent.SetBrushColor(tintList[adapterPosition]))
             }
         }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            return ViewHolder(ImageView(parent.context).apply {
-                layoutParams = MarginLayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT)
-                setImageResource(R.drawable.seekbar_indicator)
-            })
+            return ViewHolder(ItemCanvasColorSelectorBinding.inflate(LayoutInflater.from(parent.context), parent, false))
         }
 
         override fun getItemCount() = 6
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            (holder.itemView as ImageView).imageTintList = ColorStateList.valueOf(tintList[position])
-            (holder.itemView.layoutParams as MarginLayoutParams).let {
-                it.marginStart = if (position == 0) 0 else dpToPx(5)
-                holder.itemView.layoutParams = it
-            }
+            holder.binding.iv.imageTintList = ColorStateList.valueOf(tintList[position])
+            holder.binding.ivSelected.isVisible = viewModel.brushColor.value == tintList[position]
         }
     }
 }

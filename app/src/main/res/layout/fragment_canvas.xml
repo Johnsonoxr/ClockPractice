@@ -29,25 +29,39 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_paint"
-        style="?attr/floatingActionButtonPrimaryStyle"
+    <FrameLayout
+        android:id="@+id/fab_1_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:src="@drawable/fab_brush"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toEndOf="parent" />
+        app:layout_constraintEnd_toEndOf="parent">
 
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_erase"
-        style="?attr/floatingActionButtonPrimaryStyle"
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_paint"
+            style="?attr/floatingActionButtonPrimaryStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/fab_brush" />
+
+    </FrameLayout>
+
+    <FrameLayout
+        android:id="@+id/fab_2_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:src="@drawable/fab_edit_off"
+        android:alpha="0.5"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@+id/fab_paint" />
+        app:layout_constraintEnd_toStartOf="@id/fab_1_container">
+
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
+            android:id="@+id/fab_erase"
+            style="?attr/floatingActionButtonPrimaryStyle"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/fab_edit_off" />
+    </FrameLayout>
 
     <FrameLayout
         android:id="@+id/stroke_width_container"
@@ -57,8 +71,8 @@
         android:background="@drawable/round_corners_primary"
         android:backgroundTint="?attr/colorPrimaryContainer"
         android:padding="5dp"
-        app:layout_constraintBottom_toTopOf="@+id/fab_paint"
-        app:layout_constraintEnd_toEndOf="@+id/fab_paint">
+        app:layout_constraintBottom_toTopOf="@+id/fab_1_container"
+        app:layout_constraintEnd_toEndOf="@+id/fab_1_container">
 
         <com.jaygoo.widget.RangeSeekBar
             android:id="@+id/seekbar_stroke_width"
@@ -83,20 +97,20 @@
         android:background="@drawable/round_corners_primary"
         android:backgroundTint="?attr/colorPrimaryContainer"
         android:orientation="horizontal"
-        android:padding="5dp"
+        android:padding="2.5dp"
         app:layout_constraintBottom_toTopOf="@+id/stroke_width_container"
         app:layout_constraintEnd_toEndOf="@+id/stroke_width_container">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_color_secondary"
             android:layout_width="match_parent"
-            android:layout_height="30dp"
+            android:layout_height="wrap_content"
             app:layout_constraintTop_toTopOf="parent" />
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_color_primary"
             android:layout_width="match_parent"
-            android:layout_height="30dp"
+            android:layout_height="wrap_content"
             app:layout_constraintBottom_toBottomOf="parent" />
 
         <View
