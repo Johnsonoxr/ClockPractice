@@ -3,13 +3,14 @@ package com.johnson.sketchclock.font_canvas
 import android.os.Bundle
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.johnson.sketchclock.R
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.databinding.ActivityCanvasBinding
@@ -35,6 +36,8 @@ class CanvasActivity : AppCompatActivity() {
 
     private val vb: ActivityCanvasBinding by lazy { ActivityCanvasBinding.inflate(layoutInflater) }
 
+    private var saved = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(vb.root)
@@ -48,14 +51,19 @@ class CanvasActivity : AppCompatActivity() {
             return
         }
 
+        lifecycleScope.launch {
+            viewModel.undoable.collectLatest {
+                saved = !it
+            }
+        }
+
         vb.rvItems.layoutManager = GridLayoutManager(this, 2, LinearLayoutManager.HORIZONTAL, false)
         vb.rvItems.adapter = ItemAdapter().apply {
-            listener = {
-                lifecycleScope.launch {
-                    viewModel.onEvent(CanvasEvent.Save)
-                    viewModel.onEvent(CanvasEvent.Init(it.width(), it.height(), File(font.getCharacterPath(it))))
+            listener = { ch ->
+                showSaveDialogIfNeed {
+                    viewModel.onEvent(CanvasEvent.Init(ch.width(), ch.height(), File(font.getCharacterPath(ch))))
+                    selection = ch
                 }
-                selection = it
             }
             selection = Character.ZERO
         }
@@ -71,9 +79,34 @@ class CanvasActivity : AppCompatActivity() {
             }
         }
 
+        onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
+
         supportFragmentManager.beginTransaction()
             .replace(vb.fragContainer.id, CanvasFragment())
             .commit()
+    }
+
+    private fun showSaveDialogIfNeed(block: () -> Unit) {
+        if (saved) {
+            block()
+            return
+        }
+        MaterialAlertDialogBuilder(this)
+            .setMessage("Save changes?")
+            .setPositiveButton("Yes") { _, _ ->
+                viewModel.onEvent(CanvasEvent.Save)
+                block()
+            }
+            .setNegativeButton("No") { _, _ -> block() }
+            .show()
+    }
+
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            showSaveDialogIfNeed {
+                finish()
+            }
+        }
     }
 
     override fun onDestroy() {

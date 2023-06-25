@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
@@ -27,6 +28,26 @@
         android:layout_margin="16dp"
         android:src="@drawable/fab_layer_clear"
         app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_undo"
+        style="?attr/floatingActionButtonSmallSecondaryStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@drawable/fab_undo"
+        app:layout_constraintStart_toEndOf="@+id/fab_clear"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_redo"
+        style="?attr/floatingActionButtonSmallSecondaryStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@drawable/fab_redo"
+        app:layout_constraintStart_toEndOf="@+id/fab_undo"
         app:layout_constraintTop_toTopOf="parent" />
 
     <FrameLayout
@@ -91,13 +112,13 @@
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/color_container"
-        android:layout_width="215dp"
-        android:layout_height="80dp"
+        android:layout_width="220dp"
+        android:layout_height="85dp"
         android:layout_marginBottom="16dp"
         android:background="@drawable/round_corners_primary"
         android:backgroundTint="?attr/colorPrimaryContainer"
         android:orientation="horizontal"
-        android:padding="2.5dp"
+        android:padding="5dp"
         app:layout_constraintBottom_toTopOf="@+id/stroke_width_container"
         app:layout_constraintEnd_toEndOf="@+id/stroke_width_container">
 

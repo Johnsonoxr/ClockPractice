@@ -7,10 +7,8 @@ import android.graphics.Color
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
-import android.graphics.PorterDuff
 import android.util.AttributeSet
 import android.util.Size
-import androidx.core.graphics.toXfermode
 import com.johnson.sketchclock.common.ControlView
 
 class CanvasView @JvmOverloads constructor(

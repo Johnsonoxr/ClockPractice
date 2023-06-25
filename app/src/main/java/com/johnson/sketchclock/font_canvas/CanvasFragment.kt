@@ -9,19 +9,20 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.annotation.AttrRes
-import androidx.appcompat.app.AlertDialog
-import androidx.core.content.ContextCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jaygoo.widget.OnRangeChangedListener
 import com.jaygoo.widget.RangeSeekBar
-import com.johnson.sketchclock.R
 import com.johnson.sketchclock.databinding.FragmentCanvasBinding
 import com.johnson.sketchclock.databinding.ItemCanvasColorSelectorBinding
 import kotlinx.coroutines.flow.collectLatest
@@ -36,6 +37,14 @@ class CanvasFragment : Fragment() {
 
     private lateinit var vb: FragmentCanvasBinding
 
+    private fun launchWhenStarted(block: suspend () -> Unit) {
+        lifecycleScope.launch {
+            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+                block()
+            }
+        }
+    }
+
     @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
@@ -45,26 +54,26 @@ class CanvasFragment : Fragment() {
         vb.rvColorSecondary.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         vb.rvColorSecondary.adapter = ColorSecondaryAdapter()
 
-        lifecycleScope.launch {
+        launchWhenStarted {
             viewModel.bitmap.collectLatest { bmp -> vb.canvasView.bitmap = bmp }
         }
-        lifecycleScope.launch {
+        launchWhenStarted {
             viewModel.bmpUpdated.collectLatest { vb.canvasView.render() }
         }
-        lifecycleScope.launch {
+        launchWhenStarted {
             viewModel.brushColor.collectLatest { color ->
                 vb.fabPaint.imageTintList = ColorStateList.valueOf(color)
                 (vb.rvColorSecondary.adapter as ColorSecondaryAdapter).notifyDataSetChanged()
                 vb.canvasView.brushColor = color
             }
         }
-        lifecycleScope.launch {
+        launchWhenStarted {
             viewModel.brushSize.collectLatest { size ->
                 vb.seekbarStrokeWidth.setProgress(size)
                 vb.canvasView.brushSize = size
             }
         }
-        lifecycleScope.launch {
+        launchWhenStarted {
             viewModel.isEraseMode.collectLatest { isEraseMode ->
                 val fab1View = if (isEraseMode) vb.fabErase else vb.fabPaint
                 val fab2View = if (isEraseMode) vb.fabPaint else vb.fabErase
@@ -75,10 +84,19 @@ class CanvasFragment : Fragment() {
                 vb.canvasView.isEraseMode = isEraseMode
             }
         }
-        lifecycleScope.launch {
+        launchWhenStarted {
             viewModel.primaryColor.collectLatest { color ->
                 (vb.rvColorSecondary.adapter as ColorSecondaryAdapter).colorTint = color
             }
+        }
+        launchWhenStarted {
+            viewModel.undoable.collectLatest { vb.fabUndo.isEnabled = it }
+        }
+        launchWhenStarted {
+            viewModel.redoable.collectLatest { vb.fabRedo.isEnabled = it }
+        }
+        launchWhenStarted {
+            viewModel.fileSaved.collectLatest { Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show() }
         }
 
         vb.fabDone.setOnClickListener {
@@ -100,6 +118,14 @@ class CanvasFragment : Fragment() {
             showColorPanel(!isShowingControlPanels)
         }
 
+        vb.fabUndo.setOnClickListener {
+            viewModel.onEvent(CanvasEvent.Undo)
+        }
+
+        vb.fabRedo.setOnClickListener {
+            viewModel.onEvent(CanvasEvent.Redo)
+        }
+
         vb.fabErase.setOnClickListener {
             if (!viewModel.isEraseMode.value) {
                 showFab2(false)
@@ -116,7 +142,7 @@ class CanvasFragment : Fragment() {
         }
 
         vb.fabClear.setOnClickListener {
-            AlertDialog.Builder(requireContext())
+            MaterialAlertDialogBuilder(requireContext())
                 .setMessage("Clear canvas?")
                 .setPositiveButton("Yes") { _, _ ->
                     viewModel.onEvent(CanvasEvent.Clear)

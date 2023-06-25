@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -61,6 +62,12 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     private val _primaryColor = MutableStateFlow(Color.WHITE)
     val primaryColor: StateFlow<Int> = _primaryColor
 
+    private val _undoPathDataList = MutableStateFlow<List<PathData>>(listOf())
+    private val _redoPathDataList = MutableStateFlow<List<PathData>>(listOf())
+
+    val undoable = _undoPathDataList.map { it.isNotEmpty() }
+    val redoable = _redoPathDataList.map { it.isNotEmpty() }
+
     private val canvas: Canvas = Canvas()
     private val brushPaint: Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -74,6 +81,8 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
         strokeJoin = Paint.Join.ROUND
         xfermode = PorterDuff.Mode.CLEAR.toXfermode()
     }
+
+    private var baseBitmap: Bitmap? = null
 
     private val singleDispatcher = Dispatchers.Default.limitedParallelism(1)
 
@@ -100,16 +109,25 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch(singleDispatcher) {
             when (event) {
                 is CanvasEvent.Init -> {
-                    val loadedBmp = BitmapFactory.decodeFile(event.saveFile.absolutePath, BitmapFactory.Options().apply { inMutable = true })
-                    if (loadedBmp != null && loadedBmp.width == event.width && loadedBmp.height == event.height) {
-                        _bmp.emit(loadedBmp)
+                    baseBitmap = BitmapFactory.decodeFile(event.saveFile.absolutePath)
+                    if (baseBitmap?.width == event.width && baseBitmap?.height == event.height) {
+                        _bmp.value = baseBitmap?.copy(Bitmap.Config.ARGB_8888, true)
                     } else {
-                        _bmp.emit(Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888))
+                        baseBitmap = null
+                        _bmp.value = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
                     }
-                    _file.emit(event.saveFile)
+                    _undoPathDataList.value = emptyList()
+                    _redoPathDataList.value = emptyList()
+                    _file.value = event.saveFile
                 }
 
                 is CanvasEvent.AddPath -> {
+                    _undoPathDataList.value = _undoPathDataList.value + PathData(
+                        event.path,
+                        if (!isEraseMode.value) brushPaint.color else null,
+                        if (isEraseMode.value) erasePaint.strokeWidth else brushPaint.strokeWidth,
+                    )
+                    _redoPathDataList.value = emptyList()
                     if (isEraseMode.value) {
                         drawPath(canvas, erasePaint, event.path)
                     } else {
@@ -119,27 +137,30 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is CanvasEvent.SetBrushColor -> {
-                    _brushColor.emit(event.color)
+                    _brushColor.value = event.color
                 }
 
                 is CanvasEvent.SetBrushSize -> {
-                    _brushSize.emit(event.size)
+                    _brushSize.value = event.size
                 }
 
                 is CanvasEvent.SetIsEraseMode -> {
-                    _isEraseMode.emit(event.isEraseMode)
+                    _isEraseMode.value = event.isEraseMode
                 }
 
                 is CanvasEvent.SetEraseSize -> {
-                    _eraseSize.emit(event.size)
+                    _eraseSize.value = event.size
                 }
 
                 is CanvasEvent.SetPrimaryColor -> {
-                    _primaryColor.emit(event.color)
+                    _primaryColor.value = event.color
                 }
 
                 is CanvasEvent.Clear -> {
                     canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+                    baseBitmap = null
+                    _undoPathDataList.value = emptyList()
+                    _redoPathDataList.value = emptyList()
                     _bmpUpdated.emit(Unit)
                 }
 
@@ -147,12 +168,70 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                     _file.value?.parentFile?.mkdirs()
                     _file.value?.outputStream()?.use {
                         _bmp.value?.compress(Bitmap.CompressFormat.PNG, 100, it)
+                        baseBitmap = null
+                        _undoPathDataList.value = emptyList()
+                        _redoPathDataList.value = emptyList()
                     }
                     _fileSaved.emit(_file.value)
                 }
 
-                else -> Unit
+                is CanvasEvent.Undo -> {
+                    if (_undoPathDataList.value.isEmpty()) {
+                        return@launch
+                    }
+                    _redoPathDataList.value = _redoPathDataList.value + _undoPathDataList.value.last()
+                    _undoPathDataList.value = _undoPathDataList.value.dropLast(1)
+
+                    canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+                    baseBitmap?.let { canvas.drawBitmap(it, 0f, 0f, null) }
+
+                    _undoPathDataList.value.forEach { pathData ->
+                        if (pathData.color != null) {
+                            brushPaint.color = pathData.color
+                            brushPaint.strokeWidth = pathData.size
+                            drawPath(canvas, brushPaint, pathData.path)
+                        } else {
+                            erasePaint.strokeWidth = pathData.size
+                            drawPath(canvas, erasePaint, pathData.path)
+                        }
+                    }
+                    brushPaint.color = _brushColor.value
+                    brushPaint.strokeWidth = _brushSize.value
+                    erasePaint.strokeWidth = _eraseSize.value
+
+                    _bmpUpdated.emit(Unit)
+                }
+
+                is CanvasEvent.Redo -> {
+                    if (_redoPathDataList.value.isEmpty()) {
+                        return@launch
+                    }
+                    _undoPathDataList.value = _undoPathDataList.value + _redoPathDataList.value.last()
+                    _redoPathDataList.value = _redoPathDataList.value.dropLast(1)
+
+                    _undoPathDataList.value.last().let { pathData ->
+                        if (pathData.color != null) {
+                            brushPaint.color = pathData.color
+                            brushPaint.strokeWidth = pathData.size
+                            drawPath(canvas, brushPaint, pathData.path)
+                        } else {
+                            erasePaint.strokeWidth = pathData.size
+                            drawPath(canvas, erasePaint, pathData.path)
+                        }
+                    }
+                    brushPaint.color = _brushColor.value
+                    brushPaint.strokeWidth = _brushSize.value
+                    erasePaint.strokeWidth = _eraseSize.value
+
+                    _bmpUpdated.emit(Unit)
+                }
             }
         }
     }
+
+    private data class PathData(
+        val path: Path,
+        val color: Int?,
+        val size: Float
+    )
 }

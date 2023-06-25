@@ -254,8 +254,6 @@ open class ControlView @JvmOverloads constructor(
 
         val canvasXy = floatArrayOf(viewX, viewY).apply { invMatrix.mapPoints(this) }
 
-        Log.v(TAG, "onTouchEvent: ${event.action}, mask=${event.actionMasked}")
-
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
                 handleTouchDown(canvasXy[0], canvasXy[1])
