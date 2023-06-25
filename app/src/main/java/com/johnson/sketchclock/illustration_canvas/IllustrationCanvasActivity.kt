@@ -4,9 +4,11 @@ import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Illustration
 import com.johnson.sketchclock.databinding.ActivityIllustrationCanvasBinding
@@ -39,6 +41,8 @@ class IllustrationCanvasActivity : AppCompatActivity() {
 
     private lateinit var vb: ActivityIllustrationCanvasBinding
 
+    private var saved = false
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vb = ActivityIllustrationCanvasBinding.inflate(layoutInflater)
@@ -63,8 +67,39 @@ class IllustrationCanvasActivity : AppCompatActivity() {
             }
         }
 
+        lifecycleScope.launch {
+            viewModel.undoable.collectLatest {
+                saved = !it
+            }
+        }
+
+        onBackPressedDispatcher.addCallback(onBackPressedCallback)
+
         supportFragmentManager.beginTransaction()
             .replace(vb.fragContainer.id, CanvasFragment())
             .commit()
+    }
+
+    private fun showSaveDialogIfNeed(block: () -> Unit) {
+        if (saved) {
+            block()
+            return
+        }
+        MaterialAlertDialogBuilder(this)
+            .setMessage("Save changes?")
+            .setPositiveButton("Yes") { _, _ ->
+                viewModel.onEvent(CanvasEvent.Save)
+                block()
+            }
+            .setNegativeButton("No") { _, _ -> block() }
+            .show()
+    }
+
+    private val onBackPressedCallback = object : OnBackPressedCallback(true) {
+        override fun handleOnBackPressed() {
+            showSaveDialogIfNeed {
+                finish()
+            }
+        }
     }
 }
