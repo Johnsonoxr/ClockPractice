@@ -1,6 +1,7 @@
 package com.johnson.sketchclock.repository.font
 
 import android.content.Context
+import android.util.Log
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.johnson.sketchclock.common.Font
@@ -32,6 +33,10 @@ class FontRepositoryImpl @Inject constructor(
     init {
         GlobalScope.launch(Dispatchers.IO) {
             _fonts.value = loadFontList()
+            fontsDir.listFiles { pathname -> pathname?.name?.startsWith(".") == true }?.forEach {
+                it.deleteRecursively()
+                Log.d("FontRepositoryImpl", "Deleted \"${it.name}\"")
+            }
         }
     }
 
@@ -57,14 +62,21 @@ class FontRepositoryImpl @Inject constructor(
 
         if (id != -1) {
             val fontDir = File(fontsDir, id.toString())
-            val descriptionFile = File(fontDir, DESCRIPTION_FILE)
-            val gsonString = gson.toJson(
-                mapOf(
-                    KEY_FONT_NAME to font.name,
-                    KEY_LAST_MODIFIED to System.currentTimeMillis()
+            val dotFontDir = File(fontsDir, ".${id}")
+
+            if (!fontDir.exists() && dotFontDir.exists()) {
+                dotFontDir.renameTo(fontDir)
+            } else {
+                fontDir.mkdirs()
+                val descriptionFile = File(fontDir, DESCRIPTION_FILE)
+                val gsonString = gson.toJson(
+                    mapOf(
+                        KEY_FONT_NAME to font.name,
+                        KEY_LAST_MODIFIED to System.currentTimeMillis()
+                    )
                 )
-            )
-            descriptionFile.writeText(gsonString)
+                descriptionFile.writeText(gsonString)
+            }
             _fonts.value = loadFontList()
         }
 
@@ -72,12 +84,13 @@ class FontRepositoryImpl @Inject constructor(
     }
 
     override suspend fun deleteFont(font: Font) {
-        File(fontsDir, font.id.toString()).deleteRecursively()
+        File(fontsDir, font.id.toString()).renameTo(File(fontsDir, ".${font.id}"))
         _fonts.value = loadFontList()
     }
 
     private fun loadFontList(): List<Font> {
         val indices = fontsDir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.name.toIntOrNull() } ?: emptyList()
+        Log.e("FontRepositoryImpl", "indices: $indices")
         return indices.mapNotNull { index ->
             val fontDir = File(fontsDir, index.toString())
             val descriptionFile = File(fontDir, DESCRIPTION_FILE)

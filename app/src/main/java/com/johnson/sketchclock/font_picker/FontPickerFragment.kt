@@ -16,9 +16,11 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.GlideHelper
+import com.johnson.sketchclock.common.launchWhenStarted
 import com.johnson.sketchclock.databinding.DialogEdittextBinding
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemFontBinding
@@ -46,9 +48,16 @@ class FontPickerFragment : Fragment() {
         val adapter = FontAdapter()
         vb.rv.adapter = adapter
 
-        lifecycleScope.launch {
+        launchWhenStarted {
             fontRepository.getFonts().collectLatest {
                 adapter.fonts = it
+            }
+        }
+        launchWhenStarted {
+            viewModel.deletedFont.collectLatest {
+                Snackbar.make(vb.root, "Font deleted", Snackbar.LENGTH_INDEFINITE)
+                    .setAction("Undo") { viewModel.onEvent(FontPickerEvent.UndoDeleteFont) }
+                    .show()
             }
         }
 
@@ -112,7 +121,7 @@ class FontPickerFragment : Fragment() {
                     }
 
                     vb.ivDelete -> {
-                        viewModel.onEvent(FontPickerEvent.RemoveFont(font))
+                        viewModel.onEvent(FontPickerEvent.DeleteFont(font))
                     }
 
                     vb.tvFontName -> {

@@ -15,18 +15,15 @@ import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jaygoo.widget.OnRangeChangedListener
 import com.jaygoo.widget.RangeSeekBar
+import com.johnson.sketchclock.common.launchWhenStarted
 import com.johnson.sketchclock.databinding.FragmentCanvasBinding
 import com.johnson.sketchclock.databinding.ItemCanvasColorSelectorBinding
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 
 
 private const val TAG = "CanvasFragment"
@@ -36,14 +33,6 @@ class CanvasFragment : Fragment() {
     private val viewModel: CanvasViewModel by activityViewModels()
 
     private lateinit var vb: FragmentCanvasBinding
-
-    private fun launchWhenStarted(block: suspend () -> Unit) {
-        lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                block()
-            }
-        }
-    }
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

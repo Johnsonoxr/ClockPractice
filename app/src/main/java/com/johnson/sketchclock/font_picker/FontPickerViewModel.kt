@@ -3,13 +3,18 @@ package com.johnson.sketchclock.font_picker
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @HiltViewModel
 class FontPickerViewModel @Inject constructor() : ViewModel() {
+
+    private val _deletedFont = MutableSharedFlow<Font>(replay = 1)
+    val deletedFont = _deletedFont
 
     @Inject
     lateinit var fontRepository: FontRepository
@@ -22,12 +27,19 @@ class FontPickerViewModel @Inject constructor() : ViewModel() {
                     fontRepository.upsertFont(event.font)
                 }
 
-                is FontPickerEvent.RemoveFont -> {
+                is FontPickerEvent.DeleteFont -> {
                     fontRepository.deleteFont(event.font)
+                    _deletedFont.emit(event.font)
                 }
 
                 is FontPickerEvent.UpdateFont -> {
                     fontRepository.upsertFont(event.font)
+                }
+
+                is FontPickerEvent.UndoDeleteFont -> {
+                    deletedFont.replayCache.firstOrNull()?.let {
+                        fontRepository.upsertFont(it)
+                    }
                 }
             }
         }
