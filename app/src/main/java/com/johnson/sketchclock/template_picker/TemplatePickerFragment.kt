@@ -6,22 +6,18 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.johnson.sketchclock.template_editor.EditorActivity
+import com.johnson.sketchclock.common.Template
+import com.johnson.sketchclock.common.launchWhenStarted
+import com.johnson.sketchclock.common.showDialog
+import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemTemplateBinding
-import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.repository.template.TemplateRepository
-import com.johnson.sketchclock.common.Font
-import com.johnson.sketchclock.repository.font.FontRepository
+import com.johnson.sketchclock.template_editor.EditorActivity
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -29,9 +25,6 @@ class TemplatePickerFragment : Fragment() {
 
     @Inject
     lateinit var templateRepository: TemplateRepository
-
-    @Inject
-    lateinit var fontRepository: FontRepository
 
     private lateinit var vb: FragmentPickerBinding
 
@@ -48,21 +41,9 @@ class TemplatePickerFragment : Fragment() {
         vb.rv.layoutManager = LinearLayoutManager(context)
         vb.rv.adapter = adapter
 
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                templateRepository.getTemplateFlow().collect {
-                    adapter.templates = it
-                }
-            }
-        }
-
-        var defaultFont: Font? = null
-
-        viewLifecycleOwner.lifecycleScope.launch {
-            viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                fontRepository.getFonts().collectLatest {
-                    defaultFont = it.firstOrNull()
-                }
+        launchWhenStarted {
+            templateRepository.getTemplateFlow().collect {
+                adapter.templates = it
             }
         }
 
@@ -97,9 +78,10 @@ class TemplatePickerFragment : Fragment() {
                 get() = templates[adapterPosition]
 
             init {
-                vb.root.setOnClickListener(this)
+                vb.tvName.setOnClickListener(this)
                 vb.ivEdit.setOnClickListener(this)
                 vb.ivDelete.setOnClickListener(this)
+                vb.root.setOnClickListener(this)
             }
 
             fun bind() {
@@ -109,15 +91,19 @@ class TemplatePickerFragment : Fragment() {
             override fun onClick(v: View) {
                 when (v) {
                     vb.root -> {
-                        startActivity(EditorActivity.createIntent(requireContext(), template))
+                        showEditTextDialog("Rename template", template.name) { newName ->
+                            viewModel.onEvent(TemplatePickerEvent.UpdateTemplate(template.copy(name = newName)))
+                        }
                     }
 
                     vb.ivEdit -> {
-
+                        startActivity(EditorActivity.createIntent(requireContext(), template))
                     }
 
                     vb.ivDelete -> {
-                        viewModel.onEvent(TemplatePickerEvent.RemoveTemplate(template))
+                        showDialog("Delete template", "Are you sure you want to delete \"${template.name}\"?") {
+                            viewModel.onEvent(TemplatePickerEvent.RemoveTemplate(template))
+                        }
                     }
 
                     else -> Unit

@@ -1,35 +1,29 @@
 package com.johnson.sketchclock.font_picker
 
-import android.content.Context
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.launchWhenStarted
-import com.johnson.sketchclock.databinding.DialogEdittextBinding
+import com.johnson.sketchclock.common.showDialog
+import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemFontBinding
 import com.johnson.sketchclock.font_canvas.CanvasActivity
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -55,7 +49,7 @@ class FontPickerFragment : Fragment() {
         }
         launchWhenStarted {
             viewModel.deletedFont.collectLatest {
-                Snackbar.make(vb.root, "Font deleted", Snackbar.LENGTH_INDEFINITE)
+                Snackbar.make(vb.rv, "Font deleted", Snackbar.LENGTH_INDEFINITE)
                     .setAction("Undo") { viewModel.onEvent(FontPickerEvent.UndoDeleteFont) }
                     .show()
             }
@@ -121,37 +115,14 @@ class FontPickerFragment : Fragment() {
                     }
 
                     vb.ivDelete -> {
-                        viewModel.onEvent(FontPickerEvent.DeleteFont(font))
+                        showDialog("Delete Font", "Are you sure you want to delete \"${font.name}\"?") {
+                            viewModel.onEvent(FontPickerEvent.DeleteFont(font))
+                        }
                     }
 
                     vb.tvFontName -> {
-                        val ctx = context ?: return
-                        val dialogVb = DialogEdittextBinding.inflate(layoutInflater)
-
-                        MaterialAlertDialogBuilder(ctx)
-                            .setTitle("Rename Font")
-                            .setView(dialogVb.root)
-                            .setPositiveButton(android.R.string.ok) { _, _ ->
-                                val newName = dialogVb.etText.text?.toString()?.trim()
-                                if (newName.isNullOrEmpty()) {
-                                    Log.d("FontPickerFragment", "newName is null or empty")
-                                    Toast.makeText(ctx, "Font name cannot be empty", Toast.LENGTH_SHORT).show()
-                                    return@setPositiveButton
-                                }
-                                viewModel.onEvent(FontPickerEvent.UpdateFont(font.copy(name = newName)))
-                            }
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .create()
-                            .show()
-
-                        dialogVb.etText.setText(font.name)
-                        dialogVb.etText.selectAll()
-                        dialogVb.etText.requestFocus()
-
-                        lifecycleScope.launch {
-                            delay(300)
-                            val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                            imm.showSoftInput(dialogVb.etText, InputMethodManager.SHOW_IMPLICIT)
+                        showEditTextDialog("Rename Font", font.name) { newName ->
+                            viewModel.onEvent(FontPickerEvent.UpdateFont(font.copy(name = newName)))
                         }
                     }
 

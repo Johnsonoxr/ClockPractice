@@ -1,31 +1,26 @@
 package com.johnson.sketchclock.illustration_picker
 
-import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Illustration
-import com.johnson.sketchclock.databinding.DialogEdittextBinding
+import com.johnson.sketchclock.common.launchWhenStarted
+import com.johnson.sketchclock.common.showDialog
+import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemIllustrationBinding
 import com.johnson.sketchclock.illustration_canvas.IllustrationCanvasActivity
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -44,7 +39,7 @@ class IllustrationPickerFragment : Fragment() {
         val adapter = IllustrationAdapter()
         vb.rv.adapter = adapter
 
-        lifecycleScope.launch {
+        launchWhenStarted {
             illustrationRepository.getIllustrations().collectLatest {
                 adapter.illustrations = it
             }
@@ -106,37 +101,14 @@ class IllustrationPickerFragment : Fragment() {
                     }
 
                     vb.ivDelete -> {
-                        viewModel.onEvent(IllustrationPickerEvent.RemoveIllustration(illustration))
+                        showDialog("Delete Illustration", "Are you sure you want to delete ${illustration.name}?") {
+                            viewModel.onEvent(IllustrationPickerEvent.RemoveIllustration(illustration))
+                        }
                     }
 
                     vb.tvName -> {
-                        val ctx = context ?: return
-                        val dialogVb = DialogEdittextBinding.inflate(layoutInflater)
-
-                        MaterialAlertDialogBuilder(ctx)
-                            .setTitle("Rename Illustration")
-                            .setView(dialogVb.root)
-                            .setPositiveButton(android.R.string.ok) { _, _ ->
-                                val newName = dialogVb.etText.text?.toString()?.trim()
-                                if (newName.isNullOrEmpty()) {
-                                    Log.d("IllustrationPickerFragment", "newName is null or empty")
-                                    Toast.makeText(ctx, "Illustration name cannot be empty", Toast.LENGTH_SHORT).show()
-                                    return@setPositiveButton
-                                }
-                                viewModel.onEvent(IllustrationPickerEvent.UpdateIllustration(illustration.copy(name = newName)))
-                            }
-                            .setNegativeButton(android.R.string.cancel, null)
-                            .create()
-                            .show()
-
-                        dialogVb.etText.setText(illustration.name)
-                        dialogVb.etText.selectAll()
-                        dialogVb.etText.requestFocus()
-
-                        lifecycleScope.launch {
-                            delay(300)
-                            val imm = ctx.getSystemService(Context.INPUT_METHOD_SERVICE) as InputMethodManager
-                            imm.showSoftInput(dialogVb.etText, InputMethodManager.SHOW_IMPLICIT)
+                        showEditTextDialog("Rename Illustration", illustration.name) { newName ->
+                            viewModel.onEvent(IllustrationPickerEvent.UpdateIllustration(illustration.copy(name = newName)))
                         }
                     }
 
