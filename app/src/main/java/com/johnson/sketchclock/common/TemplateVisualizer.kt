@@ -67,7 +67,7 @@ class TemplateVisualizer @Inject constructor(
             EType.Month2 -> numberToCharacter(month % 10)
             EType.Day1 -> numberToCharacter(day / 10)
             EType.Day2 -> numberToCharacter(day % 10)
-            EType.Separator -> Character.SEPARATOR
+            EType.Slash -> Character.SLASH
             EType.AmPm -> if (hour < 12) Character.AM else Character.PM
             EType.Colon -> Character.COLON
             EType.Illustration -> null

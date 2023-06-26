@@ -14,14 +14,14 @@ enum class Character(val representation: String) {
     COLON(":"),
     AM("AM"),
     PM("PM"),
-    SEPARATOR("/");
+    SLASH("/");
 
     fun width(): Int {
         return when (this) {
             ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE -> Constants.NUMBER_WIDTH
             COLON -> Constants.COLON_WIDTH
             AM, PM -> Constants.AMPM_WIDTH
-            SEPARATOR -> Constants.SEPARATOR_WIDTH
+            SLASH -> Constants.SEPARATOR_WIDTH
         }
     }
 
@@ -30,7 +30,7 @@ enum class Character(val representation: String) {
             ZERO, ONE, TWO, THREE, FOUR, FIVE, SIX, SEVEN, EIGHT, NINE -> Constants.NUMBER_HEIGHT
             COLON -> Constants.COLON_HEIGHT
             AM, PM -> Constants.AMPM_HEIGHT
-            SEPARATOR -> Constants.SEPARATOR_HEIGHT
+            SLASH -> Constants.SEPARATOR_HEIGHT
         }
     }
 }

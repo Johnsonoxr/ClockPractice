@@ -73,8 +73,10 @@
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:alpha="0.5"
+        android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintEnd_toStartOf="@id/fab_1_container">
+        app:layout_constraintEnd_toStartOf="@id/fab_1_container"
+        tools:visibility="visible">
 
         <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/fab_erase"
@@ -92,8 +94,10 @@
         android:background="@drawable/round_corners_primary"
         android:backgroundTint="?attr/colorPrimaryContainer"
         android:padding="5dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/fab_1_container"
-        app:layout_constraintEnd_toEndOf="@+id/fab_1_container">
+        app:layout_constraintEnd_toEndOf="@+id/fab_1_container"
+        tools:visibility="visible">
 
         <com.jaygoo.widget.RangeSeekBar
             android:id="@+id/seekbar_stroke_width"
@@ -119,8 +123,10 @@
         android:backgroundTint="?attr/colorPrimaryContainer"
         android:orientation="horizontal"
         android:padding="5dp"
+        android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/stroke_width_container"
-        app:layout_constraintEnd_toEndOf="@+id/stroke_width_container">
+        app:layout_constraintEnd_toEndOf="@+id/stroke_width_container"
+        tools:visibility="visible">
 
         <androidx.recyclerview.widget.RecyclerView
             android:id="@+id/rv_color_secondary"

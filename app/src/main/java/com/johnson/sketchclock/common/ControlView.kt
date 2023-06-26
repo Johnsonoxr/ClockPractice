@@ -52,7 +52,7 @@ open class ControlView @JvmOverloads constructor(
         }
     }
 
-    private val matrix = Matrix()
+    private var matrix: Matrix? = null
     private val invMatrix = Matrix()
     private val tmpMatrix = Matrix()
 
@@ -66,7 +66,7 @@ open class ControlView @JvmOverloads constructor(
     var canvasSize: Size = Size(0, 0)
         set(value) {
             field = value
-            matrix.reset()
+            matrix = null
             render()
         }
 
@@ -84,7 +84,11 @@ open class ControlView @JvmOverloads constructor(
 
         if (width == 0 || height == 0) return
 
-        if (matrix.isIdentity) prepareMatrix()
+        if (matrix == null) {
+            prepareMatrix()
+        }
+
+        val m = matrix ?: return
 
         viewScope?.launch {
 
@@ -104,13 +108,13 @@ open class ControlView @JvmOverloads constructor(
             bgMatrix.preTranslate(-bgBitmap.width / 2f, -bgBitmap.height / 2f)
 
             canvas.save()
-            canvas.concat(matrix)
+            canvas.concat(m)
             canvas.clipRect(0f, 0f, canvasSize.width.toFloat(), canvasSize.height.toFloat())
             canvas.drawBitmap(bgBitmap, bgMatrix, null)
             canvas.restore()
 
             val idx = canvas.save()
-            handleDraw(canvas, matrix)
+            handleDraw(canvas, m)
             canvas.restoreToCount(idx)
 
             holder.unlockCanvasAndPost(canvas)
@@ -128,6 +132,7 @@ open class ControlView @JvmOverloads constructor(
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         Log.v(TAG, "surfaceChanged: $width, $height")
+        matrix = null
         render()
     }
 
@@ -138,6 +143,7 @@ open class ControlView @JvmOverloads constructor(
 
     private fun prepareMatrix() {
         if (width == 0 || height == 0) return
+        val m = matrix?.apply { reset() } ?: Matrix()
 
         minScale = minOf(
             (width - MARGIN * 2) / canvasSize.width.toFloat(),
@@ -145,12 +151,14 @@ open class ControlView @JvmOverloads constructor(
         )
         defaultTranslateX = (width - canvasSize.width * minScale) / 2f
         defaultTranslateY = (height - canvasSize.height * minScale) / 2f
-        matrix.setScale(minScale, minScale)
-        matrix.postTranslate(defaultTranslateX, defaultTranslateY)
-        matrix.invert(invMatrix)
+        m.setScale(minScale, minScale)
+        m.postTranslate(defaultTranslateX, defaultTranslateY)
+        m.invert(invMatrix)
 
         defaultRect.set(0f, 0f, canvasSize.width.toFloat(), canvasSize.height.toFloat())
-        matrix.mapRect(defaultRect)
+        m.mapRect(defaultRect)
+
+        matrix = m
     }
 
     private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
@@ -163,8 +171,8 @@ open class ControlView @JvmOverloads constructor(
 
     private val scaleGestureDetector = object : ScaleDetector() {
         override fun onScale(matrix: Matrix) {
-            this@ControlView.matrix.postConcat(matrix)
-            this@ControlView.matrix.invert(invMatrix)
+            this@ControlView.matrix?.postConcat(matrix)
+            this@ControlView.matrix?.invert(invMatrix)
             render()
         }
 
@@ -178,7 +186,9 @@ open class ControlView @JvmOverloads constructor(
     }
 
     private fun restoreMatrixIfNeed() {
-        tmpMatrix.set(matrix)
+        val m = matrix ?: return
+
+        tmpMatrix.set(m)
         val v1 = FloatArray(9)
         tmpMatrix.getValues(v1)
 
@@ -231,8 +241,8 @@ open class ControlView @JvmOverloads constructor(
                 v2[Matrix.MSCALE_Y] *= dScaleIntermediate
                 v2[Matrix.MTRANS_X] += dxIntermediate
                 v2[Matrix.MTRANS_Y] += dyIntermediate
-                matrix.setValues(v2)
-                matrix.invert(invMatrix)
+                m.setValues(v2)
+                m.invert(invMatrix)
                 render()
             }
         }.start()

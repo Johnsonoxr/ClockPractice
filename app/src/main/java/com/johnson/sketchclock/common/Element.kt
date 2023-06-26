@@ -25,14 +25,14 @@ enum class EType {
     Day2,
     Colon,
     AmPm,
-    Separator,
+    Slash,
     Illustration;
 
     fun width() = when (this) {
         Hour1, Hour2, Minute1, Minute2, Month1, Month2, Day1, Day2 -> Constants.NUMBER_WIDTH
         Colon -> Constants.COLON_WIDTH
         AmPm -> Constants.AMPM_WIDTH
-        Separator -> Constants.SEPARATOR_WIDTH
+        Slash -> Constants.SEPARATOR_WIDTH
         Illustration -> Constants.ILLUSTRATION_WIDTH
     }
 
@@ -40,7 +40,7 @@ enum class EType {
         Hour1, Hour2, Minute1, Minute2, Month1, Month2, Day1, Day2 -> Constants.NUMBER_HEIGHT
         Colon -> Constants.COLON_HEIGHT
         AmPm -> Constants.AMPM_HEIGHT
-        Separator -> Constants.SEPARATOR_HEIGHT
+        Slash -> Constants.SEPARATOR_HEIGHT
         Illustration -> Constants.ILLUSTRATION_HEIGHT
     }
 }

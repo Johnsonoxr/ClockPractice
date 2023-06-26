@@ -21,6 +21,8 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jaygoo.widget.OnRangeChangedListener
 import com.jaygoo.widget.RangeSeekBar
 import com.johnson.sketchclock.common.launchWhenStarted
+import com.johnson.sketchclock.common.scaleIn
+import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentCanvasBinding
 import com.johnson.sketchclock.databinding.ItemCanvasColorSelectorBinding
 import kotlinx.coroutines.flow.collectLatest
@@ -156,22 +158,18 @@ class CanvasFragment : Fragment() {
             override fun onStartTrackingTouch(view: RangeSeekBar?, isLeft: Boolean) {}
             override fun onStopTrackingTouch(view: RangeSeekBar?, isLeft: Boolean) {}
         })
-
-        showStrokeWidthSeekbar(false)
-        showColorPanel(false)
-        showFab2(false)
     }
 
     private fun showStrokeWidthSeekbar(show: Boolean) {
-        vb.strokeWidthContainer.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) vb.strokeWidthContainer.scaleIn() else vb.strokeWidthContainer.scaleOut()
     }
 
     private fun showColorPanel(show: Boolean) {
-        vb.colorContainer.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) vb.colorContainer.scaleIn() else vb.colorContainer.scaleOut()
     }
 
     private fun showFab2(show: Boolean) {
-        vb.fab2Container.visibility = if (show) View.VISIBLE else View.GONE
+        if (show) vb.fab2Container.scaleIn() else vb.fab2Container.scaleOut()
     }
 
 //    private fun showColorPickerDialog() {
