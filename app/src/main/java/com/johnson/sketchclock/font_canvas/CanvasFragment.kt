@@ -96,17 +96,13 @@ class CanvasFragment : Fragment() {
 
         vb.fabPaint.setOnClickListener {
             if (viewModel.isEraseMode.value) {
-                showStrokeWidthSeekbar(false)
-                showColorPanel(false)
-                showFab2(false)
+                showControlPanels(strokeWidth = false, colorPanel = false, fab2 = false)
                 viewModel.onEvent(CanvasEvent.SetIsEraseMode(false))
                 return@setOnClickListener
             }
 
-            val isShowingControlPanels = vb.fab2Container.isVisible
-            showFab2(!isShowingControlPanels)
-            showStrokeWidthSeekbar(!isShowingControlPanels)
-            showColorPanel(!isShowingControlPanels)
+            val show = !vb.fab2Container.isVisible
+            showControlPanels(strokeWidth = show, colorPanel = show, fab2 = show)
         }
 
         vb.fabUndo.setOnClickListener {
@@ -119,17 +115,13 @@ class CanvasFragment : Fragment() {
 
         vb.fabErase.setOnClickListener {
             if (!viewModel.isEraseMode.value) {
-                showFab2(false)
-                showStrokeWidthSeekbar(false)
-                showColorPanel(false)
+                showControlPanels(strokeWidth = false, colorPanel = false, fab2 = false)
                 viewModel.onEvent(CanvasEvent.SetIsEraseMode(true))
                 return@setOnClickListener
             }
 
-            val isShowingControlPanels = vb.fab2Container.isVisible
-            showFab2(!isShowingControlPanels)
-            showStrokeWidthSeekbar(!isShowingControlPanels)
-            showColorPanel(false)
+            val show = !vb.fab2Container.isVisible
+            showControlPanels(strokeWidth = show, fab2 = show)
         }
 
         vb.fabClear.setOnClickListener {
@@ -160,16 +152,14 @@ class CanvasFragment : Fragment() {
         })
     }
 
-    private fun showStrokeWidthSeekbar(show: Boolean) {
-        if (show) vb.strokeWidthContainer.scaleIn() else vb.strokeWidthContainer.scaleOut()
-    }
-
-    private fun showColorPanel(show: Boolean) {
-        if (show) vb.colorContainer.scaleIn() else vb.colorContainer.scaleOut()
-    }
-
-    private fun showFab2(show: Boolean) {
-        if (show) vb.fab2Container.scaleIn() else vb.fab2Container.scaleOut()
+    private fun showControlPanels(
+        strokeWidth: Boolean? = null,
+        colorPanel: Boolean? = null,
+        fab2: Boolean? = null
+    ) {
+        strokeWidth?.let { if (it) vb.strokeWidthContainer.scaleIn() else vb.strokeWidthContainer.scaleOut() }
+        colorPanel?.let { if (it) vb.colorContainer.scaleIn() else vb.colorContainer.scaleOut() }
+        fab2?.let { if (it) vb.fab2Container.scaleIn() else vb.fab2Container.scaleOut() }
     }
 
 //    private fun showColorPickerDialog() {
