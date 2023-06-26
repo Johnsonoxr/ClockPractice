@@ -34,6 +34,9 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _name = MutableStateFlow<String?>(null)
     val name: StateFlow<String?> = _name
 
+    private val _selectedElements = MutableStateFlow<List<Element>>(emptyList())
+    val selectedElements: StateFlow<List<Element>> = _selectedElements
+
     private val _templateSaved = MutableSharedFlow<Template>()
     val templateSaved: SharedFlow<Template> = _templateSaved
 
@@ -80,16 +83,20 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                     _resUpdated.emit(Unit)
                 }
 
-                is EditorEvent.AddPieces -> {
+                is EditorEvent.AddElements -> {
                     _elements.value?.let {
                         _elements.value = it + event.elements
                     }
                 }
 
-                is EditorEvent.RemovePieces -> {
+                is EditorEvent.RemoveElements -> {
                     _elements.value?.let {
                         _elements.value = it - event.elements.toSet()
                     }
+                }
+
+                is EditorEvent.SetSelectedElements -> {
+                    _selectedElements.value = event.elements
                 }
             }
         }

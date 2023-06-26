@@ -164,7 +164,8 @@ open class ControlView @JvmOverloads constructor(
     private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             handleTouchCanceled()
-            handleClick(e.x, e.y)
+            val pt = floatArrayOf(e.x, e.y).also { invMatrix.mapPoints(it) }
+            handleClick(pt[0], pt[1])
             return true
         }
     })

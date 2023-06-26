@@ -9,16 +9,16 @@ import android.view.animation.OvershootInterpolator
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.lifecycleScope
 import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Template
+import com.johnson.sketchclock.common.launchWhenStarted
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentEditorBinding
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
+import java.lang.ref.WeakReference
 
 private const val TEMPLATE = "template"
 
@@ -38,19 +38,25 @@ class EditorFragment : Fragment() {
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
+        launchWhenStarted {
             viewModel.elements.collectLatest { pieces ->
                 vb.controlView.elements = pieces
             }
         }
 
-        viewLifecycleOwner.lifecycleScope.launch {
+        launchWhenStarted {
             viewModel.resUpdated.collectLatest {
                 vb.controlView.render()
             }
         }
 
-        vb.controlView.visualizer = viewModel.visualizer
+        launchWhenStarted {
+            viewModel.selectedElements.collectLatest { selectedElements ->
+                vb.controlView.selectedElements = selectedElements
+            }
+        }
+
+        vb.controlView.viewModelRef = WeakReference(viewModel)
 
         vb.fabDone.setOnClickListener {
             viewModel.onEvent(EditorEvent.Save)
@@ -62,17 +68,17 @@ class EditorFragment : Fragment() {
 
         vb.fabAddTime.setOnClickListener {
             showAddFabs(false)
-            viewModel.onEvent(EditorEvent.AddPieces(createTimeTemplate()))
+            viewModel.onEvent(EditorEvent.AddElements(createTimeTemplate()))
         }
 
         vb.fabAddDate.setOnClickListener {
             showAddFabs(false)
-            viewModel.onEvent(EditorEvent.AddPieces(createDateTemplate()))
+            viewModel.onEvent(EditorEvent.AddElements(createDateTemplate()))
         }
 
         vb.fabAddIllustration.setOnClickListener {
             showAddFabs(false)
-            viewModel.onEvent(EditorEvent.AddPieces(listOf(createIllustrationTemplate())))
+            viewModel.onEvent(EditorEvent.AddElements(listOf(createIllustrationTemplate())))
         }
     }
 
