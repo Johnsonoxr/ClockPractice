@@ -1,5 +1,6 @@
 package com.johnson.sketchclock.common
 
+import android.content.Context
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
@@ -26,4 +27,10 @@ fun View.scaleOut() {
             visibility = View.GONE
         }
         .start()
+}
+
+fun Context.getAttrColor(attr: Int): Int {
+    val typedValue = android.util.TypedValue()
+    theme.resolveAttribute(attr, typedValue, true)
+    return typedValue.data
 }

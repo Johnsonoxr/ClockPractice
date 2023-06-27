@@ -7,7 +7,7 @@ import com.johnson.sketchclock.common.Font
 sealed class EditorEvent {
     data class Init(val template: Template) : EditorEvent()
     data class AddElements(val elements: List<Element>) : EditorEvent()
-    data class RemoveElements(val elements: List<Element>) : EditorEvent()
+    data class DeleteElements(val elements: List<Element>) : EditorEvent()
     data class SetSelectedElements(val elements: List<Element>) : EditorEvent()
     data class ChangeFont(val elements: Element, val font: Font) : EditorEvent()
     object Save : EditorEvent()

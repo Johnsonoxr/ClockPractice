@@ -89,7 +89,7 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                     }
                 }
 
-                is EditorEvent.RemoveElements -> {
+                is EditorEvent.DeleteElements -> {
                     _elements.value?.let {
                         _elements.value = it - event.elements.toSet()
                     }
