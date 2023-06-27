@@ -72,9 +72,6 @@ class CanvasView @JvmOverloads constructor(
     private var prevX = 0f
     private var prevY = 0f
 
-    override fun handleClick(x: Float, y: Float) {
-    }
-
     override fun handleDraw(canvas: Canvas, matrix: Matrix) {
         bitmap?.let { canvas.drawBitmap(it, matrix, null) }
         path?.let {
@@ -94,12 +91,14 @@ class CanvasView @JvmOverloads constructor(
         path?.moveTo(x, y)
         prevX = x
         prevY = y
+        render()
     }
 
     override fun handleTouchMove(x: Float, y: Float) {
         path?.quadTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2)
         prevX = x
         prevY = y
+        render()
     }
 
     override fun handleTouchUp(x: Float, y: Float) {
@@ -108,9 +107,11 @@ class CanvasView @JvmOverloads constructor(
             addPathListener?.invoke(it)
         }
         path = null
+        render()
     }
 
     override fun handleTouchCanceled() {
         path = null
+        render()
     }
 }

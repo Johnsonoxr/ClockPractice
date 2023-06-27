@@ -25,12 +25,16 @@ class EditorView @JvmOverloads constructor(
         private const val TAG = "EditorView"
     }
 
+    private val relativeMatrixMap = mutableMapOf<Element, Matrix>()
     private var elementGroup: ElementGroup? = null
-    override val preHandleMatrix: Matrix = Matrix()
+    private var cachedGroupMatrix: Matrix? = null
+    private var touchDownPoint: PointF? = null
+
+    override val matrixAppliedBeforeHandle: Matrix = Matrix()
 
     init {
         canvasSize = Size(Constants.TEMPLATE_WIDTH, Constants.TEMPLATE_HEIGHT)
-        preHandleMatrix.setTranslate(-Constants.TEMPLATE_WIDTH / 2f, -Constants.TEMPLATE_HEIGHT / 2f)
+        matrixAppliedBeforeHandle.setTranslate(-Constants.TEMPLATE_WIDTH / 2f, -Constants.TEMPLATE_HEIGHT / 2f)
     }
 
     var viewModelRef: WeakReference<EditorViewModel>? = null
@@ -46,17 +50,19 @@ class EditorView @JvmOverloads constructor(
         set(value) {
             Log.v(TAG, "set selectedElements: $value")
             field = value
-
-            if (value.isEmpty()) {
-                elementGroup = null
-            } else {
-                setupSelectedRect(value)
-            }
+            setupGroup(value)
 
             render()
         }
 
-    private fun setupSelectedRect(selectedElements: List<Element>) {
+    private fun setupGroup(selectedElements: List<Element>?) {
+        relativeMatrixMap.clear()
+
+        if (selectedElements.isNullOrEmpty()) {
+            elementGroup = null
+            return
+        }
+
         val corners = selectedElements.map { it.corners() }.flatten().chunked(2).map { PointF(it[0], it[1]) }
         val left = corners.minByOrNull { it.x }?.x ?: 0f
         val right = corners.maxByOrNull { it.x }?.x ?: 0f
@@ -64,10 +70,20 @@ class EditorView @JvmOverloads constructor(
         val bottom = corners.maxByOrNull { it.y }?.y ?: 0f
 
 
-        val rect = RectF(left - 5.dp(), top - 5.dp(), right + 5.dp(), bottom + 5.dp())
-        val matrix = Matrix().apply { setTranslate(rect.centerX(), rect.centerY()) }
-        rect.offset(-rect.centerX(), -rect.centerY())
-        elementGroup = ElementGroup(rect, matrix)
+        val groupRect = RectF(left - 5.dp(), top - 5.dp(), right + 5.dp(), bottom + 5.dp())
+        val groupMatrix = Matrix().apply { setTranslate(groupRect.centerX(), groupRect.centerY()) }
+        groupRect.offset(-groupRect.centerX(), -groupRect.centerY())
+        elementGroup = ElementGroup(groupRect, groupMatrix)
+
+        //  elementM = groupM * relativeElementM
+        //  Both sides multiply groupM^-1, we get:
+        //  groupM^-1 * elementM = groupM^-1 * groupM * relativeElementM = relativeElementM
+        //  So we can get relativeElementM by multiplying groupM^-1 * elementM
+        val groupMatrixInv = Matrix().apply { groupMatrix.invert(this) }
+        selectedElements.forEach { element ->
+            val relativeElementMatrix = Matrix(element.matrix()).apply { postConcat(groupMatrixInv) }
+            relativeMatrixMap[element] = relativeElementMatrix
+        }
     }
 
     override fun onDetachedFromWindow() {
@@ -113,21 +129,54 @@ class EditorView @JvmOverloads constructor(
         strokeWidth = 5f
     }
 
-    private var ctlMatrix: Matrix? = null
-
     override fun handleTouchDown(x: Float, y: Float) {
-        ctlMatrix = Matrix()
+        if (elementGroup?.contains(x, y) != true) {
+            return
+        }
+        touchDownPoint = PointF(x, y)
+        cachedGroupMatrix = elementGroup?.matrix?.let { Matrix(it) }
+        render()
     }
 
     override fun handleTouchMove(x: Float, y: Float) {
         val group = elementGroup ?: return
-        group.matrix
+        val touchDownPoint = touchDownPoint ?: return
+
+        group.matrix.set(cachedGroupMatrix)
+        group.matrix.postTranslate(x - touchDownPoint.x, y - touchDownPoint.y)
+        updateElementMatrices()
+
+        render()
     }
 
     override fun handleTouchUp(x: Float, y: Float) {
+        cachedGroupMatrix = null
+        touchDownPoint = null
+        render()
     }
 
     override fun handleTouchCanceled() {
+        val group = elementGroup ?: return
+        val cachedMatrix = cachedGroupMatrix ?: return
+
+        group.matrix.set(cachedMatrix)
+        updateElementMatrices()
+        cachedGroupMatrix = null
+        touchDownPoint = null
+
+        render()
+    }
+
+    private fun updateElementMatrices() {
+        val group = elementGroup ?: return
+        selectedElements.forEach { element ->
+            relativeMatrixMap[element]?.let { relativeMatrix ->
+                element.matrix().apply {
+                    set(group.matrix)
+                    preConcat(relativeMatrix)
+                }
+            }
+        }
     }
 
     private fun Element.corners(): List<Float> {
