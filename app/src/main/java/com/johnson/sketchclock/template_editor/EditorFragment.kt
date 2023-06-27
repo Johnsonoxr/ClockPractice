@@ -1,5 +1,6 @@
 package com.johnson.sketchclock.template_editor
 
+import android.graphics.Matrix
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
@@ -103,8 +104,12 @@ class EditorFragment : Fragment() {
             EType.Colon,
             EType.Minute1,
             EType.Minute2
-        ).mapIndexed { index, pieceType ->
-            Element(eType = pieceType, x = index * 108.0f - 216, y = 0.0f, scale = 0.3f, rotation = 0.0f, resId = 0)
+        ).mapIndexed { index, eType ->
+            Element(eType = eType, resId = 0, Matrix().let { matrix ->
+                matrix.postScale(0.3f, 0.3f)
+                matrix.postTranslate(index * 108.0f - 216, 0.0f)
+                FloatArray(9).apply { matrix.getValues(this) }
+            })
         }
     }
 
@@ -115,8 +120,12 @@ class EditorFragment : Fragment() {
             EType.Slash,
             EType.Day1,
             EType.Day2,
-        ).mapIndexed { index, pieceType ->
-            Element(eType = pieceType, x = index * 108.0f - 216, y = 0.0f, scale = 0.3f, rotation = 0.0f, resId = 0)
+        ).mapIndexed { index, eType ->
+            Element(eType = eType, resId = 0, Matrix().let { matrix ->
+                matrix.postScale(0.3f, 0.3f)
+                matrix.postTranslate(index * 108.0f - 216, 0.0f)
+                FloatArray(9).apply { matrix.getValues(this) }
+            })
         }
     }
 

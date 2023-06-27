@@ -30,10 +30,7 @@ class TemplateVisualizer @Inject constructor(
      */
     fun draw(canvas: Canvas, elements: List<Element>, timeMillis: Long? = null) {
         elements.forEach { element ->
-            matrix.reset()
-            matrix.preTranslate(element.x, element.y)
-            matrix.preScale(element.scale, element.scale)
-            matrix.preRotate(element.rotation)
+            matrix.set(element.matrix())
             matrix.preTranslate(-element.width() / 2f, -element.height() / 2f)
             loadBitmap(element, timeMillis)?.let {
                 canvas.drawBitmap(it, matrix, null)
@@ -125,11 +122,7 @@ class TemplateVisualizer @Inject constructor(
                 halfWidth, halfHeight,
                 -halfWidth, halfHeight
             )
-            matrix.reset()
-            matrix.setTranslate(element.x, element.y)
-            matrix.preScale(element.scale, element.scale)
-            matrix.preRotate(element.rotation)
-            matrix.mapPoints(cornerArray)
+            element.matrix().mapPoints(cornerArray)
 
             cornerArray.asList().chunked(2).forEach { (x, y) ->
                 maxX = max(maxX, x)

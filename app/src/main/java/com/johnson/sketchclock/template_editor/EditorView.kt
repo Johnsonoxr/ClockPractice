@@ -10,11 +10,11 @@ import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
 import android.util.Size
+import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.ControlView
 import com.johnson.sketchclock.common.Element
 import java.lang.ref.WeakReference
 
-@Suppress("NAME_SHADOWING")
 class EditorView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
@@ -25,11 +25,13 @@ class EditorView @JvmOverloads constructor(
         private const val TAG = "EditorView"
     }
 
-    init {
-        canvasSize = Size(1000, 1000)
-    }
+    private var elementGroup: ElementGroup? = null
+    override val preHandleMatrix: Matrix = Matrix()
 
-    private val selectedMatrix = Matrix()
+    init {
+        canvasSize = Size(Constants.TEMPLATE_WIDTH, Constants.TEMPLATE_HEIGHT)
+        preHandleMatrix.setTranslate(-Constants.TEMPLATE_WIDTH / 2f, -Constants.TEMPLATE_HEIGHT / 2f)
+    }
 
     var viewModelRef: WeakReference<EditorViewModel>? = null
 
@@ -46,8 +48,7 @@ class EditorView @JvmOverloads constructor(
             field = value
 
             if (value.isEmpty()) {
-                selectedCenter = null
-                selectedMatrix.reset()
+                elementGroup = null
             } else {
                 setupSelectedRect(value)
             }
@@ -55,23 +56,18 @@ class EditorView @JvmOverloads constructor(
             render()
         }
 
-    private var selectedCenter: PointF? = null
-
     private fun setupSelectedRect(selectedElements: List<Element>) {
-        val elementCorners: FloatArray = selectedElements.map { it.corners() }.flatten().toFloatArray()
-        val averageRotation = selectedElements.map { degreeCentralizedByZero(it.rotation) }.average().toFloat()
-        selectedMatrix.reset()
-        selectedMatrix.setRotate(averageRotation)
-        selectedMatrix.mapPoints(elementCorners)
+        val corners = selectedElements.map { it.corners() }.flatten().chunked(2).map { PointF(it[0], it[1]) }
+        val left = corners.minByOrNull { it.x }?.x ?: 0f
+        val right = corners.maxByOrNull { it.x }?.x ?: 0f
+        val top = corners.minByOrNull { it.y }?.y ?: 0f
+        val bottom = corners.maxByOrNull { it.y }?.y ?: 0f
 
-        val pts = elementCorners.toList().chunked(2).map { PointF(it[0], it[1]) }
-        val left = pts.minByOrNull { it.x }?.x ?: 0f
-        val right = pts.maxByOrNull { it.x }?.x ?: 0f
-        val top = pts.minByOrNull { it.y }?.y ?: 0f
-        val bottom = pts.maxByOrNull { it.y }?.y ?: 0f
-        val selectedRect = RectF(left, top, right, bottom)
 
-        selectedCenter = PointF(selectedRect.centerX(), selectedRect.centerY())
+        val rect = RectF(left - 5.dp(), top - 5.dp(), right + 5.dp(), bottom + 5.dp())
+        val matrix = Matrix().apply { setTranslate(rect.centerX(), rect.centerY()) }
+        rect.offset(-rect.centerX(), -rect.centerY())
+        elementGroup = ElementGroup(rect, matrix)
     }
 
     override fun onDetachedFromWindow() {
@@ -80,11 +76,10 @@ class EditorView @JvmOverloads constructor(
     }
 
     override fun handleClick(x: Float, y: Float) {
-        val x = x - canvasSize.width / 2f
-        val y = y - canvasSize.height / 2f
-        Log.v(TAG, "handleClick: $x, $y")
-        elements?.find { it.contains(x, y) }?.let { element ->
-            viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(listOf(element)))
+        when (val newSelectedElement = elements?.findLast { it.contains(x, y) }) {
+            null -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(emptyList()))
+            in selectedElements -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements - newSelectedElement))
+            else -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements + newSelectedElement))
         }
     }
 
@@ -93,12 +88,22 @@ class EditorView @JvmOverloads constructor(
         val visualizer = viewModelRef?.get()?.visualizer ?: return
 
         canvas.concat(matrix)
-        canvas.translate(canvasSize.width / 2f, canvasSize.height / 2f)
-
         visualizer.draw(canvas, elements)
 
-        selectedCenter?.let {
-            canvas.drawCircle(it.x, it.y, 10f, testPaint)
+        testPaint.strokeWidth = 5f
+        elementGroup?.let { group ->
+            canvas.save()
+            canvas.concat(group.matrix)
+            canvas.drawRect(group.rect, testPaint)
+            canvas.restore()
+        }
+
+        testPaint.strokeWidth = 3f
+        selectedElements.forEach { element ->
+            canvas.save()
+            canvas.concat(element.matrix())
+            canvas.drawRect(-element.width() / 2f, -element.height() / 2f, element.width() / 2f, element.height() / 2f, testPaint)
+            canvas.restore()
         }
     }
 
@@ -108,10 +113,15 @@ class EditorView @JvmOverloads constructor(
         strokeWidth = 5f
     }
 
+    private var ctlMatrix: Matrix? = null
+
     override fun handleTouchDown(x: Float, y: Float) {
+        ctlMatrix = Matrix()
     }
 
     override fun handleTouchMove(x: Float, y: Float) {
+        val group = elementGroup ?: return
+        group.matrix
     }
 
     override fun handleTouchUp(x: Float, y: Float) {
@@ -120,38 +130,34 @@ class EditorView @JvmOverloads constructor(
     override fun handleTouchCanceled() {
     }
 
-    private fun degreeCentralizedByZero(degree: Float): Float {
-        return when {
-            degree > 180 -> degree % 360
-            degree < -180 -> degree % 360 + 360
-            else -> degree
-        }
-    }
-
     private fun Element.corners(): List<Float> {
-        val matrix = Matrix()
-        matrix.setRotate(rotation)
-        matrix.postScale(scale, scale)
-        matrix.postTranslate(x, y)
         val corners = floatArrayOf(
             -width() / 2f, -height() / 2f,
             width() / 2f, -height() / 2f,
             width() / 2f, height() / 2f,
             -width() / 2f, height() / 2f
         )
-        matrix.mapPoints(corners)
+        matrix().mapPoints(corners)
         return corners.toList()
     }
 
     private fun Element.contains(x: Float, y: Float): Boolean {
-        val matrix = Matrix()
-        matrix.setRotate(this.rotation)
-        matrix.postScale(this.scale, this.scale)
-        matrix.postTranslate(this.x, this.y)
-        val inv = Matrix()
-        matrix.invert(inv)
         val pt = floatArrayOf(x, y)
+        val inv = Matrix().apply { matrix().invert(this) }
         inv.mapPoints(pt)
         return pt[0] >= -width() / 2f && pt[0] <= width() / 2f && pt[1] >= -height() / 2f && pt[1] <= height() / 2f
+    }
+
+    private data class ElementGroup(val rect: RectF, val matrix: Matrix) {
+        fun contains(x: Float, y: Float): Boolean {
+            val pt = floatArrayOf(x, y)
+            val inv = Matrix().apply { matrix.invert(this) }
+            inv.mapPoints(pt)
+            return rect.contains(pt[0], pt[1])
+        }
+    }
+
+    private fun Int.dp(): Float {
+        return this * resources.displayMetrics.density
     }
 }

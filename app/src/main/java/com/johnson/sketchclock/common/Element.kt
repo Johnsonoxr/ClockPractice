@@ -1,17 +1,48 @@
 package com.johnson.sketchclock.common
 
+import android.graphics.Matrix
 import java.io.Serializable
 
 data class Element(
     val eType: EType,
-    var x: Float = 0f,
-    var y: Float = 0f,
-    var scale: Float = 1f,
-    var rotation: Float = 0f,
-    var resId: Int = -1 //  fontId or illustrationId
+    var resId: Int = -1, //  fontId or illustrationId
+    private val matrixArray: FloatArray = FloatArray(9).apply { Matrix.IDENTITY_MATRIX.getValues(this) },
 ) : Serializable {
+
+    @Transient
+    private var m: Matrix? = null
+
     fun width() = eType.width()
     fun height() = eType.height()
+
+    fun matrix(): Matrix {
+        return m ?: Matrix().apply {
+            setValues(matrixArray)
+            m = this
+        }
+    }
+
+    fun commitMatrix() {
+        m?.getValues(matrixArray)
+    }
+
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as Element
+
+        if (eType != other.eType) return false
+        if (resId != other.resId) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = eType.hashCode()
+        result = 31 * result + resId
+        return result
+    }
 }
 
 enum class EType {

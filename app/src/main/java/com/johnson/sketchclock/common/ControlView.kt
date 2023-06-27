@@ -63,6 +63,8 @@ open class ControlView @JvmOverloads constructor(
     private var defaultTranslateX = 0f
     private var defaultTranslateY = 0f
 
+    protected open val preHandleMatrix: Matrix? = null
+
     var canvasSize: Size = Size(0, 0)
         set(value) {
             field = value
@@ -114,7 +116,12 @@ open class ControlView @JvmOverloads constructor(
             canvas.restore()
 
             val idx = canvas.save()
-            handleDraw(canvas, m)
+            val handledMatrix = preHandleMatrix?.let {
+                it.invert(tmpMatrix)
+                tmpMatrix.postConcat(m)
+                tmpMatrix
+            } ?: m
+            handleDraw(canvas, handledMatrix)
             canvas.restoreToCount(idx)
 
             holder.unlockCanvasAndPost(canvas)
@@ -165,6 +172,7 @@ open class ControlView @JvmOverloads constructor(
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             handleTouchCanceled()
             val pt = floatArrayOf(e.x, e.y).also { invMatrix.mapPoints(it) }
+            preHandleMatrix?.mapPoints(pt)
             handleClick(pt[0], pt[1])
             return true
         }
@@ -263,7 +271,9 @@ open class ControlView @JvmOverloads constructor(
         val viewX = event.x
         val viewY = event.y
 
-        val canvasXy = floatArrayOf(viewX, viewY).apply { invMatrix.mapPoints(this) }
+        val canvasXy = floatArrayOf(viewX, viewY)
+        invMatrix.mapPoints(canvasXy)
+        preHandleMatrix?.mapPoints(canvasXy)
 
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
