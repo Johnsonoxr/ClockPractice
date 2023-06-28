@@ -3,7 +3,7 @@ package com.johnson.sketchclock.common
 import android.graphics.Matrix
 import java.io.Serializable
 
-data class Element(
+class Element(
     val eType: EType,
     var resId: Int = -1, //  fontId or illustrationId
     private val matrixArray: FloatArray = FloatArray(9).apply { Matrix.IDENTITY_MATRIX.getValues(this) },
@@ -26,22 +26,8 @@ data class Element(
         m?.getValues(matrixArray)
     }
 
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as Element
-
-        if (eType != other.eType) return false
-        if (resId != other.resId) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = eType.hashCode()
-        result = 31 * result + resId
-        return result
+    override fun toString(): String {
+        return "Element(eType=$eType, resId=$resId)"
     }
 }
 

@@ -69,17 +69,25 @@ class EditorFragment : Fragment() {
 
         vb.fabAddTime.setOnClickListener {
             showAddFabs(false)
-            viewModel.onEvent(EditorEvent.AddElements(createTimeTemplate()))
+            val elements = createTimeTemplate()
+            viewModel.onEvent(EditorEvent.AddElements(elements))
+            viewModel.onEvent(EditorEvent.SetSelectedElements(elements))
         }
 
         vb.fabAddDate.setOnClickListener {
             showAddFabs(false)
-            viewModel.onEvent(EditorEvent.AddElements(createDateTemplate()))
+            val elements = createDateTemplate()
+            viewModel.onEvent(EditorEvent.AddElements(elements))
+            viewModel.onEvent(EditorEvent.SetSelectedElements(elements))
         }
 
         vb.fabAddIllustration.setOnClickListener {
             showAddFabs(false)
             viewModel.onEvent(EditorEvent.AddElements(listOf(createIllustrationTemplate())))
+        }
+
+        vb.controlView.onOptionClicked = { elements ->
+
         }
     }
 

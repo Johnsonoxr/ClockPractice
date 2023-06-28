@@ -25,7 +25,7 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     @Inject
     lateinit var fontRepository: FontRepository
 
-    private val _elements = MutableStateFlow<List<Element>?>(null)
+    private val _elements = MutableStateFlow<List<Element>>(emptyList())
     val elements: StateFlow<List<Element>?> = _elements
 
     private val _templateId = MutableStateFlow<Int?>(null)
@@ -47,7 +47,7 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     lateinit var visualizer: TemplateVisualizer
 
     val isInitialized: Boolean
-        get() = _elements.value != null
+        get() = _templateId.value != null
 
     fun onEvent(event: EditorEvent) {
         Log.v("EditorViewModel", "onEvent: $event")
@@ -61,13 +61,13 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.Reset -> {
-                    _elements.value = null
+                    _elements.value = emptyList()
                     _templateId.value = null
                     _name.value = null
                 }
 
                 is EditorEvent.Save -> {
-                    val elements = _elements.value ?: return@launch
+                    val elements = _elements.value
                     val templateId = _templateId.value ?: return@launch
                     val template = Template(
                         id = templateId,
@@ -84,15 +84,12 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.AddElements -> {
-                    _elements.value?.let {
-                        _elements.value = it + event.elements
-                    }
+                    _elements.value += event.elements
                 }
 
                 is EditorEvent.DeleteElements -> {
-                    _elements.value?.let {
-                        _elements.value = it - event.elements.toSet()
-                    }
+                    _elements.value -= event.elements
+                    _selectedElements.value -= event.elements
                 }
 
                 is EditorEvent.SetSelectedElements -> {
