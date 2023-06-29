@@ -17,6 +17,7 @@ import android.util.Size
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.ControlView
+import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import java.lang.ref.WeakReference
 import kotlin.math.atan2
@@ -109,6 +110,10 @@ class EditorView @JvmOverloads constructor(
 
     var onOptionClicked: ((List<Element>) -> Unit)? = null
 
+    private val isOptionAvailable: Boolean
+        get() = selectedElements.size == 1 && !selectedElements.first().eType.isCharacter()   // one Illustration only
+                || selectedElements.isNotEmpty() && selectedElements.all { it.eType.isCharacter() }    //  Characters only
+
     private fun setupGroup(selectedElements: List<Element>?) {
         relativeMatrixMap.clear()
 
@@ -152,7 +157,7 @@ class EditorView @JvmOverloads constructor(
             return
         }
 
-        if (elementGroup?.isTouchingIcon(OPTIONS_CORNER_IDX, x, y) == true) {
+        if (isOptionAvailable && elementGroup?.isTouchingIcon(OPTIONS_CORNER_IDX, x, y) == true) {
             onOptionClicked?.invoke(selectedElements)
             return
         }
@@ -200,7 +205,9 @@ class EditorView @JvmOverloads constructor(
             deleteBitmap?.let { drawCornerIcon(it, DELETE_CORNER_IDX, canvas) }
             scaleBitmap?.let { drawCornerIcon(it, SCALE_CORNER_IDX, canvas) }
             rotateBitmap?.let { drawCornerIcon(it, ROTATE_CORNER_IDX, canvas) }
-            optionsBitmap?.let { drawCornerIcon(it, OPTIONS_CORNER_IDX, canvas) }
+            if (isOptionAvailable) {
+                optionsBitmap?.let { drawCornerIcon(it, OPTIONS_CORNER_IDX, canvas) }
+            }
         }
     }
 

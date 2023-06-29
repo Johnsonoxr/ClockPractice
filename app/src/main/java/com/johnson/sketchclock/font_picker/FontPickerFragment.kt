@@ -100,6 +100,8 @@ class FontPickerFragment : Fragment() {
                 GlideHelper.load(vb.ivPreview0, font.getCharacterFile(Character.ZERO))
                 GlideHelper.load(vb.ivPreview1, font.getCharacterFile(Character.ONE))
                 GlideHelper.load(vb.ivPreview2, font.getCharacterFile(Character.TWO))
+                GlideHelper.load(vb.ivPreview3, font.getCharacterFile(Character.THREE))
+                GlideHelper.load(vb.ivPreview4, font.getCharacterFile(Character.FOUR))
             }
 
             override fun onClick(v: View) {

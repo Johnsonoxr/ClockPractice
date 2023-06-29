@@ -60,4 +60,6 @@ enum class EType {
         Slash -> Constants.SEPARATOR_HEIGHT
         Illustration -> Constants.ILLUSTRATION_HEIGHT
     }
+
+    fun isCharacter() = this != Illustration
 }
