@@ -17,7 +17,6 @@ import android.util.Size
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.ControlView
-import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import java.lang.ref.WeakReference
 import kotlin.math.atan2

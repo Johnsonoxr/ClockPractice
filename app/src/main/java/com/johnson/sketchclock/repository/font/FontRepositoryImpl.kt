@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
+import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
@@ -15,16 +16,22 @@ import java.io.FileFilter
 import javax.inject.Inject
 
 class FontRepositoryImpl @Inject constructor(
-    context: Context
+    private val context: Context
 ) : FontRepository {
 
-    private val fontsDir = File(context.filesDir, FONTS_DIR)
+    private val defaultRootDir = File(context.filesDir, DEFAULT_DIR)
+    private val userRootDir = File(context.filesDir, USER_DIR)
     private val gson = GsonBuilder().setPrettyPrinting().setNumberToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
     private val _fonts: MutableStateFlow<List<Font>> = MutableStateFlow(emptyList())
+    private lateinit var defaultFonts: List<Font>
 
     companion object {
-        const val FONTS_DIR = "font"
+        private const val TAG = "FontRepositoryImpl"
+
+        private const val USER_DIR = "user_fonts"
+        private const val DEFAULT_DIR = "default_fonts"
+
         private const val DESCRIPTION_FILE = "description.txt"
         private const val KEY_FONT_NAME = "font_name"
         private const val KEY_LAST_MODIFIED = "last_modified"
@@ -32,11 +39,16 @@ class FontRepositoryImpl @Inject constructor(
 
     init {
         GlobalScope.launch(Dispatchers.IO) {
-            _fonts.value = loadFontList()
-            fontsDir.listFiles { pathname -> pathname?.name?.startsWith(".") == true }?.forEach {
+            copyAssetFilesIntoDirRecursively(DEFAULT_DIR, defaultRootDir)
+            defaultFonts = loadFontList(defaultRootDir)
+
+            userRootDir.mkdirs()
+            userRootDir.listFiles { pathname -> pathname?.name?.startsWith(".") == true }?.forEach {
                 it.deleteRecursively()
-                Log.d("FontRepositoryImpl", "Deleted \"${it.name}\"")
+                Log.d(TAG, "Deleted \"${it.name}\"")
             }
+
+            _fonts.value = loadFontList()
         }
     }
 
@@ -44,76 +56,116 @@ class FontRepositoryImpl @Inject constructor(
         return _fonts
     }
 
-    override suspend fun getFontById(id: Int): Font? {
-        return _fonts.value.find { it.id == id }
+    override suspend fun getFontByRes(resName: String): Font? {
+        return _fonts.value.find { it.resName == resName }
     }
 
-    override suspend fun getFontByName(name: String): Font? {
-        return _fonts.value.find { it.name == name }
-    }
+    override suspend fun upsertFont(font: Font): String? {
 
-    override suspend fun upsertFont(font: Font): Int {
+        val id = when {
+            font.resName == null -> _fonts.value.filter { it.isUser }.maxOfOrNull { it.id }?.plus(1) ?: 0
+            font.isUser -> font.id
+            else -> null
+        }
 
-        val id = if (font.id >= 0) {
-            font.id
+        if (id == null || id < 0) {
+            Log.e(TAG, "upsertFont(): Invalid font resName=${font.resName}")
+            return null
+        }
+
+        val resName = "$USER_DIR/$id"
+        val newFont = font.copy(resName = resName)
+
+        if (!newFont.dir.exists() && newFont.deletedDir.exists()) {
+            Log.d(TAG, "upsertFont(): Restoring deleted font: $resName")
+            newFont.deletedDir.renameTo(newFont.dir)
         } else {
-            createValidDir()?.name?.toIntOrNull() ?: -1
+            newFont.dir.mkdirs()
         }
 
-        if (id != -1) {
-            val fontDir = File(fontsDir, id.toString())
-            val dotFontDir = File(fontsDir, ".${id}")
+        val descriptionFile = File(newFont.dir, DESCRIPTION_FILE)
+        val gsonString = gson.toJson(
+            mapOf(
+                KEY_FONT_NAME to newFont.title,
+                KEY_LAST_MODIFIED to System.currentTimeMillis()
+            )
+        )
+        descriptionFile.writeText(gsonString)
 
-            if (!fontDir.exists() && dotFontDir.exists()) {
-                dotFontDir.renameTo(fontDir)
-            } else {
-                fontDir.mkdirs()
-                val descriptionFile = File(fontDir, DESCRIPTION_FILE)
-                val gsonString = gson.toJson(
-                    mapOf(
-                        KEY_FONT_NAME to font.name,
-                        KEY_LAST_MODIFIED to System.currentTimeMillis()
-                    )
-                )
-                descriptionFile.writeText(gsonString)
-            }
-            _fonts.value = loadFontList()
-        }
+        _fonts.value = loadFontList()
 
-        return id
+        Log.d(TAG, "upsertFont(): Saved font: $resName")
+
+        return resName
     }
 
     override suspend fun deleteFont(font: Font) {
-        File(fontsDir, font.id.toString()).renameTo(File(fontsDir, ".${font.id}"))
+        if (!font.isUser) {
+            Log.e(TAG, "deleteFont(): Cannot delete default font: ${font.resName}")
+            return
+        }
+        font.dir.renameTo(font.deletedDir)
         _fonts.value = loadFontList()
     }
 
-    private fun loadFontList(): List<Font> {
-        val indices = fontsDir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.name.toIntOrNull() } ?: emptyList()
-        Log.e("FontRepositoryImpl", "indices: $indices")
-        return indices.mapNotNull { index ->
-            val fontDir = File(fontsDir, index.toString())
-            val descriptionFile = File(fontDir, DESCRIPTION_FILE)
-            return@mapNotNull if (descriptionFile.exists()) {
-                gson.fromJson(descriptionFile.readText(), Map::class.java).let {
-                    Font(
-                        id = index,
-                        name = it[KEY_FONT_NAME] as? String ?: "",
-                        lastModified = (it[KEY_LAST_MODIFIED] as? Double)?.toLong() ?: 0L,
-                        rootDir = fontDir.absolutePath
-                    )
-                }
-            } else {
+    override fun getFontFile(font: Font, character: Character): File {
+        return File(font.dir, "${character.name}.png")
+    }
+
+    private fun loadFontList(dir: File): List<Font> {
+        val indices = dir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.name.toIntOrNull() } ?: emptyList()
+
+        return indices.map { index ->
+            val descriptions = try {
+                gson.fromJson(File(dir, "$index/$DESCRIPTION_FILE").takeIf { it.exists() }?.readText(), Map::class.java)
+            } catch (e: Exception) {
                 null
             }
+            val title = when {
+                descriptions?.containsKey(KEY_FONT_NAME) == true -> descriptions[KEY_FONT_NAME] as? String ?: "Untitled"
+                dir == userRootDir -> "User Font $index"
+                else -> "Default Font $index"
+            }
+
+            return@map Font(
+                title = title,
+                resName = "${dir.name}/$index",
+                lastModified = (descriptions?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
+                editable = dir == userRootDir
+            )
         }.sortedBy { it.id }
     }
 
-    // a func that create valid dir under fontsDir with incremental index
-    private fun createValidDir(): File? {
-        val dirs = fontsDir.listFiles(FileFilter { it.isDirectory })
-        val maxDirIndex = dirs?.maxOfOrNull { it.name.toIntOrNull() ?: -1 } ?: -1
-        val newDir = File(fontsDir, (maxDirIndex + 1).toString())
-        return if (newDir.mkdirs()) newDir else null
+    private fun loadFontList(): List<Font> {
+        return defaultFonts + loadFontList(userRootDir)
+    }
+
+    private val Font.id: Int
+        get() = resName?.split("/")?.last()?.toIntOrNull() ?: -1
+
+    private val Font.isUser: Boolean
+        get() = resName?.split("/")?.firstOrNull() == USER_DIR
+
+    private val Font.dir: File
+        get() = if (isUser) File(userRootDir, "$id") else File(defaultRootDir, "$id")
+
+    private val Font.deletedDir: File
+        get() = if (isUser) File(userRootDir, ".$id") else File(defaultRootDir, ".$id")
+
+    private fun copyAssetFilesIntoDirRecursively(assetDir: String, destDir: File) {
+        context.assets.list(assetDir)?.forEach { assetFile ->
+            val assetPath = "$assetDir/$assetFile"
+            val destFile = File(destDir, assetFile)
+            if (context.assets.list(assetPath)?.isNotEmpty() == true) {
+                destFile.mkdirs()
+                copyAssetFilesIntoDirRecursively(assetPath, destFile)
+            } else {
+                context.assets.open(assetPath).use { inputStream ->
+                    destFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+            }
+        }
     }
 }

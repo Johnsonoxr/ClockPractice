@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DiffUtil
@@ -90,7 +91,7 @@ class TemplatePickerFragment : Fragment() {
 
             override fun onClick(v: View) {
                 when (v) {
-                    vb.root -> {
+                    vb.tvName -> {
                         showEditTextDialog("Rename template", template.name) { newName ->
                             viewModel.onEvent(TemplatePickerEvent.UpdateTemplate(template.copy(name = newName)))
                         }
@@ -104,6 +105,10 @@ class TemplatePickerFragment : Fragment() {
                         showDialog("Delete template", "Are you sure you want to delete \"${template.name}\"?") {
                             viewModel.onEvent(TemplatePickerEvent.RemoveTemplate(template))
                         }
+                    }
+
+                    vb.root -> {
+                        Toast.makeText(requireContext(), template.name, Toast.LENGTH_SHORT).show()
                     }
 
                     else -> Unit

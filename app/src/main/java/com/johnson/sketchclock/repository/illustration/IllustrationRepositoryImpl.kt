@@ -1,6 +1,7 @@
 package com.johnson.sketchclock.repository.illustration
 
 import android.content.Context
+import android.util.Log
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.johnson.sketchclock.common.Illustration
@@ -17,20 +18,38 @@ class IllustrationRepositoryImpl @Inject constructor(
     private val context: Context
 ) : IllustrationRepository {
 
-    private val rootDir = File(context.filesDir, ILLUSTRATIONS_DIR)
+    private val defaultRootDir = File(context.filesDir, DEFAULT_DIR)
+    private val userRootDir = File(context.filesDir, USER_DIR)
     private val gson = GsonBuilder().setPrettyPrinting().setNumberToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
     private val _illustrations: MutableStateFlow<List<Illustration>> = MutableStateFlow(emptyList())
+    private lateinit var defaultIllustrations: List<Illustration>
 
     companion object {
-        const val ILLUSTRATIONS_DIR = "illustrations"
+
+        private const val TAG = "IllustrationRepository"
+
+        private const val DEFAULT_DIR = "default_illustrations"
+        private const val USER_DIR = "user_illustrations"
+
         private const val KEY_ILLUSTRATION_NAME = "illustration_name"
         private const val KEY_LAST_MODIFIED = "last_modified"
+
+        private const val DESCRIPTION_FILE = "description.txt"
+        private const val ILLUSTRATION_FILE = "illustration.png"
     }
 
     init {
         GlobalScope.launch(Dispatchers.IO) {
-            rootDir.mkdirs()
+            copyAssetFilesIntoDirRecursively(DEFAULT_DIR, defaultRootDir)
+            defaultIllustrations = loadIllustrationList(defaultRootDir)
+
+            userRootDir.mkdirs()
+            userRootDir.listFiles { file -> file?.name?.startsWith(".") == true }?.forEach {
+                it.delete()
+                Log.d(TAG, "Deleted \"${it.name}\"")
+            }
+
             _illustrations.value = loadIllustrationList()
         }
     }
@@ -39,61 +58,114 @@ class IllustrationRepositoryImpl @Inject constructor(
         return _illustrations
     }
 
-    override suspend fun getIllustrationById(id: Int): Illustration? {
-        return _illustrations.value.find { it.id == id }
+    override suspend fun getIllustrationByRes(resName: String): Illustration? {
+        return _illustrations.value.find { it.resName == resName }
     }
 
-    override suspend fun getIllustrationByName(name: String): Illustration? {
-        return _illustrations.value.find { it.name == name }
-    }
+    override suspend fun upsertIllustration(illustration: Illustration): String? {
 
-    override suspend fun upsertIllustration(illustration: Illustration): Int {
+        val id = when {
+            illustration.resName == null -> _illustrations.value.filter { it.isUser }.maxOfOrNull { it.id }?.plus(1) ?: 0
+            illustration.isUser -> illustration.id
+            else -> null
+        }
 
-        val id = if (illustration.id >= 0) {
-            illustration.id
+        if (id == null || id < 0) {
+            Log.e(TAG, "upsertIllustration(): Invalid resName=${illustration.resName}")
+            return null
+        }
+
+        val resName = "$USER_DIR/$id"
+        val newIllustration = illustration.copy(resName = resName)
+
+        if (!newIllustration.dir.exists() && newIllustration.deletedDir.exists()) {
+            Log.d(TAG, "upsertIllustration(): Restoring deleted illustration, res=${newIllustration.resName}")
+            newIllustration.deletedDir.renameTo(newIllustration.dir)
         } else {
-            _illustrations.value.maxOfOrNull { it.id }?.plus(1) ?: 0
+            newIllustration.dir.mkdirs()
         }
-
-        if (id >= 0) {
-            val descriptionFile = File(rootDir, "$id.txt")
-            val gsonString = gson.toJson(
-                mapOf(
-                    KEY_ILLUSTRATION_NAME to illustration.name,
-                    KEY_LAST_MODIFIED to System.currentTimeMillis()
-                )
+        val gsonString = gson.toJson(
+            mapOf(
+                KEY_ILLUSTRATION_NAME to newIllustration.title,
+                KEY_LAST_MODIFIED to System.currentTimeMillis()
             )
-            descriptionFile.writeText(gsonString)
-            _illustrations.value = loadIllustrationList()
-        }
+        )
+        File(newIllustration.dir, DESCRIPTION_FILE).writeText(gsonString)
 
-        return id
+        _illustrations.value = loadIllustrationList()
+
+        Log.d(TAG, "upsertIllustration(): Save illustration: $resName")
+
+        return resName
     }
 
     override suspend fun deleteIllustration(illustration: Illustration) {
-        illustration.getFile().delete()
-        File(rootDir, "${illustration.id}.txt").delete()
+        if (!illustration.isUser) {
+            Log.e(TAG, "deleteIllustration(): Invalid resName=${illustration.resName}")
+            return
+        }
+        illustration.dir.renameTo(illustration.deletedDir)
         _illustrations.value = loadIllustrationList()
     }
 
-    private val fileFilter = FileFilter { it.isFile && it.extension == "txt" }
+    override fun getIllustrationFile(illustration: Illustration): File {
+        return File(illustration.dir, ILLUSTRATION_FILE)
+    }
 
-    private fun loadIllustrationList(): List<Illustration> {
-        val indices = rootDir.listFiles(fileFilter)?.mapNotNull { it.nameWithoutExtension.toIntOrNull() } ?: emptyList()
-        return indices.mapNotNull { index ->
-            val descriptionFile = File(rootDir, "$index.txt")
-            return@mapNotNull if (descriptionFile.exists()) {
-                gson.fromJson(descriptionFile.readText(), Map::class.java).let {
-                    Illustration(
-                        id = index,
-                        name = it[KEY_ILLUSTRATION_NAME] as? String ?: "",
-                        lastModified = (it[KEY_LAST_MODIFIED] as? Double)?.toLong() ?: 0L,
-                        rootDir = rootDir.absolutePath
-                    )
-                }
-            } else {
+    private fun loadIllustrationList(dir: File): List<Illustration> {
+        val indices = dir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.nameWithoutExtension.toIntOrNull() } ?: emptyList()
+        Log.e(TAG, "loadIllustrationList(): indices=$indices")
+
+        return indices.map { id ->
+            val description = try {
+                gson.fromJson(File(dir, "$id/$DESCRIPTION_FILE").readText(), Map::class.java)
+            } catch (e: Exception) {
                 null
             }
+            val title = when {
+                description?.containsKey(KEY_ILLUSTRATION_NAME) == true -> description[KEY_ILLUSTRATION_NAME] as? String ?: "Untitled"
+                dir == defaultRootDir -> "Default Illustration #$id"
+                else -> "User Illustration #$id"
+            }
+            return@map Illustration(
+                title = title,
+                resName = "${dir.name}/$id",
+                lastModified = (description?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
+                editable = dir == userRootDir
+            )
         }.sortedBy { it.id }
+    }
+
+    private fun loadIllustrationList(): List<Illustration> {
+        return defaultIllustrations + loadIllustrationList(userRootDir)
+    }
+
+    private val Illustration.id: Int
+        get() = resName?.split("/")?.last()?.toIntOrNull() ?: -1
+
+    private val Illustration.isUser: Boolean
+        get() = resName?.split("/")?.firstOrNull() == USER_DIR
+
+    private val Illustration.dir: File
+        get() = if (isUser) File(userRootDir, "$id") else File(defaultRootDir, "$id")
+
+    private val Illustration.deletedDir: File
+        get() = if (isUser) File(userRootDir, ".$id") else File(defaultRootDir, ".$id")
+
+    private fun copyAssetFilesIntoDirRecursively(assetDir: String, destDir: File) {
+        context.assets.list(assetDir)?.forEach { assetFile ->
+            val assetPath = "$assetDir/$assetFile"
+            val destFile = File(destDir, assetFile)
+            if (context.assets.list(assetPath)?.isNotEmpty() == true) {
+                destFile.mkdirs()
+                copyAssetFilesIntoDirRecursively(assetPath, destFile)
+            } else {
+                context.assets.open(assetPath).use { inputStream ->
+                    destFile.outputStream().use { outputStream ->
+                        inputStream.copyTo(outputStream)
+                    }
+                }
+            }
+        }
     }
 }

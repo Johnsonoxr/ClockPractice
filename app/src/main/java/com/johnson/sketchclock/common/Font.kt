@@ -1,20 +1,10 @@
 package com.johnson.sketchclock.common
 
-import java.io.File
 import java.io.Serializable
 
-
 data class Font(
-    val id: Int = -1,
-    val name: String,
+    val title: String,
+    val resName: String? = null,
     val lastModified: Long = 0,
-    val rootDir: String? = null
-) : Serializable {
-    fun getCharacterPath(character: Character): String {
-        return getCharacterFile(character).absolutePath
-    }
-
-    fun getCharacterFile(character: Character): File {
-        return File(rootDir, "$character.png")
-    }
-}
+    val editable: Boolean = true,
+) : Serializable

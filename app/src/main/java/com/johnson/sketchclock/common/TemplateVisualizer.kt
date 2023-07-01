@@ -9,7 +9,6 @@ import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import java.io.File
 import java.util.Calendar
 import javax.inject.Inject
 import kotlin.math.max
@@ -38,15 +37,17 @@ class TemplateVisualizer @Inject constructor(
         }
     }
 
-    private fun bitmapKey(fontId: Int, character: Character): String {
-        return "Font_${fontId}_${character.name}"
+    private fun bitmapKey(resName: String, character: Character): String {
+        return "${resName}_${character.name}"
     }
 
-    private fun bitmapKey(illustrationId: Int): String {
-        return "Illustration_${illustrationId}"
+    private fun bitmapKey(resName: String): String {
+        return resName
     }
 
     private fun loadBitmap(element: Element, timeMillis: Long? = null): Bitmap? {
+        val elementResName = element.resName ?: return null
+
         val calendar = Calendar.getInstance()
         timeMillis?.let { calendar.timeInMillis = it }
 
@@ -71,8 +72,8 @@ class TemplateVisualizer @Inject constructor(
         }
 
         val key = when (char) {
-            null -> bitmapKey(element.resId)
-            else -> bitmapKey(element.resId, char)
+            null -> bitmapKey(elementResName)
+            else -> bitmapKey(elementResName, char)
         }
 
         bitmaps[key]?.let { return it }
@@ -80,11 +81,13 @@ class TemplateVisualizer @Inject constructor(
         var bitmap: Bitmap?
 
         runBlocking(Dispatchers.IO) {
-            val bitmapPath = when (char) {
-                null -> illustrationRepository.getIllustrationById(element.resId)?.getPath()
-                else -> fontRepository.getFontById(element.resId)?.getCharacterPath(char)
+            bitmap = if (char == null) {
+                val illustration = illustrationRepository.getIllustrationByRes(elementResName)
+                illustration?.let { illustrationRepository.getIllustrationFile(it) }?.let { GlideHelper.loadBitmap(context, it) }
+            } else {
+                val font = fontRepository.getFontByRes(elementResName)
+                font?.let { fontRepository.getFontFile(it, char) }?.let { GlideHelper.loadBitmap(context, it) }
             }
-            bitmap = bitmapPath?.let { GlideHelper.loadBitmap(context, File(it)) }
         }
 
         return bitmap

@@ -110,9 +110,12 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
             when (event) {
                 is CanvasEvent.Init -> {
                     baseBitmap = BitmapFactory.decodeFile(event.saveFile.absolutePath)
+                    Log.d(TAG, "onEvent: baseBitmap: $baseBitmap, width: ${baseBitmap?.width}, height: ${baseBitmap?.height}")
                     if (baseBitmap?.width == event.width && baseBitmap?.height == event.height) {
+                        Log.d(TAG, "onEvent: Found existing bitmap, using it.")
                         _bmp.value = baseBitmap?.copy(Bitmap.Config.ARGB_8888, true)
                     } else {
+                        Log.d(TAG, "onEvent: Creating new bitmap.")
                         baseBitmap = null
                         _bmp.value = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
                     }

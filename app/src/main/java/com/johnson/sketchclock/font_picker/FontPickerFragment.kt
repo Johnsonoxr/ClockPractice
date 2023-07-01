@@ -6,6 +6,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DiffUtil
@@ -56,7 +57,7 @@ class FontPickerFragment : Fragment() {
         }
 
         vb.fab.setOnClickListener {
-            viewModel.onEvent(FontPickerEvent.AddFont(Font(name = "new font")))
+            viewModel.onEvent(FontPickerEvent.AddFont(Font(title = "new font")))
         }
     }
 
@@ -91,23 +92,25 @@ class FontPickerFragment : Fragment() {
             init {
                 vb.ivEdit.setOnClickListener(this)
                 vb.ivDelete.setOnClickListener(this)
-                vb.tvFontName.setOnClickListener(this)
+                vb.tvName.setOnClickListener(this)
                 vb.root.setOnClickListener(this)
             }
 
             fun bind(font: Font) {
-                vb.tvFontName.text = font.name
-                GlideHelper.load(vb.ivPreview0, font.getCharacterFile(Character.ZERO))
-                GlideHelper.load(vb.ivPreview1, font.getCharacterFile(Character.ONE))
-                GlideHelper.load(vb.ivPreview2, font.getCharacterFile(Character.TWO))
-                GlideHelper.load(vb.ivPreview3, font.getCharacterFile(Character.THREE))
-                GlideHelper.load(vb.ivPreview4, font.getCharacterFile(Character.FOUR))
+                vb.tvName.text = font.title
+                vb.ivEdit.isVisible = font.editable
+                vb.ivDelete.isVisible = font.editable
+                fontRepository.getFontFile(font, Character.ZERO).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview0, it) }
+                fontRepository.getFontFile(font, Character.ONE).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview1, it) }
+                fontRepository.getFontFile(font, Character.TWO).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview2, it) }
+                fontRepository.getFontFile(font, Character.THREE).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview3, it) }
+                fontRepository.getFontFile(font, Character.FOUR).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview4, it) }
             }
 
             override fun onClick(v: View) {
                 when (v) {
                     vb.root -> {
-                        Toast.makeText(context, "Font: ${font.name}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Font: ${font.title}", Toast.LENGTH_SHORT).show()
                     }
 
                     vb.ivEdit -> {
@@ -117,14 +120,14 @@ class FontPickerFragment : Fragment() {
                     }
 
                     vb.ivDelete -> {
-                        showDialog("Delete Font", "Are you sure you want to delete \"${font.name}\"?") {
+                        showDialog("Delete Font", "Are you sure you want to delete \"${font.title}\"?") {
                             viewModel.onEvent(FontPickerEvent.DeleteFont(font))
                         }
                     }
 
-                    vb.tvFontName -> {
-                        showEditTextDialog("Rename Font", font.name) { newName ->
-                            viewModel.onEvent(FontPickerEvent.UpdateFont(font.copy(name = newName)))
+                    vb.tvName -> {
+                        showEditTextDialog("Rename Font", font.title) { newName ->
+                            viewModel.onEvent(FontPickerEvent.UpdateFont(font.copy(title = newName)))
                         }
                     }
 
@@ -144,13 +147,13 @@ class FontPickerFragment : Fragment() {
         }
 
         override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].id == newList[newItemPosition].id
+            return oldList[oldItemPosition].resName == newList[newItemPosition].resName
         }
 
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].id == newList[newItemPosition].id
+            return oldList[oldItemPosition].resName == newList[newItemPosition].resName
                     && oldList[oldItemPosition].lastModified == newList[newItemPosition].lastModified
-                    && oldList[oldItemPosition].name == newList[newItemPosition].name
+                    && oldList[oldItemPosition].title == newList[newItemPosition].title
         }
     }
 }

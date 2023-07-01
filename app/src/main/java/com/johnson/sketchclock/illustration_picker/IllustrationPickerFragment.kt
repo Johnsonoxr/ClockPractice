@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DiffUtil
@@ -46,7 +47,7 @@ class IllustrationPickerFragment : Fragment() {
         }
 
         vb.fab.setOnClickListener {
-            viewModel.onEvent(IllustrationPickerEvent.AddIllustration(Illustration(name = "new illustration")))
+            viewModel.onEvent(IllustrationPickerEvent.AddIllustration(Illustration(title = "new illustration")))
         }
     }
 
@@ -86,14 +87,16 @@ class IllustrationPickerFragment : Fragment() {
             }
 
             fun bind(illustration: Illustration) {
-                vb.tvName.text = illustration.name
-                GlideHelper.load(vb.ivPreview, illustration.getFile())
+                vb.tvName.text = illustration.title
+                vb.ivEdit.isVisible = illustration.editable
+                vb.ivDelete.isVisible = illustration.editable
+                GlideHelper.load(vb.ivPreview, illustrationRepository.getIllustrationFile(illustration))
             }
 
             override fun onClick(v: View) {
                 when (v) {
                     vb.root -> {
-                        Toast.makeText(context, "Illustration: ${illustration.name}", Toast.LENGTH_SHORT).show()
+                        Toast.makeText(context, "Illustration: ${illustration.title}", Toast.LENGTH_SHORT).show()
                     }
 
                     vb.ivEdit -> {
@@ -101,14 +104,14 @@ class IllustrationPickerFragment : Fragment() {
                     }
 
                     vb.ivDelete -> {
-                        showDialog("Delete Illustration", "Are you sure you want to delete ${illustration.name}?") {
+                        showDialog("Delete Illustration", "Are you sure you want to delete ${illustration.title}?") {
                             viewModel.onEvent(IllustrationPickerEvent.RemoveIllustration(illustration))
                         }
                     }
 
                     vb.tvName -> {
-                        showEditTextDialog("Rename Illustration", illustration.name) { newName ->
-                            viewModel.onEvent(IllustrationPickerEvent.UpdateIllustration(illustration.copy(name = newName)))
+                        showEditTextDialog("Rename Illustration", illustration.title) { newName ->
+                            viewModel.onEvent(IllustrationPickerEvent.UpdateIllustration(illustration.copy(title = newName)))
                         }
                     }
 
@@ -128,13 +131,13 @@ class IllustrationPickerFragment : Fragment() {
         }
 
         override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].id == newList[newItemPosition].id
+            return oldList[oldItemPosition].resName == newList[newItemPosition].resName
         }
 
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].id == newList[newItemPosition].id
+            return oldList[oldItemPosition].resName == newList[newItemPosition].resName
                     && oldList[oldItemPosition].lastModified == newList[newItemPosition].lastModified
-                    && oldList[oldItemPosition].name == newList[newItemPosition].name
+                    && oldList[oldItemPosition].title == newList[newItemPosition].title
         }
     }
 }

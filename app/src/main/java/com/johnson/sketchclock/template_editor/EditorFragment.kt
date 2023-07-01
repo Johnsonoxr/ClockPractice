@@ -7,18 +7,21 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.OvershootInterpolator
+import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Font
+import com.johnson.sketchclock.common.Illustration
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.launchWhenStarted
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentEditorBinding
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.Companion.showFontSelectorDialog
+import com.johnson.sketchclock.template_editor.SimpleIllustrationSelectorFragment.Companion.showIllustrationSelectorDialog
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import java.lang.ref.WeakReference
@@ -40,6 +43,7 @@ class EditorFragment : Fragment() {
                 viewModel.onEvent(EditorEvent.Init(template))
             }
         }
+
 
         launchWhenStarted {
             viewModel.elements.collectLatest { pieces ->
@@ -72,7 +76,7 @@ class EditorFragment : Fragment() {
         vb.fabAddTime.setOnClickListener {
             showFontSelectorDialog { font ->
                 showAddFabs(false)
-                val elements = createTimeTemplate(font)
+                val elements = createTimeElements(font)
                 viewModel.onEvent(EditorEvent.AddElements(elements))
                 viewModel.onEvent(EditorEvent.SetSelectedElements(elements))
             }
@@ -81,21 +85,29 @@ class EditorFragment : Fragment() {
         vb.fabAddDate.setOnClickListener {
             showFontSelectorDialog { font ->
                 showAddFabs(false)
-                val elements = createDateTemplate(font)
+                val elements = createDateElements(font)
                 viewModel.onEvent(EditorEvent.AddElements(elements))
                 viewModel.onEvent(EditorEvent.SetSelectedElements(elements))
             }
         }
 
         vb.fabAddIllustration.setOnClickListener {
-            showAddFabs(false)
-            viewModel.onEvent(EditorEvent.AddElements(listOf(createIllustrationTemplate())))
+            showIllustrationSelectorDialog { illustration ->
+                showAddFabs(false)
+                val element = createIllustrationElement(illustration)
+                viewModel.onEvent(EditorEvent.AddElements(listOf(element)))
+                viewModel.onEvent(EditorEvent.SetSelectedElements(listOf(element)))
+            }
         }
 
         vb.controlView.onOptionClicked = { elements ->
-            val charElements = elements.filter { it.eType.isCharacter() }
-            showFontSelectorDialog { font ->
-                viewModel.onEvent(EditorEvent.ChangeRes(charElements, font))
+            if (elements.any { it.eType == EType.Illustration }) {
+                Toast.makeText(requireContext(), "Illustration cannot be changed", Toast.LENGTH_SHORT).show()
+            } else {
+                val charElements = elements.filter { it.eType.isCharacter() }
+                showFontSelectorDialog { font ->
+                    viewModel.onEvent(EditorEvent.ChangeRes(charElements, font))
+                }
             }
         }
     }
@@ -114,7 +126,7 @@ class EditorFragment : Fragment() {
         return FragmentEditorBinding.inflate(inflater, container, false).also { vb = it }.root
     }
 
-    private fun createTimeTemplate(font: Font): List<Element> {
+    private fun createTimeElements(font: Font): List<Element> {
         return listOf(
             EType.Hour1,
             EType.Hour2,
@@ -122,7 +134,7 @@ class EditorFragment : Fragment() {
             EType.Minute1,
             EType.Minute2
         ).mapIndexed { index, eType ->
-            Element(eType = eType, resId = font.id, Matrix().let { matrix ->
+            Element(eType = eType, resName = font.resName, Matrix().let { matrix ->
                 matrix.postScale(0.3f, 0.3f)
                 matrix.postTranslate(index * 108.0f - 216, 0.0f)
                 FloatArray(9).apply { matrix.getValues(this) }
@@ -130,7 +142,7 @@ class EditorFragment : Fragment() {
         }
     }
 
-    private fun createDateTemplate(font: Font): List<Element> {
+    private fun createDateElements(font: Font): List<Element> {
         return listOf(
             EType.Month1,
             EType.Month2,
@@ -138,7 +150,7 @@ class EditorFragment : Fragment() {
             EType.Day1,
             EType.Day2,
         ).mapIndexed { index, eType ->
-            Element(eType = eType, resId = font.id, Matrix().let { matrix ->
+            Element(eType = eType, resName = font.resName, Matrix().let { matrix ->
                 matrix.postScale(0.3f, 0.3f)
                 matrix.postTranslate(index * 108.0f - 216, 0.0f)
                 FloatArray(9).apply { matrix.getValues(this) }
@@ -146,8 +158,11 @@ class EditorFragment : Fragment() {
         }
     }
 
-    private fun createIllustrationTemplate(): Element {
-        return Element(eType = EType.Illustration, resId = 0)
+    private fun createIllustrationElement(illustration: Illustration): Element {
+        return Element(eType = EType.Illustration, resName = illustration.resName, Matrix().let { matrix ->
+            matrix.postScale(0.8f, 0.8f)
+            FloatArray(9).apply { matrix.getValues(this) }
+        })
     }
 
     companion object {

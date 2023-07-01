@@ -50,7 +50,7 @@ class IllustrationCanvasActivity : AppCompatActivity() {
 
         val illustration: Illustration? = intent.getSerializableExtra(KEY_ILLUSTRATION) as? Illustration
         if (illustration != null) {
-            vb.toolbar.title = illustration.name
+            vb.toolbar.title = illustration.title
         } else {
             Toast.makeText(this, "Missing font name", Toast.LENGTH_SHORT).show()
             finish()
@@ -58,7 +58,8 @@ class IllustrationCanvasActivity : AppCompatActivity() {
         }
 
         if (!viewModel.isInitialized) {
-            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, illustration.getFile()))
+            val illustrationFile = illustrationRepository.getIllustrationFile(illustration)
+            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, illustrationFile))
         }
 
         lifecycleScope.launch {

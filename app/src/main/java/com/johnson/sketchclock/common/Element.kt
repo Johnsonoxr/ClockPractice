@@ -5,7 +5,7 @@ import java.io.Serializable
 
 class Element(
     val eType: EType,
-    var resId: Int = -1, //  fontId or illustrationId
+    var resName: String? = null,
     private val matrixArray: FloatArray = FloatArray(9).apply { Matrix.IDENTITY_MATRIX.getValues(this) },
 ) : Serializable {
 
@@ -27,7 +27,7 @@ class Element(
     }
 
     override fun toString(): String {
-        return "Element(eType=$eType, resId=$resId)"
+        return "Element(eType=$eType, resName=$resName)"
     }
 }
 

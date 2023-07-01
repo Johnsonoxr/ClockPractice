@@ -14,7 +14,7 @@
         android:paddingHorizontal="10dp">
 
         <TextView
-            android:id="@+id/tvFontName"
+            android:id="@+id/tvName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:text="TextView"
@@ -30,7 +30,7 @@
             android:layout_height="64dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tvFontName" />
+            app:layout_constraintTop_toBottomOf="@+id/tvName" />
 
         <ImageView
             android:id="@+id/ivPreview1"
@@ -38,7 +38,7 @@
             android:layout_height="64dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/ivPreview0"
-            app:layout_constraintTop_toBottomOf="@+id/tvFontName" />
+            app:layout_constraintTop_toBottomOf="@+id/tvName" />
 
         <ImageView
             android:id="@+id/ivPreview2"
@@ -46,7 +46,7 @@
             android:layout_height="64dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/ivPreview1"
-            app:layout_constraintTop_toBottomOf="@+id/tvFontName" />
+            app:layout_constraintTop_toBottomOf="@+id/tvName" />
 
         <ImageView
             android:id="@+id/ivPreview3"
@@ -54,7 +54,7 @@
             android:layout_height="64dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/ivPreview2"
-            app:layout_constraintTop_toBottomOf="@+id/tvFontName" />
+            app:layout_constraintTop_toBottomOf="@+id/tvName" />
 
         <ImageView
             android:id="@+id/ivPreview4"
@@ -62,7 +62,7 @@
             android:layout_height="64dp"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@+id/ivPreview3"
-            app:layout_constraintTop_toBottomOf="@+id/tvFontName" />
+            app:layout_constraintTop_toBottomOf="@+id/tvName" />
 
         <Button
             android:id="@+id/ivEdit"

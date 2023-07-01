@@ -19,7 +19,6 @@ import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
-import java.io.File
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -44,7 +43,7 @@ class CanvasActivity : AppCompatActivity() {
 
         val font: Font? = intent.getSerializableExtra(KEY_FONT) as? Font
         if (font != null) {
-            vb.toolbar.title = font.name
+            vb.toolbar.title = font.title
         } else {
             Toast.makeText(this, "Missing font name", Toast.LENGTH_SHORT).show()
             finish()
@@ -61,7 +60,7 @@ class CanvasActivity : AppCompatActivity() {
         vb.rvItems.adapter = ItemAdapter().apply {
             listener = { ch ->
                 showSaveDialogIfNeed {
-                    viewModel.onEvent(CanvasEvent.Init(ch.width(), ch.height(), File(font.getCharacterPath(ch))))
+                    viewModel.onEvent(CanvasEvent.Init(ch.width(), ch.height(), fontRepository.getFontFile(font, ch)))
                     selection = ch
                 }
             }
@@ -70,7 +69,7 @@ class CanvasActivity : AppCompatActivity() {
 
         if (!viewModel.isInitialized) {
             val ch = Character.ZERO
-            viewModel.onEvent(CanvasEvent.Init(ch.width(), ch.height(), File(font.getCharacterPath(ch))))
+            viewModel.onEvent(CanvasEvent.Init(ch.width(), ch.height(), fontRepository.getFontFile(font, ch)))
         }
 
         lifecycleScope.launch {

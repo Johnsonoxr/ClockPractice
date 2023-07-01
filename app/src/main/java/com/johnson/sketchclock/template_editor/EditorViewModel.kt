@@ -79,7 +79,7 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.ChangeRes -> {
-                    event.elements.forEach { it.resId = event.font.id }
+                    event.elements.forEach { it.resName = event.font.resName }
                     _resUpdated.emit(Unit)
                 }
 
