@@ -1,6 +1,7 @@
 package com.johnson.sketchclock.common
 
 import android.view.View
+import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
 
@@ -26,4 +27,21 @@ fun View.scaleOut() {
             visibility = View.GONE
         }
         .start()
+}
+
+fun View.addCancelObserverView(onCancel: () -> Unit): Boolean {
+    (parent as? ViewGroup)?.let { viewGroup ->
+        val cancelView = View(context)
+        cancelView.layoutParams = ViewGroup.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.MATCH_PARENT
+        )
+        cancelView.setOnClickListener {
+            viewGroup.removeView(cancelView)
+            onCancel()
+        }
+        viewGroup.addView(cancelView, viewGroup.indexOfChild(this))
+        return true
+    }
+    return false
 }

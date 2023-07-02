@@ -3,7 +3,11 @@ package com.johnson.sketchclock.common
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
+import android.graphics.ColorFilter
 import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.util.Size
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
@@ -15,26 +19,33 @@ import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.roundToInt
 
+private const val TAG = "TemplateVisualizer"
+
 class TemplateVisualizer @Inject constructor(
     private val context: Context,
     private val fontRepository: FontRepository,
     private val illustrationRepository: IllustrationRepository
 ) {
 
+    private val bitmapPaint = Paint().apply {
+        isAntiAlias = true
+//        isFilterBitmap = true
+//        isDither = true
+    }
     private val bitmaps = mutableMapOf<String, Bitmap?>()
     private val matrix = Matrix()
 
-    /**
-     * Canvas should be pre-positioned at the center of the drawing region.
-     */
     fun draw(canvas: Canvas, elements: List<Element>, timeMillis: Long? = null) {
+        canvas.save()
         elements.forEach { element ->
             matrix.set(element.matrix())
             matrix.preTranslate(-element.width() / 2f, -element.height() / 2f)
             loadBitmap(element, timeMillis)?.let {
-                canvas.drawBitmap(it, matrix, null)
+                bitmapPaint.colorFilter = element.softTintColor?.let { tint -> PorterDuffColorFilter(tint, PorterDuff.Mode.SRC_IN) }
+                canvas.drawBitmap(it, matrix, bitmapPaint)
             }
         }
+        canvas.restore()
     }
 
     private fun bitmapKey(resName: String, character: Character): String {

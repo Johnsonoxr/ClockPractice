@@ -6,6 +6,8 @@ import java.io.Serializable
 class Element(
     val eType: EType,
     var resName: String? = null,
+    var softTintColor: Int? = null,
+    var hardTintColor: Int? = null,
     private val matrixArray: FloatArray = FloatArray(9).apply { Matrix.IDENTITY_MATRIX.getValues(this) },
 ) : Serializable {
 

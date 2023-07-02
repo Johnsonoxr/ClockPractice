@@ -10,6 +10,7 @@ sealed class EditorEvent {
     data class DeleteElements(val elements: List<Element>) : EditorEvent()
     data class SetSelectedElements(val elements: List<Element>) : EditorEvent()
     data class ChangeRes(val elements: List<Element>, val font: Font) : EditorEvent()
+    data class SetTint(val elements: List<Element>, val tintColor: Int?) : EditorEvent()
     object Save : EditorEvent()
     object Reset : EditorEvent()
 }

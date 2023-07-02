@@ -13,10 +13,11 @@ import android.graphics.PointF
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
-import android.util.Size
+import android.util.SizeF
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.ControlView
+import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import java.lang.ref.WeakReference
 import kotlin.math.atan2
@@ -30,10 +31,6 @@ class EditorView @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "EditorView"
-        private const val DELETE_CORNER_IDX = 0
-        private const val SCALE_CORNER_IDX = 1
-        private const val ROTATE_CORNER_IDX = 2
-        private const val OPTIONS_CORNER_IDX = 3
 
         private const val CTL_STATE_NONE = 0
         private const val CTL_STATE_MOVE = 1
@@ -44,7 +41,7 @@ class EditorView @JvmOverloads constructor(
     private val relativeMatrixMap = mutableMapOf<Element, Matrix>()
     private val path = Path()
 
-    private var elementGroup: ElementGroup? = null
+    private var selection: Selection? = null
     private var cachedGroupMatrix: Matrix? = null
     private var touchDownPoint: PointF? = null
 
@@ -54,8 +51,27 @@ class EditorView @JvmOverloads constructor(
     private val scaleBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_scale) }
     private val rotateBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_rotate) }
     private val optionsBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_options) }
+    private val optionsSelectedBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_options_selected) }
+    private val colorBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_color) }
+    private val editBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_edit) }
+    private val fontBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_font) }
 
-    override val matrixAppliedBeforeHandle: Matrix = Matrix()
+    private val tolerance: Float by lazy { deleteBitmap?.width?.times(.5f) ?: 0f }
+    private val detailOptionsOffset: Float by lazy { optionsBitmap?.width?.times(1.5f) ?: 0f }
+
+    private var isDetailOptionsVisible = false
+
+    private val isColorAvailable: Boolean
+        get() = selectedElements.isNotEmpty()
+
+    private val isEditAvailable: Boolean
+        get() = selectedElements.size == 1 && selectedElements.firstOrNull()?.eType == EType.Illustration
+
+    private val isFontAvailable: Boolean
+        get() = selectedElements.all { it.eType.isCharacter() }
+
+    private val isOptionsAvailable: Boolean
+        get() = isColorAvailable || isEditAvailable || isFontAvailable
 
     private val groupRectPaint = Paint().apply {
         strokeWidth = 1.dp()
@@ -86,8 +102,7 @@ class EditorView @JvmOverloads constructor(
     }
 
     init {
-        canvasSize = Size(Constants.TEMPLATE_WIDTH, Constants.TEMPLATE_HEIGHT)
-        matrixAppliedBeforeHandle.setTranslate(-Constants.TEMPLATE_WIDTH / 2f, -Constants.TEMPLATE_HEIGHT / 2f)
+        canvasSize = SizeF(Constants.TEMPLATE_WIDTH.toFloat(), Constants.TEMPLATE_HEIGHT.toFloat())
     }
 
     var viewModelRef: WeakReference<EditorViewModel>? = null
@@ -107,31 +122,29 @@ class EditorView @JvmOverloads constructor(
             render()
         }
 
-    var onOptionClicked: ((List<Element>) -> Unit)? = null
-
-    private val isOptionAvailable: Boolean
-        get() = selectedElements.size == 1 && !selectedElements.first().eType.isCharacter()   // one Illustration only
-                || selectedElements.isNotEmpty() && selectedElements.all { it.eType.isCharacter() }    //  Characters only
+    var onColorOptionClicked: ((List<Element>) -> Unit)? = null
+    var onEditOptionClicked: ((List<Element>) -> Unit)? = null
+    var onFontOptionClicked: ((List<Element>) -> Unit)? = null
 
     private fun setupGroup(selectedElements: List<Element>?) {
         relativeMatrixMap.clear()
 
         if (selectedElements.isNullOrEmpty()) {
-            elementGroup = null
+            selection = null
             return
         }
 
-        val corners = selectedElements.map { it.corners() }.flatten().chunked(2).map { PointF(it[0], it[1]) }
-        val left = corners.minByOrNull { it.x }?.x ?: 0f
-        val right = corners.maxByOrNull { it.x }?.x ?: 0f
-        val top = corners.minByOrNull { it.y }?.y ?: 0f
-        val bottom = corners.maxByOrNull { it.y }?.y ?: 0f
+        val corners = selectedElements.map { it.corners().toList() }.flatten().chunked(2).map { PointF(it[0], it[1]) }
+        val left = corners.minOf { it.x }
+        val right = corners.maxOf { it.x }
+        val top = corners.minOf { it.y }
+        val bottom = corners.maxOf { it.y }
 
         val groupRect = RectF(left - 5.dp(), top - 5.dp(), right + 5.dp(), bottom + 5.dp())
         val groupMatrix = Matrix().apply { setTranslate(groupRect.centerX(), groupRect.centerY()) }
         groupRect.offset(-groupRect.centerX(), -groupRect.centerY())
-        elementGroup = ElementGroup(groupRect, groupMatrix)
-        elementGroup?.updateCorners()
+        selection = Selection(groupRect, groupMatrix)
+        selection?.updateCorners()
 
         //  elementM = groupM * relativeElementM
         //  Both sides multiply groupM^-1, we get:
@@ -149,34 +162,74 @@ class EditorView @JvmOverloads constructor(
         viewModelRef?.clear()
     }
 
-    override fun handleClick(x: Float, y: Float) {
+    override fun handleClick(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {
+        val elements = elements ?: return
+        val vxy = floatArrayOf(viewX, viewY)
 
-        if (elementGroup?.isTouchingIcon(DELETE_CORNER_IDX, x, y) == true) {
+        if (isDetailOptionsVisible && isColorAvailable) {
+            val colorVxy = selection?.iconColorViewXy(c2v)
+            if (colorVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
+                onColorOptionClicked?.invoke(selectedElements)
+                return
+            }
+        }
+
+        if (isDetailOptionsVisible && isEditAvailable) {
+            val editVxy = selection?.iconEditViewXy(c2v)
+            if (editVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
+                onEditOptionClicked?.invoke(selectedElements)
+                return
+            }
+        }
+
+        if (isDetailOptionsVisible && isFontAvailable) {
+            val fontVxy = selection?.iconFontViewXy(c2v)
+            if (fontVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
+                onFontOptionClicked?.invoke(selectedElements)
+                return
+            }
+        }
+
+        if (isDetailOptionsVisible) {
+            isDetailOptionsVisible = false
+            render()
+            return
+        }
+
+        val deleteVxy = selection?.iconDeleteViewXy(c2v)
+        if (deleteVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
             viewModelRef?.get()?.onEvent(EditorEvent.DeleteElements(selectedElements))
             return
         }
 
-        if (isOptionAvailable && elementGroup?.isTouchingIcon(OPTIONS_CORNER_IDX, x, y) == true) {
-            onOptionClicked?.invoke(selectedElements)
+        val optionsVxy = selection?.iconOptionsViewXy(c2v)
+        if (optionsVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
+            isDetailOptionsVisible = !isDetailOptionsVisible
+            render()
             return
         }
 
-        when (val touchedElement = elements?.filter { it.contains(x, y) }?.minByOrNull { it.distToCenter(x, y) }) {
+        val cxy = floatArrayOf(viewX, viewY).apply { v2c.mapPoints(this) }
+        val clickedElements = elements.filter { it.contains(cxy[0], cxy[1]) }
+        when (val clickedElement = clickedElements.minByOrNull { it.distToCenter(cxy[0], cxy[1]) - 1e-5 * elements.indexOf(it) }) {
             null -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(emptyList()))
-            in selectedElements -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements - touchedElement))
-            else -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements + touchedElement))
+            in selectedElements -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements - clickedElement))
+            else -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements + clickedElement))
         }
     }
 
-    override fun handleDraw(canvas: Canvas, matrix: Matrix) {
+    override fun handleDraw(canvas: Canvas, v2c: Matrix, c2v: Matrix) {
         val elements = elements ?: return
         val visualizer = viewModelRef?.get()?.visualizer ?: return
 
-        canvas.concat(matrix)
+        canvas.save()
+        canvas.concat(c2v)
         visualizer.draw(canvas, elements)
+        canvas.restore()
 
         selectedElements.forEach { element ->
             val corners = element.corners()
+            c2v.mapPoints(corners)
             path.apply {
                 reset()
                 moveTo(corners[0], corners[1])
@@ -189,86 +242,105 @@ class EditorView @JvmOverloads constructor(
             canvas.drawPath(path, elementRectPaint)
         }
 
-        elementGroup?.let { group ->
-            val corners = group.corners
+        selection?.let { s ->
+            val copy = s.corners.copyOf()
+            c2v.mapPoints(copy)
             path.apply {
                 reset()
-                moveTo(corners[0], corners[1])
+                moveTo(copy[0], copy[1])
                 for (i in 1 until 4) {
-                    lineTo(corners[i * 2], corners[i * 2 + 1])
+                    lineTo(copy[i * 2], copy[i * 2 + 1])
                 }
                 close()
             }
             canvas.drawPath(path, groupShadowPaint)
             canvas.drawPath(path, groupRectPaint)
-            deleteBitmap?.let { drawCornerIcon(it, DELETE_CORNER_IDX, canvas) }
-            scaleBitmap?.let { drawCornerIcon(it, SCALE_CORNER_IDX, canvas) }
-            rotateBitmap?.let { drawCornerIcon(it, ROTATE_CORNER_IDX, canvas) }
-            if (isOptionAvailable) {
-                optionsBitmap?.let { drawCornerIcon(it, OPTIONS_CORNER_IDX, canvas) }
+
+            val deleteXy = s.iconDeleteViewXy(c2v)
+            deleteBitmap?.let { canvas.drawBitmap(it, deleteXy[0] - it.width / 2f, deleteXy[1] - it.height / 2f, null) }
+
+            val scaleXy = s.iconScaleViewXy(c2v)
+            scaleBitmap?.let { canvas.drawBitmap(it, scaleXy[0] - it.width / 2f, scaleXy[1] - it.height / 2f, null) }
+
+            val rotateXy = s.iconRotateViewXy(c2v)
+            rotateBitmap?.let { canvas.drawBitmap(it, rotateXy[0] - it.width / 2f, rotateXy[1] - it.height / 2f, null) }
+
+            if (isOptionsAvailable) {
+                val optionsXy = s.iconOptionsViewXy(c2v)
+                val bmp = if (isDetailOptionsVisible) optionsSelectedBitmap else optionsBitmap
+                bmp?.let { canvas.drawBitmap(it, optionsXy[0] - it.width / 2f, optionsXy[1] - it.height / 2f, null) }
+            }
+
+            if (isDetailOptionsVisible && isColorAvailable) {
+                val colorXy = s.iconColorViewXy(c2v)
+                colorBitmap?.let { canvas.drawBitmap(it, colorXy[0] - it.width / 2f, colorXy[1] - it.height / 2f, null) }
+            }
+
+            if (isDetailOptionsVisible && isEditAvailable) {
+                val editXy = s.iconEditViewXy(c2v)
+                editBitmap?.let { canvas.drawBitmap(it, editXy[0] - it.width / 2f, editXy[1] - it.height / 2f, null) }
+            }
+
+            if (isDetailOptionsVisible && isFontAvailable) {
+                val fontXy = s.iconFontViewXy(c2v)
+                fontBitmap?.let { canvas.drawBitmap(it, fontXy[0] - it.width / 2f, fontXy[1] - it.height / 2f, null) }
             }
         }
     }
 
-    private fun drawCornerIcon(bitmap: Bitmap, cornerIdx: Int, canvas: Canvas) {
-        val corners = elementGroup?.corners ?: return
-        canvas.drawBitmap(
-            bitmap,
-            corners[2 * cornerIdx] - bitmap.width / 2f,
-            corners[2 * cornerIdx + 1] - bitmap.height / 2f,
-            null
-        )
-    }
+    override fun handleTouchDown(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {
+        val (cx, cy) = floatArrayOf(viewX, viewY).apply { v2c.mapPoints(this) }
 
-    override fun handleTouchDown(x: Float, y: Float) {
-
-        if (elementGroup?.isTouchingIcon(SCALE_CORNER_IDX, x, y) == true) {
-            touchDownPoint = PointF(x, y)
-            cachedGroupMatrix = elementGroup?.matrix?.let { Matrix(it) }
+        val scaleVxy = selection?.iconScaleViewXy(c2v)
+        if (scaleVxy?.let { distance(it, floatArrayOf(viewX, viewY)) }?.let { it < tolerance } == true) {
+            touchDownPoint = PointF(cx, cy)
+            cachedGroupMatrix = selection?.matrix?.let { Matrix(it) }
             ctlState = CTL_STATE_SCALE
             return
         }
 
-        if (elementGroup?.isTouchingIcon(ROTATE_CORNER_IDX, x, y) == true) {
-            touchDownPoint = PointF(x, y)
-            cachedGroupMatrix = elementGroup?.matrix?.let { Matrix(it) }
+        val rotateVxy = selection?.iconRotateViewXy(c2v)
+        if (rotateVxy?.let { distance(it, floatArrayOf(viewX, viewY)) }?.let { it < tolerance } == true) {
+            touchDownPoint = PointF(cx, cy)
+            cachedGroupMatrix = selection?.matrix?.let { Matrix(it) }
             ctlState = CTL_STATE_ROTATE
             return
         }
 
-        if (elementGroup?.contains(x, y) == true) {
-            touchDownPoint = PointF(x, y)
-            cachedGroupMatrix = elementGroup?.matrix?.let { Matrix(it) }
+        if (selection?.contains(cx, cy) == true) {
+            touchDownPoint = PointF(cx, cy)
+            cachedGroupMatrix = selection?.matrix?.let { Matrix(it) }
             ctlState = CTL_STATE_MOVE
             return
         }
     }
 
-    override fun handleTouchMove(x: Float, y: Float) {
-        val group = elementGroup ?: return
+    override fun handleTouchMove(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {
+        val group = selection ?: return
         val touchDownPoint = touchDownPoint ?: return
+        val (cx, cy) = floatArrayOf(viewX, viewY).apply { v2c.mapPoints(this) }
 
         when (ctlState) {
             CTL_STATE_SCALE -> {
-                val cxy = floatArrayOf(group.rect.centerX(), group.rect.centerY())
-                cachedGroupMatrix?.mapPoints(cxy)
-                val scale = hypot(x - cxy[0], y - cxy[1]) / hypot(touchDownPoint.x - cxy[0], touchDownPoint.y - cxy[1])
+                val center = floatArrayOf(group.rect.centerX(), group.rect.centerY())
+                cachedGroupMatrix?.mapPoints(center)
+                val scale = hypot(cx - center[0], cy - center[1]) / hypot(touchDownPoint.x - center[0], touchDownPoint.y - center[1])
                 group.matrix.set(cachedGroupMatrix)
-                group.matrix.postScale(scale, scale, cxy[0], cxy[1])
+                group.matrix.postScale(scale, scale, center[0], center[1])
             }
 
             CTL_STATE_ROTATE -> {
-                val cxy = floatArrayOf(group.rect.centerX(), group.rect.centerY())
-                cachedGroupMatrix?.mapPoints(cxy)
-                val touchDownDegree = Math.toDegrees(atan2(touchDownPoint.y - cxy[1], touchDownPoint.x - cxy[0]).toDouble())
-                val currentDegree = Math.toDegrees(atan2(y - cxy[1], x - cxy[0]).toDouble())
+                val center = floatArrayOf(group.rect.centerX(), group.rect.centerY())
+                cachedGroupMatrix?.mapPoints(center)
+                val touchDownDegree = Math.toDegrees(atan2(touchDownPoint.y - center[1], touchDownPoint.x - center[0]).toDouble())
+                val currentDegree = Math.toDegrees(atan2(cy - center[1], cx - center[0]).toDouble())
                 group.matrix.set(cachedGroupMatrix)
-                group.matrix.postRotate((currentDegree - touchDownDegree).toFloat(), cxy[0], cxy[1])
+                group.matrix.postRotate((currentDegree - touchDownDegree).toFloat(), center[0], center[1])
             }
 
             CTL_STATE_MOVE -> {
                 group.matrix.set(cachedGroupMatrix)
-                group.matrix.postTranslate(x - touchDownPoint.x, y - touchDownPoint.y)
+                group.matrix.postTranslate(cx - touchDownPoint.x, cy - touchDownPoint.y)
             }
 
             else -> return
@@ -279,14 +351,14 @@ class EditorView @JvmOverloads constructor(
         render()
     }
 
-    override fun handleTouchUp(x: Float, y: Float) {
+    override fun handleTouchUp(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {
         selectedElements.forEach { element -> element.commitMatrix() }
         resetTouchState()
         render()
     }
 
     override fun handleTouchCanceled() {
-        val group = elementGroup ?: return
+        val group = selection ?: return
         val cachedMatrix = cachedGroupMatrix ?: return
 
         group.matrix.set(cachedMatrix)
@@ -302,7 +374,7 @@ class EditorView @JvmOverloads constructor(
     }
 
     private fun updateElementMatrices() {
-        val group = elementGroup ?: return
+        val group = selection ?: return
         selectedElements.forEach { element ->
             relativeMatrixMap[element]?.let { relativeMatrix ->
                 element.matrix().apply {
@@ -313,7 +385,7 @@ class EditorView @JvmOverloads constructor(
         }
     }
 
-    private fun Element.corners(): List<Float> {
+    private fun Element.corners(): FloatArray {
         val corners = floatArrayOf(
             -width() / 2f, -height() / 2f,
             width() / 2f, -height() / 2f,
@@ -321,13 +393,12 @@ class EditorView @JvmOverloads constructor(
             -width() / 2f, height() / 2f
         )
         matrix().mapPoints(corners)
-        return corners.toList()
+        return corners
     }
 
     private fun Element.contains(x: Float, y: Float): Boolean {
-        val pt = floatArrayOf(x, y)
         val inv = Matrix().apply { matrix().invert(this) }
-        inv.mapPoints(pt)
+        val pt = floatArrayOf(x, y).apply { inv.mapPoints(this) }
         return pt[0] >= -width() / 2f && pt[0] <= width() / 2f && pt[1] >= -height() / 2f && pt[1] <= height() / 2f
     }
 
@@ -336,12 +407,12 @@ class EditorView @JvmOverloads constructor(
         return hypot(x - center[0], y - center[1])
     }
 
-    private inner class ElementGroup(val rect: RectF, val matrix: Matrix) {
+    private inner class Selection(val rect: RectF, val matrix: Matrix) {
 
         val corners = FloatArray(8)
 
-        fun contains(x: Float, y: Float): Boolean {
-            val pt = floatArrayOf(x, y)
+        fun contains(cx: Float, cy: Float): Boolean {
+            val pt = floatArrayOf(cx, cy)
             val inv = Matrix().apply { matrix.invert(this) }
             inv.mapPoints(pt)
             return rect.contains(pt[0], pt[1])
@@ -359,16 +430,44 @@ class EditorView @JvmOverloads constructor(
             matrix.mapPoints(corners)
         }
 
-        fun isTouchingIcon(cornerIdx: Int, x: Float, y: Float): Boolean {
-            val dist = hypot(corners[2 * cornerIdx] - x, corners[2 * cornerIdx + 1] - y)
-            return when (cornerIdx) {
-                SCALE_CORNER_IDX -> dist < (scaleBitmap?.width?.div(2f) ?: 0f)
-                ROTATE_CORNER_IDX -> dist < (rotateBitmap?.width?.div(2f) ?: 0f)
-                DELETE_CORNER_IDX -> dist < (deleteBitmap?.width?.div(2f) ?: 0f)
-                OPTIONS_CORNER_IDX -> dist < (optionsBitmap?.width?.div(2f) ?: 0f)
-                else -> false
+        fun iconDeleteViewXy(c2v: Matrix): FloatArray = corners.copyOfRange(0, 2).apply { c2v.mapPoints(this) }
+
+        fun iconScaleViewXy(c2v: Matrix): FloatArray = corners.copyOfRange(2, 4).apply { c2v.mapPoints(this) }
+
+        fun iconRotateViewXy(c2v: Matrix): FloatArray = corners.copyOfRange(4, 6).apply { c2v.mapPoints(this) }
+
+        fun iconOptionsViewXy(c2v: Matrix): FloatArray = corners.copyOfRange(6, 8).apply { c2v.mapPoints(this) }
+
+        fun iconColorViewXy(c2v: Matrix): FloatArray {
+            val dxy = floatArrayOf(-1f, 0f).apply { matrix.mapVectors(this) }
+            val unitLength = hypot(dxy[0], dxy[1])
+            return iconOptionsViewXy(c2v).apply {
+                this[0] += dxy[0] / unitLength * detailOptionsOffset
+                this[1] += dxy[1] / unitLength * detailOptionsOffset
             }
         }
+
+        fun iconEditViewXy(c2v: Matrix): FloatArray {
+            val dxy = floatArrayOf(0f, 1f).apply { matrix.mapVectors(this) }
+            val unitLength = hypot(dxy[0], dxy[1])
+            return iconOptionsViewXy(c2v).apply {
+                this[0] += dxy[0] / unitLength * detailOptionsOffset
+                this[1] += dxy[1] / unitLength * detailOptionsOffset
+            }
+        }
+
+        fun iconFontViewXy(c2v: Matrix): FloatArray {
+            val dxy = floatArrayOf(-1f, 1f).apply { matrix.mapVectors(this) }
+            val unitLength = hypot(dxy[0], dxy[1])
+            return iconOptionsViewXy(c2v).apply {
+                this[0] += dxy[0] / unitLength * detailOptionsOffset
+                this[1] += dxy[1] / unitLength * detailOptionsOffset
+            }
+        }
+    }
+
+    private fun distance(p1: FloatArray, p2: FloatArray): Float {
+        return hypot(p1[0] - p2[0], p1[1] - p2[1])
     }
 
     private fun Int.dp(): Float {

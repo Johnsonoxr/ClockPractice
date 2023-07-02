@@ -16,6 +16,7 @@ import android.util.Log
 import android.widget.RemoteViews
 import com.johnson.sketchclock.MainActivity
 import com.johnson.sketchclock.R
+import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
 import com.johnson.sketchclock.repository.template.TemplateRepository
@@ -110,7 +111,10 @@ class ClockWidget : AppWidgetProvider() {
 
         val drawSize = visualizer.evaluateDrawSize(template.elements)
         val bitmap = Bitmap.createBitmap(drawSize.width, drawSize.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap).apply { translate(drawSize.width / 2f, drawSize.height / 2f) }
+        val canvas = Canvas(bitmap).apply {
+            clipRect(0, 0, drawSize.width, drawSize.height)
+            translate((drawSize.width - Constants.TEMPLATE_WIDTH) / 2f, (drawSize.height - Constants.TEMPLATE_HEIGHT) / 2f)
+        }
         visualizer.draw(canvas, template.elements, thisMinuteMillis)
 
         val intent = Intent(context, MainActivity::class.java).apply {

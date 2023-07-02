@@ -8,7 +8,7 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.util.AttributeSet
-import android.util.Size
+import android.util.SizeF
 import com.johnson.sketchclock.common.ControlView
 
 class CanvasView @JvmOverloads constructor(
@@ -61,7 +61,7 @@ class CanvasView @JvmOverloads constructor(
         set(value) {
             field = value
             bmpCanvas = value?.let { Canvas(it) }
-            value?.let { canvasSize = Size(it.width, it.height) }
+            value?.let { canvasSize = SizeF(it.width.toFloat(), it.height.toFloat()) }
             render()
         }
 
@@ -72,11 +72,11 @@ class CanvasView @JvmOverloads constructor(
     private var prevX = 0f
     private var prevY = 0f
 
-    override fun handleDraw(canvas: Canvas, matrix: Matrix) {
-        bitmap?.let { canvas.drawBitmap(it, matrix, null) }
+    override fun handleDraw(canvas: Canvas, v2c: Matrix, c2v: Matrix) {
+        bitmap?.let { canvas.drawBitmap(it, c2v, null) }
         path?.let {
             canvas.save()
-            canvas.concat(matrix)
+            canvas.concat(c2v)
             if (isEraseMode) {
                 CanvasViewModel.drawPath(canvas, erasePaint, it)
             } else {
@@ -86,24 +86,27 @@ class CanvasView @JvmOverloads constructor(
         }
     }
 
-    override fun handleTouchDown(x: Float, y: Float) {
+    override fun handleTouchDown(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {
+        val xy = floatArrayOf(viewX, viewY).apply { v2c.mapPoints(this) }
         path = Path()
-        path?.moveTo(x, y)
-        prevX = x
-        prevY = y
+        path?.moveTo(xy[0], xy[1])
+        prevX = xy[0]
+        prevY = xy[1]
         render()
     }
 
-    override fun handleTouchMove(x: Float, y: Float) {
-        path?.quadTo(prevX, prevY, (prevX + x) / 2, (prevY + y) / 2)
-        prevX = x
-        prevY = y
+    override fun handleTouchMove(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {
+        val xy = floatArrayOf(viewX, viewY).apply { v2c.mapPoints(this) }
+        path?.quadTo(prevX, prevY, (prevX + xy[0]) / 2, (prevY + xy[1]) / 2)
+        prevX = xy[0]
+        prevY = xy[1]
         render()
     }
 
-    override fun handleTouchUp(x: Float, y: Float) {
+    override fun handleTouchUp(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {
+        val xy = floatArrayOf(viewX, viewY).apply { v2c.mapPoints(this) }
         path?.let {
-            it.lineTo(x, y)
+            it.lineTo(xy[0], xy[1])
             addPathListener?.invoke(it)
         }
         path = null

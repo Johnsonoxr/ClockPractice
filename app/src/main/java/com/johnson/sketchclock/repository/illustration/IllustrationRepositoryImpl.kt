@@ -114,7 +114,6 @@ class IllustrationRepositoryImpl @Inject constructor(
 
     private fun loadIllustrationList(dir: File): List<Illustration> {
         val indices = dir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.nameWithoutExtension.toIntOrNull() } ?: emptyList()
-        Log.e(TAG, "loadIllustrationList(): indices=$indices")
 
         return indices.map { id ->
             val description = try {

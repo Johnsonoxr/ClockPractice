@@ -10,7 +10,7 @@ import android.graphics.Matrix
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
-import android.util.Size
+import android.util.SizeF
 import android.view.GestureDetector
 import android.view.MotionEvent
 import android.view.SurfaceHolder
@@ -19,6 +19,7 @@ import android.view.animation.DecelerateInterpolator
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -29,11 +30,11 @@ open class ControlView @JvmOverloads constructor(
     defStyleAttr: Int = 0
 ) : SurfaceView(context, attrs, defStyleAttr), SurfaceHolder.Callback {
 
-    open fun handleClick(x: Float, y: Float) {}
-    open fun handleDraw(canvas: Canvas, matrix: Matrix) {}
-    open fun handleTouchDown(x: Float, y: Float) {}
-    open fun handleTouchMove(x: Float, y: Float) {}
-    open fun handleTouchUp(x: Float, y: Float) {}
+    open fun handleClick(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {}
+    open fun handleDraw(canvas: Canvas, v2c: Matrix, c2v: Matrix) {}
+    open fun handleTouchDown(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {}
+    open fun handleTouchMove(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {}
+    open fun handleTouchUp(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {}
     open fun handleTouchCanceled() {}
 
     companion object {
@@ -52,23 +53,18 @@ open class ControlView @JvmOverloads constructor(
         }
     }
 
-    private var matrix: Matrix? = null
-    private val invMatrix = Matrix()
-    private val tmpMatrix = Matrix()
+    private var c2vMatrix: Matrix? = null   // canvas to view
+    private val v2cMatrix = Matrix()        // view to canvas
 
     private var viewScope: CoroutineScope? = null
+    private var drawJob: Job? = null
 
-    private val defaultRect = RectF()
-    private var minScale = 1f
-    private var defaultTranslateX = 0f
-    private var defaultTranslateY = 0f
+    private val defaultRectInView = RectF()
 
-    protected open val matrixAppliedBeforeHandle: Matrix? = null
-
-    var canvasSize: Size = Size(0, 0)
+    open var canvasSize: SizeF = SizeF(0f, 0f)
         set(value) {
             field = value
-            matrix = null
+            c2vMatrix = null
             render()
         }
 
@@ -86,13 +82,14 @@ open class ControlView @JvmOverloads constructor(
 
         if (width == 0 || height == 0) return
 
-        if (matrix == null) {
+        if (c2vMatrix == null) {
             prepareMatrix()
         }
 
-        val m = matrix ?: return
+        val c2v = c2vMatrix ?: return
 
-        viewScope?.launch {
+        drawJob?.cancel()
+        drawJob = viewScope?.launch {
 
             if (!isActive) return@launch
 
@@ -101,28 +98,26 @@ open class ControlView @JvmOverloads constructor(
             canvas.drawColor(BG_COLOR)
 
             val bgScale = maxOf(
-                canvasSize.width.toFloat() / bgBitmap.width,
-                canvasSize.height.toFloat() / bgBitmap.height
+                canvasSize.width / bgBitmap.width,
+                canvasSize.height / bgBitmap.height
             )
             bgMatrix.reset()
             bgMatrix.preTranslate(canvasSize.width / 2f, canvasSize.height / 2f)
             bgMatrix.preScale(bgScale, bgScale)
             bgMatrix.preTranslate(-bgBitmap.width / 2f, -bgBitmap.height / 2f)
 
+            val clipViewSave = canvas.save()
+            canvas.clipRect(0f, 0f, width.toFloat(), height.toFloat())
+
             canvas.save()
-            canvas.concat(m)
-            canvas.clipRect(0f, 0f, canvasSize.width.toFloat(), canvasSize.height.toFloat())
+            canvas.concat(c2v)
+            canvas.clipRect(0f, 0f, canvasSize.width, canvasSize.height)
             canvas.drawBitmap(bgBitmap, bgMatrix, null)
             canvas.restore()
 
-            val idx = canvas.save()
-            val handledMatrix = matrixAppliedBeforeHandle?.let {
-                it.invert(tmpMatrix)
-                tmpMatrix.postConcat(m)
-                tmpMatrix
-            } ?: m
-            handleDraw(canvas, handledMatrix)
-            canvas.restoreToCount(idx)
+            handleDraw(canvas, v2cMatrix, c2v)
+
+            canvas.restoreToCount(clipViewSave)
 
             holder.unlockCanvasAndPost(canvas)
         }
@@ -139,7 +134,7 @@ open class ControlView @JvmOverloads constructor(
 
     override fun surfaceChanged(holder: SurfaceHolder, format: Int, width: Int, height: Int) {
         Log.v(TAG, "surfaceChanged: $width, $height")
-        matrix = null
+        c2vMatrix = null
         render()
     }
 
@@ -150,38 +145,36 @@ open class ControlView @JvmOverloads constructor(
 
     private fun prepareMatrix() {
         if (width == 0 || height == 0) return
-        val m = matrix?.apply { reset() } ?: Matrix()
+        val m = c2vMatrix?.apply { reset() } ?: Matrix()
 
-        minScale = minOf(
-            (width - MARGIN * 2) / canvasSize.width.toFloat(),
-            (height - MARGIN * 2) / canvasSize.height.toFloat()
+        val minScale = minOf(
+            (width - MARGIN * 2) / canvasSize.width,
+            (height - MARGIN * 2) / canvasSize.height
         )
-        defaultTranslateX = (width - canvasSize.width * minScale) / 2f
-        defaultTranslateY = (height - canvasSize.height * minScale) / 2f
-        m.setScale(minScale, minScale)
-        m.postTranslate(defaultTranslateX, defaultTranslateY)
-        m.invert(invMatrix)
+        val defaultTranslateX = (width - canvasSize.width * minScale) / 2f
+        val defaultTranslateY = (height - canvasSize.height * minScale) / 2f
+        m.preTranslate(defaultTranslateX, defaultTranslateY)
+        m.preScale(minScale, minScale)
 
-        defaultRect.set(0f, 0f, canvasSize.width.toFloat(), canvasSize.height.toFloat())
-        m.mapRect(defaultRect)
+        c2vMatrix = m
+        c2vMatrix?.invert(v2cMatrix)
 
-        matrix = m
+        defaultRectInView.set(0f, 0f, canvasSize.width, canvasSize.height)
+        c2vMatrix?.mapRect(defaultRectInView)
     }
 
     private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {
         override fun onSingleTapUp(e: MotionEvent): Boolean {
             handleTouchCanceled()
-            val pt = floatArrayOf(e.x, e.y).also { invMatrix.mapPoints(it) }
-            matrixAppliedBeforeHandle?.mapPoints(pt)
-            handleClick(pt[0], pt[1])
+            c2vMatrix?.let { handleClick(e.x, e.y, v2cMatrix, it) }
             return true
         }
     })
 
     private val scaleGestureDetector = object : ScaleDetector() {
         override fun onScale(matrix: Matrix) {
-            this@ControlView.matrix?.postConcat(matrix)
-            this@ControlView.matrix?.invert(invMatrix)
+            this@ControlView.c2vMatrix?.postConcat(matrix)
+            this@ControlView.c2vMatrix?.invert(v2cMatrix)
             render()
         }
 
@@ -195,44 +188,40 @@ open class ControlView @JvmOverloads constructor(
     }
 
     private fun restoreMatrixIfNeed() {
-        val m = matrix ?: return
+        val c2vMatrix = c2vMatrix ?: return
 
-        tmpMatrix.set(m)
-        val v1 = FloatArray(9)
-        tmpMatrix.getValues(v1)
-
-        val corners = RectF(0f, 0f, canvasSize.width.toFloat(), canvasSize.height.toFloat())
-        tmpMatrix.mapRect(corners)
+        val rectInView = RectF(0f, 0f, canvasSize.width, canvasSize.height).also { c2vMatrix.mapRect(it) }
 
         val dScale = when {
-            corners.width() < defaultRect.width() -> defaultRect.width() / corners.width()
-            corners.width() > defaultRect.width() * 5 -> defaultRect.width() * 5 / corners.width()
+            rectInView.width() < defaultRectInView.width() -> defaultRectInView.width() / rectInView.width()
+            rectInView.width() > defaultRectInView.width() * 5 -> defaultRectInView.width() * 5 / rectInView.width()
             else -> 1f
         }
 
-        tmpMatrix.postScale(dScale, dScale, width / 2f, height / 2f)
+        val tmpC2vMatrix = Matrix(c2vMatrix)
+        tmpC2vMatrix.postScale(dScale, dScale, width / 2f, height / 2f)
 
-        corners.set(0f, 0f, canvasSize.width.toFloat(), canvasSize.height.toFloat())
-        tmpMatrix.mapRect(corners)
+        rectInView.set(0f, 0f, canvasSize.width, canvasSize.height)
+        tmpC2vMatrix.mapRect(rectInView)
 
         val dx = when {
-            corners.left > defaultRect.left -> defaultRect.left - corners.left
-            corners.right < defaultRect.right -> defaultRect.right - corners.right
+            rectInView.left > defaultRectInView.left -> defaultRectInView.left - rectInView.left
+            rectInView.right < defaultRectInView.right -> defaultRectInView.right - rectInView.right
             else -> 0f
         }
 
         val dy = when {
-            corners.top > defaultRect.top -> defaultRect.top - corners.top
-            corners.bottom < defaultRect.bottom -> defaultRect.bottom - corners.bottom
+            rectInView.top > defaultRectInView.top -> defaultRectInView.top - rectInView.top
+            rectInView.bottom < defaultRectInView.bottom -> defaultRectInView.bottom - rectInView.bottom
             else -> 0f
         }
 
-        tmpMatrix.postTranslate(dx, dy)
+        tmpC2vMatrix.postTranslate(dx, dy)
 
-        val v2 = FloatArray(9)
-        tmpMatrix.getValues(v2)
+        if (tmpC2vMatrix == c2vMatrix) return
 
-        if (v1.contentEquals(v2)) return
+        val v1 = FloatArray(9).also { c2vMatrix.getValues(it) }
+        val v2 = FloatArray(9).also { tmpC2vMatrix.getValues(it) }
 
         ValueAnimator.ofPropertyValuesHolder(
             PropertyValuesHolder.ofFloat("dx", 0f, v2[Matrix.MTRANS_X] - v1[Matrix.MTRANS_X]),
@@ -250,8 +239,8 @@ open class ControlView @JvmOverloads constructor(
                 v2[Matrix.MSCALE_Y] *= dScaleIntermediate
                 v2[Matrix.MTRANS_X] += dxIntermediate
                 v2[Matrix.MTRANS_Y] += dyIntermediate
-                m.setValues(v2)
-                m.invert(invMatrix)
+                this@ControlView.c2vMatrix?.setValues(v2)
+                this@ControlView.c2vMatrix?.invert(v2cMatrix)
                 render()
             }
         }.start()
@@ -259,6 +248,8 @@ open class ControlView @JvmOverloads constructor(
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: MotionEvent): Boolean {
+        val c2vMatrix = c2vMatrix ?: return true
+
         if (scaleGestureDetector.onTouch(event)) {
             return true
         }
@@ -270,21 +261,17 @@ open class ControlView @JvmOverloads constructor(
         val viewX = event.x
         val viewY = event.y
 
-        val canvasXy = floatArrayOf(viewX, viewY)
-        invMatrix.mapPoints(canvasXy)
-        matrixAppliedBeforeHandle?.mapPoints(canvasXy)
-
         when (event.action) {
             MotionEvent.ACTION_DOWN -> {
-                handleTouchDown(canvasXy[0], canvasXy[1])
+                handleTouchDown(viewX, viewY, v2cMatrix, c2vMatrix)
             }
 
             MotionEvent.ACTION_MOVE -> {
-                handleTouchMove(canvasXy[0], canvasXy[1])
+                handleTouchMove(viewX, viewY, v2cMatrix, c2vMatrix)
             }
 
             MotionEvent.ACTION_UP -> {
-                handleTouchUp(canvasXy[0], canvasXy[1])
+                handleTouchUp(viewX, viewY, v2cMatrix, c2vMatrix)
             }
 
             MotionEvent.ACTION_CANCEL -> {

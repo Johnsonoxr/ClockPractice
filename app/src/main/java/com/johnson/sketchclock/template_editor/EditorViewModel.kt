@@ -3,6 +3,7 @@ package com.johnson.sketchclock.template_editor
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.gson.Gson
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
@@ -40,14 +41,19 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _templateSaved = MutableSharedFlow<Template>()
     val templateSaved: SharedFlow<Template> = _templateSaved
 
-    private val _resUpdated = MutableSharedFlow<Unit>()
-    val resUpdated: SharedFlow<Unit> = _resUpdated
+    private val _contentUpdated = MutableSharedFlow<Unit>()
+    val contentUpdated: SharedFlow<Unit> = _contentUpdated
 
     @Inject
     lateinit var visualizer: TemplateVisualizer
 
     val isInitialized: Boolean
         get() = _templateId.value != null
+
+    // check if template is saved
+    private var savedElementsGson: String? = null
+    val isTemplateSaved: Boolean
+        get() = Gson().toJson(_elements.value) == savedElementsGson
 
     fun onEvent(event: EditorEvent) {
         Log.v("EditorViewModel", "onEvent: $event")
@@ -58,6 +64,7 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                     _elements.value = event.template.elements
                     _templateId.value = event.template.id
                     _name.value = event.template.name
+                    savedElementsGson = Gson().toJson(event.template.elements)
                 }
 
                 is EditorEvent.Reset -> {
@@ -74,13 +81,14 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                         name = _name.value ?: "",
                         elements = elements.toMutableList()
                     )
+                    savedElementsGson = Gson().toJson(elements)
                     templateRepository.upsertTemplate(template)
                     _templateSaved.emit(template)
                 }
 
                 is EditorEvent.ChangeRes -> {
                     event.elements.forEach { it.resName = event.font.resName }
-                    _resUpdated.emit(Unit)
+                    _contentUpdated.emit(Unit)
                 }
 
                 is EditorEvent.AddElements -> {
@@ -94,6 +102,11 @@ class EditorViewModel @Inject constructor() : ViewModel() {
 
                 is EditorEvent.SetSelectedElements -> {
                     _selectedElements.value = event.elements
+                }
+
+                is EditorEvent.SetTint -> {
+                    event.elements.forEach { it.softTintColor = event.tintColor }
+                    _contentUpdated.emit(Unit)
                 }
             }
         }
