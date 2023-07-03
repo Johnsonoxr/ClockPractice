@@ -41,8 +41,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _templateSaved = MutableSharedFlow<Template>()
     val templateSaved: SharedFlow<Template> = _templateSaved
 
-    private val _contentUpdated = MutableSharedFlow<Unit>()
-    val contentUpdated: SharedFlow<Unit> = _contentUpdated
+    private val _contentUpdated = MutableSharedFlow<String>()
+    val contentUpdated: SharedFlow<String> = _contentUpdated
 
     @Inject
     lateinit var visualizer: TemplateVisualizer
@@ -51,9 +51,9 @@ class EditorViewModel @Inject constructor() : ViewModel() {
         get() = _templateId.value != null
 
     // check if template is saved
-    private var savedElementsGson: String? = null
+    private var savedElements: List<Element>? = null
     val isTemplateSaved: Boolean
-        get() = Gson().toJson(_elements.value) == savedElementsGson
+        get() = savedElements?.size == _elements.value.size && savedElements?.zip(_elements.value)?.all { (a, b) -> a.contentEquals(b) } == true
 
     fun onEvent(event: EditorEvent) {
         Log.v("EditorViewModel", "onEvent: $event")
@@ -64,7 +64,7 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                     _elements.value = event.template.elements
                     _templateId.value = event.template.id
                     _name.value = event.template.name
-                    savedElementsGson = Gson().toJson(event.template.elements)
+                    savedElements = event.template.elements.map { it.deepClone() }
                 }
 
                 is EditorEvent.Reset -> {
@@ -81,14 +81,14 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                         name = _name.value ?: "",
                         elements = elements.toMutableList()
                     )
-                    savedElementsGson = Gson().toJson(elements)
+                    savedElements = elements.map { it.deepClone() }
                     templateRepository.upsertTemplate(template)
                     _templateSaved.emit(template)
                 }
 
                 is EditorEvent.ChangeRes -> {
                     event.elements.forEach { it.resName = event.font.resName }
-                    _contentUpdated.emit(Unit)
+                    _contentUpdated.emit("font")
                 }
 
                 is EditorEvent.AddElements -> {
@@ -105,10 +105,17 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.SetTint -> {
-                    event.elements.forEach { it.softTintColor = event.tintColor }
-                    _contentUpdated.emit(Unit)
+                    event.elements.forEach {
+                        it.softTintColor = event.softTint
+                        it.hardTintColor = event.hardTint
+                    }
+                    _contentUpdated.emit("tint")
                 }
             }
         }
+    }
+
+    private fun Element.deepClone(): Element {
+        return Gson().fromJson(Gson().toJson(this), Element::class.java)
     }
 }

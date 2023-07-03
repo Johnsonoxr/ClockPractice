@@ -41,7 +41,7 @@ class TemplateVisualizer @Inject constructor(
             matrix.set(element.matrix())
             matrix.preTranslate(-element.width() / 2f, -element.height() / 2f)
             loadBitmap(element, timeMillis)?.let {
-                bitmapPaint.colorFilter = element.softTintColor?.let { tint -> PorterDuffColorFilter(tint, PorterDuff.Mode.SRC_IN) }
+                bitmapPaint.colorFilter = element.hardTintColor?.let { tint -> PorterDuffColorFilter(tint, PorterDuff.Mode.SRC_IN) }
                 canvas.drawBitmap(it, matrix, bitmapPaint)
             }
         }

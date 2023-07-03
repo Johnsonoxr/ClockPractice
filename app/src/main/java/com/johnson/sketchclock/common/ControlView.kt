@@ -39,7 +39,6 @@ open class ControlView @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "CanvasView"
-        private const val MARGIN = 100f
         private const val BG_COLOR = 0xFF1F1F1F.toInt()
         private const val CANVAS_DARK_COLOR = 0xFF8F8F8F.toInt()
         private const val CANVAS_LIGHT_COLOR = 0xFF9F9F9F.toInt()
@@ -60,11 +59,23 @@ open class ControlView @JvmOverloads constructor(
     private var drawJob: Job? = null
 
     private val defaultRectInView = RectF()
+    private val bgMatrix = Matrix()
+    private val margin: Float = 30 * resources.displayMetrics.density
 
     open var canvasSize: SizeF = SizeF(0f, 0f)
         set(value) {
             field = value
             c2vMatrix = null
+
+            val bgScale = maxOf(
+                value.width / bgBitmap.width,
+                value.height / bgBitmap.height
+            )
+            bgMatrix.reset()
+            bgMatrix.preTranslate(value.width / 2f, value.height / 2f)
+            bgMatrix.preScale(bgScale, bgScale)
+            bgMatrix.preTranslate(-bgBitmap.width / 2f, -bgBitmap.height / 2f)
+
             render()
         }
 
@@ -82,11 +93,7 @@ open class ControlView @JvmOverloads constructor(
 
         if (width == 0 || height == 0) return
 
-        if (c2vMatrix == null) {
-            prepareMatrix()
-        }
-
-        val c2v = c2vMatrix ?: return
+        val c2v = ensureC2vMatrix()
 
         drawJob?.cancel()
         drawJob = viewScope?.launch {
@@ -97,16 +104,7 @@ open class ControlView @JvmOverloads constructor(
 
             canvas.drawColor(BG_COLOR)
 
-            val bgScale = maxOf(
-                canvasSize.width / bgBitmap.width,
-                canvasSize.height / bgBitmap.height
-            )
-            bgMatrix.reset()
-            bgMatrix.preTranslate(canvasSize.width / 2f, canvasSize.height / 2f)
-            bgMatrix.preScale(bgScale, bgScale)
-            bgMatrix.preTranslate(-bgBitmap.width / 2f, -bgBitmap.height / 2f)
-
-            val clipViewSave = canvas.save()
+            val clipSaveCount = canvas.save()
             canvas.clipRect(0f, 0f, width.toFloat(), height.toFloat())
 
             canvas.save()
@@ -117,13 +115,11 @@ open class ControlView @JvmOverloads constructor(
 
             handleDraw(canvas, v2cMatrix, c2v)
 
-            canvas.restoreToCount(clipViewSave)
+            canvas.restoreToCount(clipSaveCount)
 
             holder.unlockCanvasAndPost(canvas)
         }
     }
-
-    private val bgMatrix = Matrix()
 
     @OptIn(ExperimentalCoroutinesApi::class)
     override fun surfaceCreated(holder: SurfaceHolder) {
@@ -143,24 +139,30 @@ open class ControlView @JvmOverloads constructor(
         viewScope?.cancel()
     }
 
-    private fun prepareMatrix() {
-        if (width == 0 || height == 0) return
-        val m = c2vMatrix?.apply { reset() } ?: Matrix()
+    private fun ensureC2vMatrix(): Matrix {
+        if (width == 0 || height == 0) return Matrix.IDENTITY_MATRIX
+
+        c2vMatrix?.let { return it }
+
+        val c2v = Matrix()
 
         val minScale = minOf(
-            (width - MARGIN * 2) / canvasSize.width,
-            (height - MARGIN * 2) / canvasSize.height
+            (width - margin * 2) / canvasSize.width,
+            (height - margin * 2) / canvasSize.height
         )
         val defaultTranslateX = (width - canvasSize.width * minScale) / 2f
         val defaultTranslateY = (height - canvasSize.height * minScale) / 2f
-        m.preTranslate(defaultTranslateX, defaultTranslateY)
-        m.preScale(minScale, minScale)
+        c2v.preTranslate(defaultTranslateX, defaultTranslateY)
+        c2v.preScale(minScale, minScale)
 
-        c2vMatrix = m
-        c2vMatrix?.invert(v2cMatrix)
+        c2v.invert(v2cMatrix)
 
         defaultRectInView.set(0f, 0f, canvasSize.width, canvasSize.height)
-        c2vMatrix?.mapRect(defaultRectInView)
+        c2v.mapRect(defaultRectInView)
+
+        c2vMatrix = c2v
+
+        return c2v
     }
 
     private val gestureDetector = GestureDetector(context, object : GestureDetector.SimpleOnGestureListener() {

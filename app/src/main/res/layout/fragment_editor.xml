@@ -75,8 +75,8 @@
         android:padding="5dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
         tools:visibility="visible">
 
         <androidx.recyclerview.widget.RecyclerView
@@ -99,5 +99,44 @@
             app:layout_constraintTop_toTopOf="parent" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/tg_group_tint_type"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@id/color_container"
+        app:layout_constraintEnd_toEndOf="@id/color_container"
+        app:layout_constraintStart_toStartOf="@id/color_container"
+        app:singleSelection="true"
+        tools:visibility="visible">
+
+        <Button
+            android:id="@+id/tg_tint_none"
+            style="@style/Widget.App.Button.OutlinedButton.IconOnly"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@drawable/toggle_selector"
+            app:icon="@drawable/fab_delete" />
+
+        <Button
+            android:id="@+id/tg_tint_hard"
+            style="@style/Widget.App.Button.OutlinedButton.IconOnly"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@drawable/toggle_selector"
+            app:icon="@drawable/toggle_circle" />
+
+        <Button
+            android:id="@+id/tg_tint_soft"
+            style="@style/Widget.App.Button.OutlinedButton.IconOnly"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:backgroundTint="@drawable/toggle_selector"
+            app:icon="@drawable/toggle_bw" />
+
+
+    </com.google.android.material.button.MaterialButtonToggleGroup>
 
 </androidx.constraintlayout.widget.ConstraintLayout>

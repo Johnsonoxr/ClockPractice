@@ -21,6 +21,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
@@ -41,6 +42,7 @@ import java.lang.ref.WeakReference
 
 private const val TEMPLATE = "template"
 
+@SuppressLint("NotifyDataSetChanged")
 @AndroidEntryPoint
 class EditorFragment : Fragment() {
 
@@ -77,12 +79,31 @@ class EditorFragment : Fragment() {
         launchWhenStarted {
             viewModel.contentUpdated.collectLatest {
                 vb.controlView.render()
+                if (it == "tint") {
+                    colorSecondaryAdapter.notifyDataSetChanged()
+                }
             }
         }
 
         launchWhenStarted {
             viewModel.selectedElements.collectLatest { selectedElements ->
                 vb.controlView.selectedElements = selectedElements
+                val hardTintColor = selectedElements.map { it.hardTintColor }.distinct().takeIf { it.size == 1 }?.firstOrNull()
+                val softTintColor = selectedElements.map { it.softTintColor }.distinct().takeIf { it.size == 1 }?.firstOrNull()
+                when {
+                    hardTintColor != null -> {
+                        colorSecondaryAdapter.selectedColor = hardTintColor
+                        vb.tgGroupTintType.check(R.id.tg_tint_hard)
+                    }
+                    softTintColor != null -> {
+                        colorSecondaryAdapter.selectedColor = softTintColor
+                        vb.tgGroupTintType.check(R.id.tg_tint_soft)
+                    }
+                    else -> {
+                        colorSecondaryAdapter.selectedColor = null
+                        vb.tgGroupTintType.check(R.id.tg_tint_none)
+                    }
+                }
             }
         }
 
@@ -141,8 +162,35 @@ class EditorFragment : Fragment() {
         }
 
         vb.controlView.onColorOptionClicked = {
+            vb.fabAdd.scaleOut()
+            vb.fabDone.scaleOut()
             vb.colorContainer.scaleIn()
-            vb.colorContainer.addCancelObserverView { vb.colorContainer.scaleOut() }
+            vb.tgGroupTintType.scaleIn()
+
+            colorSecondaryAdapter.notifyDataSetChanged()
+
+            vb.colorContainer.addCancelObserverView {
+                vb.fabAdd.scaleIn()
+                vb.fabDone.scaleIn()
+                vb.colorContainer.scaleOut()
+                vb.tgGroupTintType.scaleOut()
+            }
+        }
+
+        vb.tgTintNone.setOnClickListener {
+            viewModel.onEvent(EditorEvent.SetTint(viewModel.selectedElements.value, hardTint = null, softTint = null))
+        }
+
+        vb.tgTintHard.setOnClickListener {
+            colorSecondaryAdapter.selectedColor?.let { color ->
+                viewModel.onEvent(EditorEvent.SetTint(viewModel.selectedElements.value, hardTint = color))
+            }
+        }
+
+        vb.tgTintSoft.setOnClickListener {
+            colorSecondaryAdapter.selectedColor?.let { color ->
+                viewModel.onEvent(EditorEvent.SetTint(viewModel.selectedElements.value, softTint = color))
+            }
         }
     }
 
@@ -243,7 +291,6 @@ class EditorFragment : Fragment() {
     private inner class ColorSecondaryAdapter : RecyclerView.Adapter<ColorSecondaryAdapter.ViewHolder>() {
 
         var colorTint: Int = 0
-            @SuppressLint("NotifyDataSetChanged")
             set(value) {
                 field = value
                 val lightnessArray = when (field) {
@@ -256,6 +303,12 @@ class EditorFragment : Fragment() {
                 notifyDataSetChanged()
             }
 
+        var selectedColor: Int? = null
+            set(value) {
+                field = value
+                notifyDataSetChanged()
+            }
+
         val tintList: IntArray = IntArray(6)
 
         inner class ViewHolder(val binding: ItemCanvasColorSelectorBinding) : RecyclerView.ViewHolder(binding.root), View.OnClickListener {
@@ -264,7 +317,8 @@ class EditorFragment : Fragment() {
             }
 
             override fun onClick(v: View?) {
-                viewModel.onEvent(EditorEvent.SetTint(viewModel.selectedElements.value, tintList[adapterPosition]))
+                selectedColor = tintList[adapterPosition]
+                viewModel.onEvent(EditorEvent.SetTint(viewModel.selectedElements.value, selectedColor))
             }
         }
 
@@ -276,10 +330,7 @@ class EditorFragment : Fragment() {
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
             holder.binding.iv.imageTintList = ColorStateList.valueOf(tintList[position])
-
-            val tints = viewModel.selectedElements.value.map { it.softTintColor }.distinct()
-            val elementSoftTintColor = if (tints.size == 1 && tints.first() != null) tints.first() else null
-            holder.binding.ivSelected.isVisible = elementSoftTintColor == tintList[position]
+            holder.binding.ivSelected.isVisible = selectedColor == tintList[position]
         }
     }
 

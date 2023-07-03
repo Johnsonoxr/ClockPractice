@@ -3,11 +3,13 @@ package com.johnson.sketchclock.common
 import android.graphics.Matrix
 import java.io.Serializable
 
+private const val KEY_SOFT_TINT = "soft_tint"
+private const val KEY_HARD_TINT = "hard_tint"
+
 class Element(
     val eType: EType,
     var resName: String? = null,
-    var softTintColor: Int? = null,
-    var hardTintColor: Int? = null,
+    private val params: MutableMap<String, String> = mutableMapOf(),
     private val matrixArray: FloatArray = FloatArray(9).apply { Matrix.IDENTITY_MATRIX.getValues(this) },
 ) : Serializable {
 
@@ -26,6 +28,32 @@ class Element(
 
     fun commitMatrix() {
         m?.getValues(matrixArray)
+    }
+
+    var softTintColor: Int?
+        get() = params[KEY_SOFT_TINT]?.toIntOrNull()
+        set(value) {
+            when (value) {
+                null -> params.remove(KEY_SOFT_TINT)
+                else -> params[KEY_SOFT_TINT] = value.toString()
+            }
+        }
+
+    var hardTintColor: Int?
+        get() = params[KEY_HARD_TINT]?.toIntOrNull()
+        set(value) {
+            when (value) {
+                null -> params.remove(KEY_HARD_TINT)
+                else -> params[KEY_HARD_TINT] = value.toString()
+            }
+        }
+
+    fun contentEquals(other: Element): Boolean {
+        return eType == other.eType &&
+                resName == other.resName &&
+                params.size == other.params.size &&
+                params.keys.all { params[it] == other.params[it] } &&
+                matrixArray.contentEquals(other.matrixArray)
     }
 
     override fun toString(): String {
