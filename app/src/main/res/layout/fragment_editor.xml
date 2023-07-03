@@ -65,40 +65,16 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
 
-    <androidx.constraintlayout.widget.ConstraintLayout
-        android:id="@+id/color_container"
-        android:layout_width="220dp"
-        android:layout_height="85dp"
+    <com.johnson.sketchclock.common.ColorPickerView
+        android:id="@+id/color_picker"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
         android:layout_marginBottom="16dp"
-        android:background="@drawable/round_corners_secondary"
-        android:orientation="horizontal"
-        android:padding="5dp"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        tools:visibility="visible">
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_color_secondary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_constraintTop_toTopOf="parent" />
-
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rv_color_primary"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            app:layout_constraintBottom_toBottomOf="parent" />
-
-        <View
-            android:layout_width="match_parent"
-            android:layout_height="1dp"
-            android:background="?attr/colorPrimary"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
-
-    </androidx.constraintlayout.widget.ConstraintLayout>
+        tools:visibility="visible" />
 
     <com.google.android.material.button.MaterialButtonToggleGroup
         android:id="@+id/tg_group_tint_type"
@@ -106,9 +82,9 @@
         android:layout_height="wrap_content"
         android:layout_marginBottom="8dp"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@id/color_container"
-        app:layout_constraintEnd_toEndOf="@id/color_container"
-        app:layout_constraintStart_toStartOf="@id/color_container"
+        app:layout_constraintBottom_toTopOf="@id/color_picker"
+        app:layout_constraintEnd_toEndOf="@id/color_picker"
+        app:layout_constraintStart_toStartOf="@id/color_picker"
         app:singleSelection="true"
         tools:visibility="visible">
 

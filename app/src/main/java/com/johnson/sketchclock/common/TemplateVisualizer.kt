@@ -3,11 +3,14 @@ package com.johnson.sketchclock.common
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
-import android.graphics.ColorFilter
+import android.graphics.Color
+import android.graphics.ColorMatrix
+import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.util.LruCache
 import android.util.Size
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
@@ -35,13 +38,38 @@ class TemplateVisualizer @Inject constructor(
     private val bitmaps = mutableMapOf<String, Bitmap?>()
     private val matrix = Matrix()
 
+    private val hardColorFilterCache = LruCache<Int, PorterDuffColorFilter>(10)
+    private val softColorFilterCache = LruCache<Int, ColorMatrixColorFilter>(10)
+
     fun draw(canvas: Canvas, elements: List<Element>, timeMillis: Long? = null) {
         canvas.save()
         elements.forEach { element ->
             matrix.set(element.matrix())
             matrix.preTranslate(-element.width() / 2f, -element.height() / 2f)
             loadBitmap(element, timeMillis)?.let {
-                bitmapPaint.colorFilter = element.hardTintColor?.let { tint -> PorterDuffColorFilter(tint, PorterDuff.Mode.SRC_IN) }
+                val hartTint = element.hardTintColor
+                val softTint = element.softTintColor
+
+                bitmapPaint.colorFilter = when {
+                    hartTint != null -> hardColorFilterCache[hartTint] ?: PorterDuffColorFilter(
+                        hartTint,
+                        PorterDuff.Mode.SRC_IN
+                    ).also { hardColorFilter -> hardColorFilterCache.put(hartTint, hardColorFilter) }
+
+                    softTint != null -> softColorFilterCache[softTint] ?: ColorMatrixColorFilter(
+                        ColorMatrix().apply {
+                            setScale(
+                                Color.red(softTint) / 255f,
+                                Color.green(softTint) / 255f,
+                                Color.blue(softTint) / 255f,
+                                Color.alpha(softTint) / 255f
+                            )
+                        }
+                    ).also { softColorFilter -> softColorFilterCache.put(softTint, softColorFilter) }
+
+                    else -> null
+                }
+
                 canvas.drawBitmap(it, matrix, bitmapPaint)
             }
         }

@@ -59,9 +59,6 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     private val _isEraseMode = MutableStateFlow(false)
     val isEraseMode: StateFlow<Boolean> = _isEraseMode
 
-    private val _primaryColor = MutableStateFlow(Color.WHITE)
-    val primaryColor: StateFlow<Int> = _primaryColor
-
     private val _undoPathDataList = MutableStateFlow<List<PathData>>(listOf())
     private val _redoPathDataList = MutableStateFlow<List<PathData>>(listOf())
 
@@ -153,10 +150,6 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
 
                 is CanvasEvent.SetEraseSize -> {
                     _eraseSize.value = event.size
-                }
-
-                is CanvasEvent.SetPrimaryColor -> {
-                    _primaryColor.value = event.color
                 }
 
                 is CanvasEvent.Clear -> {

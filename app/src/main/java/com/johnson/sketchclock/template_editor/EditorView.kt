@@ -107,13 +107,6 @@ class EditorView @JvmOverloads constructor(
 
     var viewModelRef: WeakReference<EditorViewModel>? = null
 
-    var elements: List<Element>? = null
-        set(value) {
-            Log.v(TAG, "set elements: $value")
-            field = value
-            render()
-        }
-
     var selectedElements: List<Element> = emptyList()
         set(value) {
             Log.v(TAG, "set selectedElements: $value")
@@ -163,7 +156,7 @@ class EditorView @JvmOverloads constructor(
     }
 
     override fun handleClick(viewX: Float, viewY: Float, v2c: Matrix, c2v: Matrix) {
-        val elements = elements ?: return
+        val elements = viewModelRef?.get()?.elements?.value ?: return
         val vxy = floatArrayOf(viewX, viewY)
 
         if (isDetailOptionsVisible && isColorAvailable) {
@@ -219,7 +212,7 @@ class EditorView @JvmOverloads constructor(
     }
 
     override fun handleDraw(canvas: Canvas, v2c: Matrix, c2v: Matrix) {
-        val elements = elements ?: return
+        val elements = viewModelRef?.get()?.elements?.value ?: return
         val visualizer = viewModelRef?.get()?.visualizer ?: return
 
         canvas.save()

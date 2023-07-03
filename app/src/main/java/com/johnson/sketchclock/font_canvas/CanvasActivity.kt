@@ -108,11 +108,6 @@ class CanvasActivity : AppCompatActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        viewModel.onEvent(CanvasEvent.Save)
-    }
-
     private inner class ItemAdapter : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
 
         var listener: ((Character) -> Unit)? = null
