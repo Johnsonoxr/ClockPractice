@@ -44,7 +44,6 @@
         android:id="@+id/fab_1_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
 
@@ -53,6 +52,7 @@
             style="?attr/floatingActionButtonPrimaryStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_margin="16dp"
             android:src="@drawable/fab_brush" />
 
     </FrameLayout>
@@ -61,7 +61,6 @@
         android:id="@+id/fab_2_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_margin="16dp"
         android:alpha="0.5"
         android:visibility="gone"
         app:layout_constraintBottom_toBottomOf="parent"
@@ -73,6 +72,7 @@
             style="?attr/floatingActionButtonPrimaryStyle"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
+            android:layout_margin="16dp"
             android:src="@drawable/fab_edit_off" />
     </FrameLayout>
 
@@ -81,11 +81,12 @@
         android:layout_width="240dp"
         android:layout_height="40dp"
         android:layout_marginBottom="16dp"
+        android:layout_marginEnd="16dp"
         android:background="@drawable/round_corners_secondary"
         android:padding="5dp"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/fab_1_container"
-        app:layout_constraintEnd_toEndOf="@+id/fab_1_container"
+        app:layout_constraintEnd_toEndOf="parent"
         tools:visibility="visible">
 
         <com.jaygoo.widget.RangeSeekBar
