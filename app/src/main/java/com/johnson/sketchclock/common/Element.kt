@@ -64,6 +64,8 @@ class Element(
 enum class EType {
     Hour1,
     Hour2,
+    Hour12Hr1,
+    Hour12Hr2,
     Minute1,
     Minute2,
     Month1,
@@ -76,7 +78,7 @@ enum class EType {
     Illustration;
 
     fun width() = when (this) {
-        Hour1, Hour2, Minute1, Minute2, Month1, Month2, Day1, Day2 -> Constants.NUMBER_WIDTH
+        Hour1, Hour2, Hour12Hr1, Hour12Hr2, Minute1, Minute2, Month1, Month2, Day1, Day2 -> Constants.NUMBER_WIDTH
         Colon -> Constants.COLON_WIDTH
         AmPm -> Constants.AMPM_WIDTH
         Slash -> Constants.SEPARATOR_WIDTH
@@ -84,7 +86,7 @@ enum class EType {
     }
 
     fun height() = when (this) {
-        Hour1, Hour2, Minute1, Minute2, Month1, Month2, Day1, Day2 -> Constants.NUMBER_HEIGHT
+        Hour1, Hour2, Hour12Hr1, Hour12Hr2, Minute1, Minute2, Month1, Month2, Day1, Day2 -> Constants.NUMBER_HEIGHT
         Colon -> Constants.COLON_HEIGHT
         AmPm -> Constants.AMPM_HEIGHT
         Slash -> Constants.SEPARATOR_HEIGHT

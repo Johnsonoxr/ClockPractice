@@ -98,6 +98,8 @@ class TemplateVisualizer @Inject constructor(
         val char: Character? = when (element.eType) {
             EType.Hour1 -> numberToCharacter(hour / 10)
             EType.Hour2 -> numberToCharacter(hour % 10)
+            EType.Hour12Hr1 -> numberToCharacter(((hour - 1) % 12 + 1) / 10)
+            EType.Hour12Hr2 -> numberToCharacter(((hour - 1) % 12 + 1) % 10)
             EType.Minute1 -> numberToCharacter(minute / 10)
             EType.Minute2 -> numberToCharacter(minute % 10)
             EType.Month1 -> numberToCharacter(month / 10)

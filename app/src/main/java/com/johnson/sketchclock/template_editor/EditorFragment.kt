@@ -106,13 +106,22 @@ class EditorFragment : Fragment() {
         }
 
         vb.fabAdd.setOnClickListener {
-            showAddFabs(!vb.fabAddTime.isShown)
+            showAddFabs(!vb.fabAddTime24h.isShown)
         }
 
-        vb.fabAddTime.setOnClickListener {
+        vb.fabAddTime24h.setOnClickListener {
             showFontSelectorDialog { font ->
                 showAddFabs(false)
-                val elements = createTimeElements(font)
+                val elements = createFontElements(font, EType.Hour1, EType.Hour2, EType.Colon, EType.Minute1, EType.Minute2)
+                viewModel.onEvent(EditorEvent.AddElements(elements))
+                viewModel.onEvent(EditorEvent.SetSelectedElements(elements))
+            }
+        }
+
+        vb.fabAddTime12h.setOnClickListener {
+            showFontSelectorDialog { font ->
+                showAddFabs(false)
+                val elements = createFontElements(font, EType.Hour12Hr1, EType.Hour12Hr2, EType.Colon, EType.Minute1, EType.Minute2, EType.AmPm)
                 viewModel.onEvent(EditorEvent.AddElements(elements))
                 viewModel.onEvent(EditorEvent.SetSelectedElements(elements))
             }
@@ -121,7 +130,7 @@ class EditorFragment : Fragment() {
         vb.fabAddDate.setOnClickListener {
             showFontSelectorDialog { font ->
                 showAddFabs(false)
-                val elements = createDateElements(font)
+                val elements = createFontElements(font, EType.Month1, EType.Month2, EType.Slash, EType.Day1, EType.Day2)
                 viewModel.onEvent(EditorEvent.AddElements(elements))
                 viewModel.onEvent(EditorEvent.SetSelectedElements(elements))
             }
@@ -162,7 +171,7 @@ class EditorFragment : Fragment() {
         }
 
         vb.tgTintNone.setOnClickListener {
-            viewModel.onEvent(EditorEvent.SetTint(viewModel.selectedElements.value, hardTint = null, softTint = null))
+            viewModel.onEvent(EditorEvent.SetTint(viewModel.selectedElements.value))
         }
 
         vb.tgTintHard.setOnClickListener {
@@ -188,10 +197,10 @@ class EditorFragment : Fragment() {
     private fun showAddFabs(show: Boolean) {
         if (show) {
             vb.fabAdd.animate().setInterpolator(OvershootInterpolator()).rotation(45.0f).setDuration(300).start()
-            listOf(vb.fabAddTime, vb.fabAddDate, vb.fabAddIllustration).forEach { fab -> fab.scaleIn() }
+            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddIllustration).forEach { fab -> fab.scaleIn() }
         } else {
             vb.fabAdd.animate().setInterpolator(OvershootInterpolator()).rotation(0f).setDuration(300).start()
-            listOf(vb.fabAddTime, vb.fabAddDate, vb.fabAddIllustration).forEach { fab -> fab.scaleOut() }
+            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddIllustration).forEach { fab -> fab.scaleOut() }
         }
     }
 
@@ -199,35 +208,15 @@ class EditorFragment : Fragment() {
         return FragmentEditorBinding.inflate(inflater, container, false).also { vb = it }.root
     }
 
-    private fun createTimeElements(font: Font): List<Element> {
-        return listOf(
-            EType.Hour1,
-            EType.Hour2,
-            EType.Colon,
-            EType.Minute1,
-            EType.Minute2
-        ).mapIndexed { index, eType ->
-            Element(eType = eType, resName = font.resName, matrixArray = Matrix().let { matrix ->
-                matrix.preTranslate(.5f * Constants.TEMPLATE_WIDTH, .5f * Constants.TEMPLATE_HEIGHT)
-                matrix.preTranslate(.5f * (index - 2f) * Constants.NUMBER_WIDTH, 0f)
-                matrix.preScale(0.5f, 0.5f)
-                FloatArray(9).apply { matrix.getValues(this) }
-            })
+    private fun createFontElements(font: Font, vararg eTypes: EType): List<Element> {
+        val anchorMatrix = Matrix().apply {
+            preTranslate(Constants.TEMPLATE_WIDTH / 2f, Constants.TEMPLATE_HEIGHT / 2f)
+            preScale(0.5f, 0.5f)
         }
-    }
-
-    private fun createDateElements(font: Font): List<Element> {
-        return listOf(
-            EType.Month1,
-            EType.Month2,
-            EType.Slash,
-            EType.Day1,
-            EType.Day2,
-        ).mapIndexed { index, eType ->
+        return eTypes.mapIndexed { index, eType ->
             Element(eType = eType, resName = font.resName, matrixArray = Matrix().let { matrix ->
-                matrix.preTranslate(.5f * Constants.TEMPLATE_WIDTH, .5f * Constants.TEMPLATE_HEIGHT)
-                matrix.preTranslate(.5f * (index - 2f) * Constants.NUMBER_WIDTH, 0f)
-                matrix.preScale(0.5f, 0.5f)
+                matrix.preTranslate((index - (eTypes.size - 1) / 2f) * eType.width(), 0f)
+                matrix.postConcat(anchorMatrix)
                 FloatArray(9).apply { matrix.getValues(this) }
             })
         }

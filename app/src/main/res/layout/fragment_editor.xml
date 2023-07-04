@@ -27,19 +27,31 @@
         android:layout_margin="16dp"
         android:text="Date"
         android:visibility="gone"
-        app:layout_constraintBottom_toTopOf="@+id/fab_add_time"
+        app:layout_constraintBottom_toTopOf="@+id/fab_add_time_12h"
         app:layout_constraintEnd_toEndOf="parent"
         tools:visibility="visible" />
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fab_add_time"
+        android:id="@+id/fab_add_time_24h"
         style="?attr/floatingActionButtonSecondaryStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:text="Time"
+        android:text="Time (24h)"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/fab_add"
+        app:layout_constraintEnd_toEndOf="parent"
+        tools:visibility="visible" />
+
+    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+        android:id="@+id/fab_add_time_12h"
+        style="?attr/floatingActionButtonSecondaryStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:text="Time (12h)"
+        android:visibility="gone"
+        app:layout_constraintBottom_toTopOf="@+id/fab_add_time_24h"
         app:layout_constraintEnd_toEndOf="parent"
         tools:visibility="visible" />
 
