@@ -63,7 +63,7 @@ class FontRepositoryImpl @Inject constructor(
     override suspend fun upsertFont(font: Font): String? {
 
         val id = when {
-            font.resName == null -> _fonts.value.filter { it.isUser }.maxOfOrNull { it.id }?.plus(1) ?: 0
+            font.resName == null -> getNewFontId()
             font.isUser -> font.id
             else -> null
         }
@@ -134,6 +134,13 @@ class FontRepositoryImpl @Inject constructor(
                 editable = dir == userRootDir
             )
         }.sortedBy { it.id }
+    }
+
+    private fun getNewFontId(): Int {
+        return userRootDir.list()?.mapNotNull { name ->
+            //  including deleted font directories
+            if (name.startsWith(".")) name.substring(1).toIntOrNull() else name.toIntOrNull()
+        }?.maxOfOrNull { it }?.plus(1) ?: 0
     }
 
     private fun loadFontList(): List<Font> {

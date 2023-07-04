@@ -16,9 +16,11 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
@@ -62,8 +64,8 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     private val _undoPathDataList = MutableStateFlow<List<PathData>>(listOf())
     private val _redoPathDataList = MutableStateFlow<List<PathData>>(listOf())
 
-    val undoable = _undoPathDataList.map { it.isNotEmpty() }
-    val redoable = _redoPathDataList.map { it.isNotEmpty() }
+    val undoable = _undoPathDataList.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
+    val redoable = _redoPathDataList.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
 
     private val canvas: Canvas = Canvas()
     private val brushPaint: Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
@@ -163,8 +165,11 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                 is CanvasEvent.Save -> {
                     _file.value?.parentFile?.mkdirs()
                     _file.value?.outputStream()?.use {
-                        _bmp.value?.compress(Bitmap.CompressFormat.PNG, 100, it)
-                        baseBitmap = null
+                        _bmp.value?.let { savedBmp ->
+                            savedBmp.compress(Bitmap.CompressFormat.PNG, 100, it)
+                            baseBitmap?.recycle()
+                            baseBitmap = savedBmp.copy(Bitmap.Config.ARGB_8888, true)
+                        }
                         _undoPathDataList.value = emptyList()
                         _redoPathDataList.value = emptyList()
                     }

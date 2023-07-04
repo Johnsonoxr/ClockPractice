@@ -4,15 +4,21 @@ import android.annotation.SuppressLint
 import android.content.res.ColorStateList
 import android.os.Bundle
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.jaygoo.widget.OnRangeChangedListener
 import com.jaygoo.widget.RangeSeekBar
+import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.launchWhenStarted
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
@@ -30,6 +36,8 @@ class CanvasFragment : Fragment() {
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+
+        activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
 
         launchWhenStarted {
             viewModel.bitmap.collectLatest { bmp -> vb.canvasView.bitmap = bmp }
@@ -69,10 +77,6 @@ class CanvasFragment : Fragment() {
         }
         launchWhenStarted {
             viewModel.fileSaved.collectLatest { Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show() }
-        }
-
-        vb.fabDone.setOnClickListener {
-            viewModel.onEvent(CanvasEvent.Save)
         }
 
         vb.fabPaint.setOnClickListener {
@@ -147,21 +151,24 @@ class CanvasFragment : Fragment() {
         fab2?.let { if (it) vb.fab2Container.scaleIn() else vb.fab2Container.scaleOut() }
     }
 
-//    private fun showColorPickerDialog() {
-//        ColorPickerDialog.Builder(requireContext())
-//            .setTitle("Color")
-//            .attachAlphaSlideBar(false)
-//            .attachBrightnessSlideBar(true)
-//            .setBottomSpace(12)
-//            .apply { colorPickerView.setInitialColor(viewModel.brushColor.value) }
-//            .setNegativeButton(android.R.string.cancel, null)
-//            .setPositiveButton(android.R.string.ok, ColorEnvelopeListener { envelope, _ ->
-//                viewModel.onEvent(CanvasEvent.SetBrushColor(envelope.color))
-//            })
-//            .show()
-//    }
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return FragmentCanvasBinding.inflate(inflater, container, false).also { vb = it }.root
+    }
+
+    private val menuProvider = object : MenuProvider {
+        override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+            menuInflater.inflate(R.menu.menu_canvas, menu)
+        }
+
+        override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+            return when (menuItem.itemId) {
+                R.id.menu_save -> {
+                    viewModel.onEvent(CanvasEvent.Save)
+                    true
+                }
+
+                else -> false
+            }
+        }
     }
 }

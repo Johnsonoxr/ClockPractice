@@ -2,6 +2,7 @@ package com.johnson.sketchclock.font_picker
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -49,7 +50,8 @@ class FontPickerFragment : Fragment() {
             }
         }
         launchWhenStarted {
-            viewModel.deletedFont.collectLatest {
+            viewModel.deletedFont.collect {
+                Log.e("FontPickerFragment", "collect deleted font: $it")
                 Snackbar.make(vb.rv, "Font deleted", Snackbar.LENGTH_INDEFINITE)
                     .setAction("Undo") { viewModel.onEvent(FontPickerEvent.UndoDeleteFont) }
                     .show()
@@ -100,11 +102,11 @@ class FontPickerFragment : Fragment() {
                 vb.tvName.text = font.title
                 vb.ivEdit.isVisible = font.editable
                 vb.ivDelete.isVisible = font.editable
-                fontRepository.getFontFile(font, Character.ZERO).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview0, it) }
-                fontRepository.getFontFile(font, Character.ONE).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview1, it) }
-                fontRepository.getFontFile(font, Character.TWO).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview2, it) }
-                fontRepository.getFontFile(font, Character.THREE).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview3, it) }
-                fontRepository.getFontFile(font, Character.FOUR).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview4, it) }
+                fontRepository.getFontFile(font, Character.ZERO).let { GlideHelper.load(vb.ivPreview0, it) }
+                fontRepository.getFontFile(font, Character.ONE).let { GlideHelper.load(vb.ivPreview1, it) }
+                fontRepository.getFontFile(font, Character.TWO).let { GlideHelper.load(vb.ivPreview2, it) }
+                fontRepository.getFontFile(font, Character.THREE).let { GlideHelper.load(vb.ivPreview3, it) }
+                fontRepository.getFontFile(font, Character.FOUR).let { GlideHelper.load(vb.ivPreview4, it) }
             }
 
             override fun onClick(v: View) {

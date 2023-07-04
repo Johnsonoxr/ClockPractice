@@ -39,7 +39,6 @@ open class ControlView @JvmOverloads constructor(
 
     companion object {
         private const val TAG = "CanvasView"
-        private const val BG_COLOR = 0xFF1F1F1F.toInt()
         private const val CANVAS_DARK_COLOR = 0xFF8F8F8F.toInt()
         private const val CANVAS_LIGHT_COLOR = 0xFF9F9F9F.toInt()
     }
@@ -51,6 +50,8 @@ open class ControlView @JvmOverloads constructor(
             setPixels(if (i % 2 == 0) oddLine else evenLine, 0, width, 0, i, width, 1)
         }
     }
+
+    private val bgColor by lazy { getAttrColor(android.R.attr.colorBackground) }
 
     private var c2vMatrix: Matrix? = null   // canvas to view
     private val v2cMatrix = Matrix()        // view to canvas
@@ -102,7 +103,7 @@ open class ControlView @JvmOverloads constructor(
 
             val canvas = holder.lockCanvas() ?: return@launch
 
-            canvas.drawColor(BG_COLOR)
+            canvas.drawColor(bgColor)
 
             val clipSaveCount = canvas.save()
             canvas.clipRect(0f, 0f, width.toFloat(), height.toFloat())

@@ -71,6 +71,8 @@ dependencies {
     implementation "com.github.skydoves:colorpickerview:2.2.4"
     implementation 'com.github.Jay-Goo:RangeSeekBar:v3.0.0'
 
+    implementation 'com.mig35:carousellayoutmanager:1.4.6'
+
     //Dagger - Hilt
     implementation "com.google.dagger:hilt-android:2.44"
     kapt "com.google.dagger:hilt-compiler:2.44"

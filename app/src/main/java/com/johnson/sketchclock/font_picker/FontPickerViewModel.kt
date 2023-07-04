@@ -13,8 +13,10 @@ import javax.inject.Inject
 @HiltViewModel
 class FontPickerViewModel @Inject constructor() : ViewModel() {
 
-    private val _deletedFont = MutableSharedFlow<Font>(replay = 1)
+    private val _deletedFont = MutableSharedFlow<Font>()
     val deletedFont = _deletedFont
+
+    private var recoverableDeletedFont: Font? = null
 
     @Inject
     lateinit var fontRepository: FontRepository
@@ -29,6 +31,7 @@ class FontPickerViewModel @Inject constructor() : ViewModel() {
 
                 is FontPickerEvent.DeleteFont -> {
                     fontRepository.deleteFont(event.font)
+                    recoverableDeletedFont = event.font
                     _deletedFont.emit(event.font)
                 }
 
@@ -37,9 +40,10 @@ class FontPickerViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is FontPickerEvent.UndoDeleteFont -> {
-                    deletedFont.replayCache.firstOrNull()?.let {
+                    recoverableDeletedFont?.let {
                         fontRepository.upsertFont(it)
                     }
+                    recoverableDeletedFont = null
                 }
             }
         }

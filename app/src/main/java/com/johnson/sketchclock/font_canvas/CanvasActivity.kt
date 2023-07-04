@@ -1,21 +1,25 @@
 package com.johnson.sketchclock.font_canvas
 
 import android.os.Bundle
+import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
-import androidx.recyclerview.widget.GridLayoutManager
-import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
+import com.johnson.sketchclock.common.getAttrColor
 import com.johnson.sketchclock.databinding.ActivityCanvasBinding
 import com.johnson.sketchclock.databinding.ItemCharacterBinding
 import com.johnson.sketchclock.repository.font.FontRepository
+import com.mig35.carousellayoutmanager.CarouselLayoutManager
+import com.mig35.carousellayoutmanager.CarouselZoomPostLayoutListener
+import com.mig35.carousellayoutmanager.CenterScrollListener
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -35,41 +39,64 @@ class CanvasActivity : AppCompatActivity() {
 
     private val vb: ActivityCanvasBinding by lazy { ActivityCanvasBinding.inflate(layoutInflater) }
 
-    private var saved = false
+    private val characters = Character.values()
+    private var centerCh: Character = Character.ZERO
+    private var currentCh: Character = centerCh
+
+    private val itemTvColorSelected by lazy { getAttrColor(com.google.android.material.R.attr.colorPrimaryContainer) }
+    private val itemTvColorNormal by lazy { getAttrColor(com.google.android.material.R.attr.colorPrimary) }
+    private val itemBgResSelected = R.drawable.item_character_bg_filled
+    private val itemBgResNormal = R.drawable.item_character_bg
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(vb.root)
 
         val font: Font? = intent.getSerializableExtra(KEY_FONT) as? Font
-        if (font != null) {
-            vb.toolbar.title = font.title
-        } else {
+        if (font == null) {
             Toast.makeText(this, "Missing font name", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        lifecycleScope.launch {
-            viewModel.undoable.collectLatest {
-                saved = !it
+        vb.rvItems.layoutManager = CarouselLayoutManager(CarouselLayoutManager.HORIZONTAL, false).apply {
+            this.maxVisibleItems = 8
+            setPostLayoutListener(
+                CarouselZoomPostLayoutListener(.1f)
+            )
+            addOnItemSelectionListener {
+                val prevCenterPosition = characters.indexOf(centerCh)
+                if (prevCenterPosition != centerItemPosition) {
+                    holderAt(prevCenterPosition)?.let { holder ->
+                        holder.vb.root.setBackgroundResource(itemBgResNormal)
+                        holder.vb.tv.setTextColor(itemTvColorNormal)
+                    }
+                    holderAt(centerItemPosition)?.let { holder ->
+                        holder.vb.root.setBackgroundResource(itemBgResSelected)
+                        holder.vb.tv.setTextColor(itemTvColorSelected)
+                    }
+                }
+                centerCh = characters[it]
             }
         }
-
-        vb.rvItems.layoutManager = GridLayoutManager(this, 2, LinearLayoutManager.HORIZONTAL, false)
-        vb.rvItems.adapter = ItemAdapter().apply {
-            listener = { ch ->
-                showSaveDialogIfNeed {
-                    viewModel.onEvent(CanvasEvent.Init(ch.width(), ch.height(), fontRepository.getFontFile(font, ch)))
-                    selection = ch
+        vb.rvItems.addOnScrollListener(CenterScrollListener())
+        vb.rvItems.addOnScrollListener(object : RecyclerView.OnScrollListener() {
+            override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+                if (newState == RecyclerView.SCROLL_STATE_IDLE) {
+                    if (currentCh != centerCh) {
+                        showSaveDialogIfNeed {
+                            viewModel.onEvent(CanvasEvent.Init(centerCh.width(), centerCh.height(), fontRepository.getFontFile(font, centerCh)))
+                            currentCh = centerCh
+                        }
+                    }
                 }
             }
-            selection = Character.ZERO
-        }
+        })
+        vb.rvItems.adapter = ItemAdapter()
+        vb.rvItems.scrollToPosition(characters.indexOf(centerCh))
 
         if (!viewModel.isInitialized) {
-            val ch = Character.ZERO
-            viewModel.onEvent(CanvasEvent.Init(ch.width(), ch.height(), fontRepository.getFontFile(font, ch)))
+            viewModel.onEvent(CanvasEvent.Init(centerCh.width(), centerCh.height(), fontRepository.getFontFile(font, centerCh)))
         }
 
         lifecycleScope.launch {
@@ -86,7 +113,7 @@ class CanvasActivity : AppCompatActivity() {
     }
 
     private fun showSaveDialogIfNeed(block: () -> Unit) {
-        if (saved) {
+        if (!viewModel.undoable.value) {
             block()
             return
         }
@@ -97,6 +124,7 @@ class CanvasActivity : AppCompatActivity() {
                 block()
             }
             .setNegativeButton("No") { _, _ -> block() }
+            .setOnCancelListener { vb.rvItems.smoothScrollToPosition(characters.indexOf(currentCh)) }
             .show()
     }
 
@@ -112,37 +140,38 @@ class CanvasActivity : AppCompatActivity() {
 
         var listener: ((Character) -> Unit)? = null
 
-        var selection: Character? = null
-            set(value) {
-                val old = field
-                field = value
-                if (old != null) {
-                    notifyItemChanged(Character.values().indexOf(old))
-                }
-                if (value != null) {
-                    notifyItemChanged(Character.values().indexOf(value))
-                }
-            }
-
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
             return ItemViewHolder(ItemCharacterBinding.inflate(layoutInflater, parent, false))
         }
 
         override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
-            holder.vb.tv.text = Character.values()[position].representation
-            holder.vb.iv.alpha = if (selection == Character.values()[position]) 1f else 0.5f
+            val ch = characters[position]
+            val (bgRes, tvColor) = when (ch) {
+                centerCh -> itemBgResSelected to itemTvColorSelected
+                else -> itemBgResNormal to itemTvColorNormal
+            }
+            holder.vb.root.setBackgroundResource(bgRes)
+            holder.vb.tv.setTextColor(tvColor)
+            holder.vb.tv.text = ch.representation
         }
 
         override fun getItemCount(): Int {
-            return Character.values().size
+            return characters.size
         }
 
-        inner class ItemViewHolder(val vb: ItemCharacterBinding) : RecyclerView.ViewHolder(vb.root) {
+        inner class ItemViewHolder(val vb: ItemCharacterBinding) : RecyclerView.ViewHolder(vb.root), View.OnClickListener {
             init {
-                vb.root.setOnClickListener {
-                    listener?.invoke(Character.values()[adapterPosition])
-                }
+                vb.root.setOnClickListener(this)
+            }
+
+            override fun onClick(v: View?) {
+                this@CanvasActivity.vb.rvItems.smoothScrollToPosition(adapterPosition)
+                listener?.invoke(characters[adapterPosition])
             }
         }
+    }
+
+    private fun holderAt(position: Int): ItemAdapter.ItemViewHolder? {
+        return vb.rvItems.findViewHolderForAdapterPosition(position) as? ItemAdapter.ItemViewHolder
     }
 }

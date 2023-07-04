@@ -65,7 +65,7 @@ class IllustrationRepositoryImpl @Inject constructor(
     override suspend fun upsertIllustration(illustration: Illustration): String? {
 
         val id = when {
-            illustration.resName == null -> _illustrations.value.filter { it.isUser }.maxOfOrNull { it.id }?.plus(1) ?: 0
+            illustration.resName == null -> getNewIllustrationId()
             illustration.isUser -> illustration.id
             else -> null
         }
@@ -133,6 +133,13 @@ class IllustrationRepositoryImpl @Inject constructor(
                 editable = dir == userRootDir
             )
         }.sortedBy { it.id }
+    }
+
+    private fun getNewIllustrationId(): Int {
+        return userRootDir.list()?.mapNotNull { name ->
+            //  including deleted illustration directories
+            if (name.startsWith(".")) name.substring(1).toIntOrNull() else name.toIntOrNull()
+        }?.maxOfOrNull { it }?.plus(1) ?: 0
     }
 
     private fun loadIllustrationList(): List<Illustration> {

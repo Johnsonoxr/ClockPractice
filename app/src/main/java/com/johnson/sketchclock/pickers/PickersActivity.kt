@@ -22,7 +22,6 @@ class PickersActivity : AppCompatActivity() {
         vb = ActivityPickersBinding.inflate(layoutInflater)
         setContentView(vb.root)
 
-        vb.toolbar.title = getString(R.string.app_name)
         vb.viewPager.adapter = SectionsPagerAdapter(supportFragmentManager)
         vb.tabs.setupWithViewPager(vb.viewPager)
     }

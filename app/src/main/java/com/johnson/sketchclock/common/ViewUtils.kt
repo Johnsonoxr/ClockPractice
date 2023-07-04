@@ -1,5 +1,6 @@
 package com.johnson.sketchclock.common
 
+import android.content.Context
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
@@ -27,6 +28,20 @@ fun View.scaleOut() {
             visibility = View.GONE
         }
         .start()
+}
+
+fun View.getAttrColor(attr: Int): Int {
+    val typedArray = context.obtainStyledAttributes(intArrayOf(attr))
+    val color = typedArray.getColor(0, 0)
+    typedArray.recycle()
+    return color
+}
+
+fun Context.getAttrColor(attr: Int): Int {
+    val typedArray = obtainStyledAttributes(intArrayOf(attr))
+    val color = typedArray.getColor(0, 0)
+    typedArray.recycle()
+    return color
 }
 
 fun View.addCancelObserverView(onCancel: () -> Unit): Boolean {
