@@ -46,7 +46,7 @@ class IllustrationRepositoryImpl @Inject constructor(
 
             userRootDir.mkdirs()
             userRootDir.listFiles { file -> file?.name?.startsWith(".") == true }?.forEach {
-                it.delete()
+                it.deleteRecursively()
                 Log.d(TAG, "Deleted \"${it.name}\"")
             }
 

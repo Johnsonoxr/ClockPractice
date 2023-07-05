@@ -57,6 +57,10 @@ class CanvasActivity : AppCompatActivity() {
             Toast.makeText(this, "Missing font name", Toast.LENGTH_SHORT).show()
             finish()
             return
+        } else if (!font.editable) {
+            Toast.makeText(this, "Font is not editable", Toast.LENGTH_SHORT).show()
+            finish()
+            return
         }
 
         vb.rvItems.layoutManager = CarouselLayoutManager(CarouselLayoutManager.HORIZONTAL, false).apply {

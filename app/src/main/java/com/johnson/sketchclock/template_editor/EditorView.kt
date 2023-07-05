@@ -17,7 +17,6 @@ import android.util.SizeF
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.ControlView
-import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import java.lang.ref.WeakReference
 import kotlin.math.atan2
@@ -50,28 +49,8 @@ class EditorView @JvmOverloads constructor(
     private val deleteBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_delete) }
     private val scaleBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_scale) }
     private val rotateBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_rotate) }
-    private val optionsBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_options) }
-    private val optionsSelectedBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_options_selected) }
-    private val colorBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_color) }
-    private val editBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_edit) }
-    private val fontBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_font) }
 
     private val tolerance: Float by lazy { deleteBitmap?.width?.times(.5f) ?: 0f }
-    private val detailOptionsOffset: Float by lazy { optionsBitmap?.width?.times(1.5f) ?: 0f }
-
-    private var isDetailOptionsVisible = false
-
-    private val isColorAvailable: Boolean
-        get() = selectedElements.isNotEmpty()
-
-    private val isEditAvailable: Boolean
-        get() = selectedElements.size == 1 && selectedElements.firstOrNull()?.eType == EType.Illustration
-
-    private val isFontAvailable: Boolean
-        get() = selectedElements.all { it.eType.isCharacter() }
-
-    private val isOptionsAvailable: Boolean
-        get() = isColorAvailable || isEditAvailable || isFontAvailable
 
     private val groupRectPaint = Paint().apply {
         strokeWidth = 1.dp()
@@ -115,10 +94,6 @@ class EditorView @JvmOverloads constructor(
             render()
         }
 
-    var onColorOptionClicked: ((List<Element>) -> Unit)? = null
-    var onEditOptionClicked: ((List<Element>) -> Unit)? = null
-    var onFontOptionClicked: ((List<Element>) -> Unit)? = null
-
     private fun setupGroup(selectedElements: List<Element>?) {
         relativeMatrixMap.clear()
 
@@ -159,46 +134,9 @@ class EditorView @JvmOverloads constructor(
         val elements = viewModelRef?.get()?.elements?.value ?: return
         val vxy = floatArrayOf(viewX, viewY)
 
-        if (isDetailOptionsVisible && isColorAvailable) {
-            val colorVxy = selection?.iconColorViewXy(c2v)
-            if (colorVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
-                onColorOptionClicked?.invoke(selectedElements)
-                return
-            }
-        }
-
-        if (isDetailOptionsVisible && isEditAvailable) {
-            val editVxy = selection?.iconEditViewXy(c2v)
-            if (editVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
-                onEditOptionClicked?.invoke(selectedElements)
-                return
-            }
-        }
-
-        if (isDetailOptionsVisible && isFontAvailable) {
-            val fontVxy = selection?.iconFontViewXy(c2v)
-            if (fontVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
-                onFontOptionClicked?.invoke(selectedElements)
-                return
-            }
-        }
-
-        if (isDetailOptionsVisible) {
-            isDetailOptionsVisible = false
-            render()
-            return
-        }
-
         val deleteVxy = selection?.iconDeleteViewXy(c2v)
         if (deleteVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
             viewModelRef?.get()?.onEvent(EditorEvent.DeleteElements(selectedElements))
-            return
-        }
-
-        val optionsVxy = selection?.iconOptionsViewXy(c2v)
-        if (optionsVxy?.let { distance(it, vxy) }?.let { it < tolerance } == true) {
-            isDetailOptionsVisible = !isDetailOptionsVisible
-            render()
             return
         }
 
@@ -257,27 +195,6 @@ class EditorView @JvmOverloads constructor(
 
             val rotateXy = s.iconRotateViewXy(c2v)
             rotateBitmap?.let { canvas.drawBitmap(it, rotateXy[0] - it.width / 2f, rotateXy[1] - it.height / 2f, null) }
-
-            if (isOptionsAvailable) {
-                val optionsXy = s.iconOptionsViewXy(c2v)
-                val bmp = if (isDetailOptionsVisible) optionsSelectedBitmap else optionsBitmap
-                bmp?.let { canvas.drawBitmap(it, optionsXy[0] - it.width / 2f, optionsXy[1] - it.height / 2f, null) }
-            }
-
-            if (isDetailOptionsVisible && isColorAvailable) {
-                val colorXy = s.iconColorViewXy(c2v)
-                colorBitmap?.let { canvas.drawBitmap(it, colorXy[0] - it.width / 2f, colorXy[1] - it.height / 2f, null) }
-            }
-
-            if (isDetailOptionsVisible && isEditAvailable) {
-                val editXy = s.iconEditViewXy(c2v)
-                editBitmap?.let { canvas.drawBitmap(it, editXy[0] - it.width / 2f, editXy[1] - it.height / 2f, null) }
-            }
-
-            if (isDetailOptionsVisible && isFontAvailable) {
-                val fontXy = s.iconFontViewXy(c2v)
-                fontBitmap?.let { canvas.drawBitmap(it, fontXy[0] - it.width / 2f, fontXy[1] - it.height / 2f, null) }
-            }
         }
     }
 
@@ -428,35 +345,6 @@ class EditorView @JvmOverloads constructor(
         fun iconScaleViewXy(c2v: Matrix): FloatArray = corners.copyOfRange(2, 4).apply { c2v.mapPoints(this) }
 
         fun iconRotateViewXy(c2v: Matrix): FloatArray = corners.copyOfRange(4, 6).apply { c2v.mapPoints(this) }
-
-        fun iconOptionsViewXy(c2v: Matrix): FloatArray = corners.copyOfRange(6, 8).apply { c2v.mapPoints(this) }
-
-        fun iconColorViewXy(c2v: Matrix): FloatArray {
-            val dxy = floatArrayOf(-1f, 0f).apply { matrix.mapVectors(this) }
-            val unitLength = hypot(dxy[0], dxy[1])
-            return iconOptionsViewXy(c2v).apply {
-                this[0] += dxy[0] / unitLength * detailOptionsOffset
-                this[1] += dxy[1] / unitLength * detailOptionsOffset
-            }
-        }
-
-        fun iconEditViewXy(c2v: Matrix): FloatArray {
-            val dxy = floatArrayOf(0f, 1f).apply { matrix.mapVectors(this) }
-            val unitLength = hypot(dxy[0], dxy[1])
-            return iconOptionsViewXy(c2v).apply {
-                this[0] += dxy[0] / unitLength * detailOptionsOffset
-                this[1] += dxy[1] / unitLength * detailOptionsOffset
-            }
-        }
-
-        fun iconFontViewXy(c2v: Matrix): FloatArray {
-            val dxy = floatArrayOf(-1f, 1f).apply { matrix.mapVectors(this) }
-            val unitLength = hypot(dxy[0], dxy[1])
-            return iconOptionsViewXy(c2v).apply {
-                this[0] += dxy[0] / unitLength * detailOptionsOffset
-                this[1] += dxy[1] / unitLength * detailOptionsOffset
-            }
-        }
     }
 
     private fun distance(p1: FloatArray, p2: FloatArray): Float {

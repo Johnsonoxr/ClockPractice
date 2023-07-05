@@ -53,12 +53,12 @@ class ColorPickerView @JvmOverloads constructor(
 
     var selectedColor: Int? = null
         set(value) {
-            val changed = field != value
+            if (value == field) return
             field = value
             val pColor = secondaryColors.filter { (_, secondaryColors) -> value in secondaryColors }.keys.firstOrNull()
             if (pColor != null) {
                 selectedPrimaryColor = pColor
-            } else if (changed) {
+            } else {
                 secondaryAdapter.notifyDataSetChanged()
             }
         }

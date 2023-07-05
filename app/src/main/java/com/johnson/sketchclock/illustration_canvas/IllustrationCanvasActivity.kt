@@ -49,13 +49,17 @@ class IllustrationCanvasActivity : AppCompatActivity() {
         setContentView(vb.root)
 
         val illustration: Illustration? = intent.getSerializableExtra(KEY_ILLUSTRATION) as? Illustration
-        if (illustration != null) {
-            vb.toolbar.title = illustration.title
-        } else {
+        if (illustration == null) {
             Toast.makeText(this, "Missing font name", Toast.LENGTH_SHORT).show()
             finish()
             return
+        } else if (!illustration.editable) {
+            Toast.makeText(this, "Illustration is not editable", Toast.LENGTH_SHORT).show()
+            finish()
+            return
         }
+
+        vb.toolbar.title = illustration.title
 
         if (!viewModel.isInitialized) {
             val illustrationFile = illustrationRepository.getIllustrationFile(illustration)

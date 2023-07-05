@@ -4,16 +4,20 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
+import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
-import com.johnson.sketchclock.repository.font.FontRepository
+import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -24,10 +28,13 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     lateinit var templateRepository: TemplateRepository
 
     @Inject
-    lateinit var fontRepository: FontRepository
+    lateinit var illustrationRepository: IllustrationRepository
+
+    @Inject
+    lateinit var visualizer: TemplateVisualizer
 
     private val _elements = MutableStateFlow<List<Element>>(emptyList())
-    val elements: StateFlow<List<Element>?> = _elements
+    val elements: StateFlow<List<Element>> = _elements
 
     private val _templateId = MutableStateFlow<Int?>(null)
     val templateId: StateFlow<Int?> = _templateId
@@ -44,8 +51,16 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _contentUpdated = MutableSharedFlow<String>()
     val contentUpdated: SharedFlow<String> = _contentUpdated
 
-    @Inject
-    lateinit var visualizer: TemplateVisualizer
+    val layerUpEnabled: StateFlow<Boolean> = combine(_elements, _selectedElements) { es, ses ->
+        ses.none { se -> es.indexOf(se) == es.lastIndex }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
+
+    val layerDownEnabled: StateFlow<Boolean> = combine(_elements, _selectedElements) { es, ses ->
+        ses.none { se -> es.indexOf(se) == 0 }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
+
+    private val _isSelectedElementsEditable = MutableStateFlow(false)
+    val isSelectedElementsEditable: StateFlow<Boolean> = _isSelectedElementsEditable
 
     val isInitialized: Boolean
         get() = _templateId.value != null
@@ -101,6 +116,14 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.SetSelectedElements -> {
+                    if (event.elements.size == 1 && event.elements.firstOrNull()?.eType == EType.Illustration) {
+                        val element = event.elements.firstOrNull()
+                        val illustration = element?.resName?.let { illustrationRepository.getIllustrationByRes(it) }
+                        _isSelectedElementsEditable.value = illustration?.editable == true
+                    } else {
+                        _isSelectedElementsEditable.value = false
+                    }
+
                     _selectedElements.value = event.elements
                 }
 
@@ -110,6 +133,30 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                         it.hardTintColor = event.hardTint
                     }
                     _contentUpdated.emit("tint")
+                }
+
+                is EditorEvent.LayerUp -> {
+                    if (event.elements.any { elements.value.indexOf(it) == elements.value.lastIndex }) {  // if any element is already at the top
+                        return@launch
+                    }
+                    val mutableElements = elements.value.toMutableList()
+                    event.elements.sortedByDescending { elements.value.indexOf(it) }.forEach {
+                        val index = elements.value.indexOf(it)
+                        mutableElements[index] = mutableElements[index + 1].also { mutableElements[index + 1] = mutableElements[index] }
+                    }
+                    _elements.value = mutableElements
+                }
+
+                is EditorEvent.LayerDown -> {
+                    if (event.elements.any { elements.value.indexOf(it) == 0 }) {  // if any element is already at the bottom
+                        return@launch
+                    }
+                    val mutableElements = elements.value.toMutableList()
+                    event.elements.sortedBy { elements.value.indexOf(it) }.forEach {
+                        val index = elements.value.indexOf(it)
+                        mutableElements[index] = mutableElements[index - 1].also { mutableElements[index - 1] = mutableElements[index] }
+                    }
+                    _elements.value = mutableElements
                 }
             }
         }

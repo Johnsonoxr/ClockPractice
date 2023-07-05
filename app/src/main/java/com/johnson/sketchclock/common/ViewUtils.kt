@@ -5,6 +5,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import com.johnson.sketchclock.R
+import java.lang.ref.WeakReference
 
 fun View.scaleIn() {
     scaleX = 0f
@@ -45,6 +47,11 @@ fun Context.getAttrColor(attr: Int): Int {
 }
 
 fun View.addCancelObserverView(onCancel: () -> Unit): Boolean {
+    if (((this.getTag(R.id.cancel_observer) as? WeakReference<*>)?.get() as? View)?.parent != null) {
+        // already has a cancel observer view
+        return false
+    }
+
     (parent as? ViewGroup)?.let { viewGroup ->
         val cancelView = View(context)
         cancelView.layoutParams = ViewGroup.LayoutParams(
@@ -56,7 +63,15 @@ fun View.addCancelObserverView(onCancel: () -> Unit): Boolean {
             onCancel()
         }
         viewGroup.addView(cancelView, viewGroup.indexOfChild(this))
+        this.setTag(R.id.cancel_observer, WeakReference(cancelView))
         return true
     }
     return false
+}
+
+fun View.removeCancelObserverView() {
+    ((this.getTag(R.id.cancel_observer) as? WeakReference<*>)?.get() as? View)?.let { cancelView ->
+        this.setTag(R.id.cancel_observer, null)
+        (cancelView.parent as? ViewGroup)?.removeView(cancelView)
+    }
 }
