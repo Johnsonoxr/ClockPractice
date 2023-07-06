@@ -43,8 +43,7 @@ class ClockWidget : AppWidgetProvider() {
 
             Log.i("ClockWidget", "setupAlarmManager: isWidgetsExists = $isWidgetsExists")
 
-            val intent = Intent(context, ClockWidget::class.java).apply { action = ACTION_UPDATE_CLOCK }
-            val pendingIntent = PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+            val pendingIntent = createUpdateClockPendingIntent(context)
 
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             alarmManager.cancel(pendingIntent)
@@ -61,6 +60,11 @@ class ClockWidget : AppWidgetProvider() {
                 pendingIntent
             )
         }
+
+        private fun createUpdateClockPendingIntent(context: Context): PendingIntent {
+            val intent = Intent(context, ClockWidget::class.java).apply { action = ACTION_UPDATE_CLOCK }
+            return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
+        }
     }
 
     @Inject
@@ -69,17 +73,16 @@ class ClockWidget : AppWidgetProvider() {
     @Inject
     lateinit var visualizer: TemplateVisualizer
 
-    private var handlerRef: WeakReference<Handler>? = null
+    @Inject
+    lateinit var clockUpdateHandler: Handler
 
     private fun postNextMinuteUpdate(context: Context) {
         val currentTimeMillis = System.currentTimeMillis()
         val nextMinuteMillis = (currentTimeMillis / MILLIS_IN_MINUTE + 1) * MILLIS_IN_MINUTE
         val delayMillis = nextMinuteMillis - currentTimeMillis + 10
 
-        val handler = Handler(Looper.getMainLooper()).apply {
-            postDelayed({ updateWidget(context) }, delayMillis)
-        }
-        handlerRef = WeakReference(handler)
+        clockUpdateHandler.removeCallbacksAndMessages(null)
+        clockUpdateHandler.postDelayed({ updateWidget(context) }, delayMillis)
     }
 
     private fun updateWidget(
@@ -117,13 +120,9 @@ class ClockWidget : AppWidgetProvider() {
         }
         visualizer.draw(canvas, template.elements, thisMinuteMillis)
 
-        val intent = Intent(context, MainActivity::class.java).apply {
-            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_CLEAR_TASK
-        }
-
         val remoteViews = RemoteViews(context.packageName, R.layout.widget_clock).apply {
             setImageViewBitmap(R.id.iv, bitmap)
-            setOnClickPendingIntent(R.id.iv, PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_IMMUTABLE))
+            setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context))
         }
 
         AppWidgetManager.getInstance(context).updateAppWidget(appWidgetIds, remoteViews)
@@ -147,7 +146,7 @@ class ClockWidget : AppWidgetProvider() {
     override fun onDisabled(context: Context) {
         Log.v(TAG, "onDisabled")
         setupAlarmManager(context)
-        handlerRef?.get()?.removeCallbacksAndMessages(null)
+        clockUpdateHandler.removeCallbacksAndMessages(null)
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) {

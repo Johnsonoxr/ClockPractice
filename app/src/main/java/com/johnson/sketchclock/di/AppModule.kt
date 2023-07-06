@@ -2,14 +2,16 @@ package com.johnson.sketchclock.di
 
 import android.app.Application
 import android.content.Context
+import android.os.Handler
+import android.os.Looper
 import androidx.room.Room
-import com.johnson.sketchclock.repository.template.TemplateDatabase
-import com.johnson.sketchclock.repository.template.TemplateRepository
-import com.johnson.sketchclock.repository.template.TemplateRepositoryImpl
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.font.FontRepositoryImpl
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import com.johnson.sketchclock.repository.illustration.IllustrationRepositoryImpl
+import com.johnson.sketchclock.repository.template.TemplateDatabase
+import com.johnson.sketchclock.repository.template.TemplateRepository
+import com.johnson.sketchclock.repository.template.TemplateRepositoryImpl
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -52,5 +54,11 @@ class AppModule {
     @Singleton
     fun provideIllustrationRepository(context: Context): IllustrationRepository {
         return IllustrationRepositoryImpl(context)
+    }
+
+    @Provides
+    @Singleton
+    fun provideClockUpdateHandler(): Handler {
+        return Handler(Looper.getMainLooper())
     }
 }

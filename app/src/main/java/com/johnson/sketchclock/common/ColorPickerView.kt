@@ -5,12 +5,10 @@ import android.content.Context
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.util.AttributeSet
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.FrameLayout
-import androidx.annotation.AttrRes
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.isVisible
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -33,7 +31,7 @@ class ColorPickerView @JvmOverloads constructor(
         Color.GREEN,
         Color.BLUE,
         Color.YELLOW,
-        getAttrColor(context, android.R.attr.colorPrimary),
+        getAttrColor(android.R.attr.colorPrimary),
     )
 
     private val secondaryColors: Map<Int, List<Int>> = primaryColors.associateWith { primaryColor ->
@@ -75,12 +73,6 @@ class ColorPickerView @JvmOverloads constructor(
         vb.rvColorSecondary.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         vb.rvColorSecondary.adapter = secondaryAdapter
         selectedPrimaryColor = primaryColors.first()
-    }
-
-    private fun getAttrColor(context: Context, @AttrRes attr: Int): Int {
-        val typedValue = TypedValue()
-        context.theme.resolveAttribute(attr, typedValue, true)
-        return typedValue.data
     }
 
     private inner class ColorPrimitiveAdapter : RecyclerView.Adapter<ColorPrimitiveAdapter.ViewHolder>() {

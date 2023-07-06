@@ -111,7 +111,6 @@ class EditorFragment : Fragment() {
 
         vb.fabAddIllustration.setOnClickListener {
             showIllustrationSelectorDialog { illustration ->
-                vb.fabAdd.removeCancelObserverView()
                 showAddTemplateButtons(false)
                 val element = createIllustrationElement(illustration)
                 viewModel.onEvent(EditorEvent.AddElements(listOf(element)))
@@ -205,7 +204,6 @@ class EditorFragment : Fragment() {
     private fun setupAddTemplateFab(addTemplateBtn: View, vararg eTypes: EType) {
         addTemplateBtn.setOnClickListener {
             showFontSelectorDialog { font ->
-                vb.fabAdd.removeCancelObserverView()
                 showAddTemplateButtons(false)
                 val elements = createFontElements(font, *eTypes)
                 viewModel.onEvent(EditorEvent.AddElements(elements))
