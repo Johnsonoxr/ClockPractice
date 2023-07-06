@@ -10,8 +10,8 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
+import android.graphics.RectF
 import android.util.LruCache
-import android.util.Size
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import kotlinx.coroutines.Dispatchers
@@ -20,7 +20,6 @@ import java.util.Calendar
 import javax.inject.Inject
 import kotlin.math.max
 import kotlin.math.min
-import kotlin.math.roundToInt
 
 private const val TAG = "TemplateVisualizer"
 
@@ -149,7 +148,7 @@ class TemplateVisualizer @Inject constructor(
         }
     }
 
-    fun evaluateDrawSize(elements: List<Element>): Size {
+    fun evaluateDrawRegion(elements: List<Element>): RectF {
 
         var maxX = Float.MIN_VALUE
         var minX = Float.MAX_VALUE
@@ -176,6 +175,6 @@ class TemplateVisualizer @Inject constructor(
             }
         }
 
-        return Size((maxX - minX).roundToInt(), (maxY - minY).roundToInt())
+        return RectF(minX, minY, maxX, maxY)
     }
 }

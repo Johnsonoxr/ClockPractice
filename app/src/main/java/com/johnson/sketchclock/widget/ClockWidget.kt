@@ -11,10 +11,9 @@ import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.os.Bundle
 import android.os.Handler
-import android.os.Looper
 import android.util.Log
+import android.util.Size
 import android.widget.RemoteViews
-import com.johnson.sketchclock.MainActivity
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Template
@@ -22,8 +21,9 @@ import com.johnson.sketchclock.common.TemplateVisualizer
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
-import java.lang.ref.WeakReference
 import javax.inject.Inject
+import kotlin.math.abs
+import kotlin.math.ceil
 
 @AndroidEntryPoint
 class ClockWidget : AppWidgetProvider() {
@@ -32,6 +32,7 @@ class ClockWidget : AppWidgetProvider() {
 
         private const val TAG = "ClockWidget"
         private const val ACTION_UPDATE_CLOCK = "com.johnson.sketchclock.UPDATE_CLOCK"
+        private const val ACTION_FORCE_UPDATE_CLOCK = "com.johnson.sketchclock.FORCE_UPDATE_CLOCK"
         private const val MILLIS_IN_MINUTE = 60000L
         private const val PREF_LAST_UPDATE_TIME = "last_update_time"
 
@@ -61,8 +62,9 @@ class ClockWidget : AppWidgetProvider() {
             )
         }
 
-        private fun createUpdateClockPendingIntent(context: Context): PendingIntent {
-            val intent = Intent(context, ClockWidget::class.java).apply { action = ACTION_UPDATE_CLOCK }
+        private fun createUpdateClockPendingIntent(context: Context, forceUpdate: Boolean = false): PendingIntent {
+            val intent = Intent(context, ClockWidget::class.java)
+                .apply { action = if (forceUpdate) ACTION_FORCE_UPDATE_CLOCK else ACTION_UPDATE_CLOCK }
             return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_MUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         }
     }
@@ -88,15 +90,19 @@ class ClockWidget : AppWidgetProvider() {
     private fun updateWidget(
         context: Context,
         appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context),
-        appWidgetIds: IntArray = appWidgetManager.getAppWidgetIds(ComponentName(context, ClockWidget::class.java))
+        appWidgetIds: IntArray = appWidgetManager.getAppWidgetIds(ComponentName(context, ClockWidget::class.java)),
+        forceUpdate: Boolean = false
     ) {
         Log.v(TAG, "updateWidget: ids = ${appWidgetIds.contentToString()}, this=$this")
 
         val sharedPreferences = context.getSharedPreferences("widget", Context.MODE_PRIVATE)
 
         val thisMinuteMillis = System.currentTimeMillis() / MILLIS_IN_MINUTE * MILLIS_IN_MINUTE
-        if (sharedPreferences.getLong(PREF_LAST_UPDATE_TIME, 0L) == thisMinuteMillis) {
-            Log.w(TAG, "updateWidget: already updated")
+
+        if (forceUpdate) {
+            Log.v(TAG, "updateWidget: forced update")
+        } else if (sharedPreferences.getLong(PREF_LAST_UPDATE_TIME, 0L) == thisMinuteMillis) {
+            Log.v(TAG, "updateWidget: already updated")
             return
         }
         sharedPreferences.edit().putLong(PREF_LAST_UPDATE_TIME, thisMinuteMillis).apply()
@@ -112,7 +118,12 @@ class ClockWidget : AppWidgetProvider() {
 
         val template = widgetTemplate ?: return
 
-        val drawSize = visualizer.evaluateDrawSize(template.elements)
+        val drawRegion = visualizer.evaluateDrawRegion(template.elements)
+        drawRegion.offset(-Constants.TEMPLATE_WIDTH / 2f, -Constants.TEMPLATE_HEIGHT / 2f)
+        val drawSize = Size(
+            ceil(maxOf(abs(drawRegion.left), abs(drawRegion.right)) * 2).toInt(),
+            ceil(maxOf(abs(drawRegion.top), abs(drawRegion.bottom)) * 2).toInt()
+        )
         val bitmap = Bitmap.createBitmap(drawSize.width, drawSize.height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap).apply {
             clipRect(0, 0, drawSize.width, drawSize.height)
@@ -122,7 +133,7 @@ class ClockWidget : AppWidgetProvider() {
 
         val remoteViews = RemoteViews(context.packageName, R.layout.widget_clock).apply {
             setImageViewBitmap(R.id.iv, bitmap)
-            setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context))
+            setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context, forceUpdate = true))
         }
 
         AppWidgetManager.getInstance(context).updateAppWidget(appWidgetIds, remoteViews)
@@ -164,6 +175,11 @@ class ClockWidget : AppWidgetProvider() {
             ACTION_UPDATE_CLOCK -> {
                 postNextMinuteUpdate(context)
                 updateWidget(context)
+            }
+
+            ACTION_FORCE_UPDATE_CLOCK -> {
+                postNextMinuteUpdate(context)
+                updateWidget(context, forceUpdate = true)
             }
         }
     }
