@@ -6,6 +6,7 @@ import android.view.ViewGroup
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
@@ -42,8 +43,9 @@ class CanvasActivity : AppCompatActivity() {
     private val characters = Character.values()
     private var centerCh: Character = Character.ZERO
     private var currentCh: Character = centerCh
+    private var saveDialog: AlertDialog? = null
 
-    private val itemTvColorSelected by lazy { getAttrColor(com.google.android.material.R.attr.colorPrimaryContainer) }
+    private val itemTvColorSelected by lazy { getAttrColor(com.google.android.material.R.attr.colorOnPrimary) }
     private val itemTvColorNormal by lazy { getAttrColor(com.google.android.material.R.attr.colorPrimary) }
     private val itemBgResSelected = R.drawable.item_character_bg_filled
     private val itemBgResNormal = R.drawable.item_character_bg
@@ -118,11 +120,14 @@ class CanvasActivity : AppCompatActivity() {
     }
 
     private fun showSaveDialogIfNeed(block: () -> Unit) {
+        if (saveDialog?.isShowing == true) {
+            return
+        }
         if (!viewModel.undoable.value) {
             block()
             return
         }
-        MaterialAlertDialogBuilder(this)
+        saveDialog = MaterialAlertDialogBuilder(this)
             .setMessage("Save changes?")
             .setPositiveButton("Yes") { _, _ ->
                 viewModel.onEvent(CanvasEvent.Save)

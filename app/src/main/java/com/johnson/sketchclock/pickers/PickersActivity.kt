@@ -22,6 +22,16 @@ class PickersActivity : AppCompatActivity() {
 
     private var currentFab: View? = null
 
+    private val pageInfoList by lazy {
+        listOf(
+            PageInfo("Templates", vb.fabAddTemplate, TemplatePickerFragment::class.java),
+            PageInfo("Fonts", vb.fabAddFont, FontPickerFragment::class.java),
+            PageInfo("Illustrations", vb.fabAddIllustration, IllustrationPickerFragment::class.java)
+        )
+    }
+
+    private data class PageInfo(val title: String, val fab: View, val fragmentClass: Class<out Fragment>)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vb = ActivityPickersBinding.inflate(layoutInflater)
@@ -40,45 +50,29 @@ class PickersActivity : AppCompatActivity() {
 
             override fun onPageSelected(position: Int) {
                 currentFab?.scaleOut(100) {
-                    currentFab = when (position) {
-                        0 -> vb.fabAddTemplate
-                        1 -> vb.fabAddFont
-                        else -> vb.fabAddIllustration
-                    }
+                    currentFab = pageInfoList[position].fab
                     currentFab?.scaleIn(100)
                 }
             }
         })
         vb.tabs.setupWithViewPager(vb.viewPager)
 
-        currentFab = when (vb.viewPager.currentItem) {
-            0 -> vb.fabAddTemplate
-            1 -> vb.fabAddFont
-            else -> vb.fabAddIllustration
-        }
+        currentFab = pageInfoList[vb.viewPager.currentItem].fab
         currentFab?.isVisible = true
     }
 
-    class SectionsPagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
+    private inner class SectionsPagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {
 
         override fun getItem(position: Int): Fragment {
-            return when (position) {
-                0 -> TemplatePickerFragment()
-                1 -> FontPickerFragment()
-                else -> IllustrationPickerFragment()
-            }
+            return pageInfoList[position].fragmentClass.getDeclaredConstructor().newInstance()
         }
 
         override fun getPageTitle(position: Int): CharSequence {
-            return when (position) {
-                0 -> "Templates"
-                1 -> "Fonts"
-                else -> "Illustrations"
-            }
+            return pageInfoList[position].title
         }
 
         override fun getCount(): Int {
-            return 3
+            return pageInfoList.size
         }
     }
 }
