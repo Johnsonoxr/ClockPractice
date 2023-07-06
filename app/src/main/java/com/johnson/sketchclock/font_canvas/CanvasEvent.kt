@@ -4,7 +4,7 @@ import android.graphics.Path
 import java.io.File
 
 sealed class CanvasEvent {
-    data class Init(val width: Int, val height: Int, val saveFile: File) : CanvasEvent()
+    data class Init(val width: Int, val height: Int, val saveFile: File, val autoCrop: Boolean = false) : CanvasEvent()
     data class AddPath(val path: Path) : CanvasEvent()
     data class SetBrushColor(val color: Int) : CanvasEvent()
     data class SetBrushSize(val size: Float) : CanvasEvent()

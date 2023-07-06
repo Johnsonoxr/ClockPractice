@@ -64,7 +64,7 @@ class IllustrationCanvasActivity : AppCompatActivity() {
 
         if (!viewModel.isInitialized) {
             val illustrationFile = illustrationRepository.getIllustrationFile(illustration)
-            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, illustrationFile))
+            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, illustrationFile, autoCrop = true))
         }
 
         lifecycleScope.launch {

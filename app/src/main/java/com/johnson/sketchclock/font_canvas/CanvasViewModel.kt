@@ -7,6 +7,7 @@ import android.graphics.Color
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
+import android.graphics.Rect
 import android.util.Log
 import androidx.core.graphics.toXfermode
 import androidx.lifecycle.ViewModel
@@ -67,6 +68,8 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     val undoable = _undoPathDataList.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
     val redoable = _redoPathDataList.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
 
+    private var autoCropWhenSaved = false
+
     private val canvas: Canvas = Canvas()
     private val brushPaint: Paint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
         style = Paint.Style.STROKE
@@ -108,10 +111,17 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch(singleDispatcher) {
             when (event) {
                 is CanvasEvent.Init -> {
+                    autoCropWhenSaved = event.autoCrop
                     baseBitmap = BitmapFactory.decodeFile(event.saveFile.absolutePath)
                     Log.d(TAG, "onEvent: baseBitmap: $baseBitmap, width: ${baseBitmap?.width}, height: ${baseBitmap?.height}")
-                    if (baseBitmap?.width == event.width && baseBitmap?.height == event.height) {
+                    val baseBmp = baseBitmap
+                    if (baseBmp != null) {
                         Log.d(TAG, "onEvent: Found existing bitmap, using it.")
+                        if (baseBmp.width != event.width || baseBmp.height != event.height) {
+                            Log.d(TAG, "onEvent: Existing bitmap size does not match, center and crop.")
+                            baseBitmap = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
+                            Canvas(baseBitmap!!).drawBitmap(baseBmp, (event.width - baseBmp.width) / 2f, (event.height - baseBmp.height) / 2f, null)
+                        }
                         _bmp.value = baseBitmap?.copy(Bitmap.Config.ARGB_8888, true)
                     } else {
                         Log.d(TAG, "onEvent: Creating new bitmap.")
@@ -165,10 +175,23 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                 is CanvasEvent.Save -> {
                     _file.value?.parentFile?.mkdirs()
                     _file.value?.outputStream()?.use {
-                        _bmp.value?.let { savedBmp ->
-                            savedBmp.compress(Bitmap.CompressFormat.PNG, 100, it)
+                        _bmp.value?.let { bmp ->
+
+                            val bmpToSave = if (autoCropWhenSaved) {
+                                val region: Rect? = evalCropRegion(bmp)
+                                if (region != null) {
+                                    Bitmap.createBitmap(bmp, region.left, region.top, region.width(), region.height())
+                                } else {
+                                    Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
+                                }
+                            } else {
+                                bmp
+                            }
+
+                            bmpToSave.compress(Bitmap.CompressFormat.PNG, 100, it)
+                            Log.d(TAG, "onEvent: Saved bitmap to ${_file.value} with size ${bmpToSave.width}x${bmpToSave.height}")
                             baseBitmap?.recycle()
-                            baseBitmap = savedBmp.copy(Bitmap.Config.ARGB_8888, true)
+                            baseBitmap = bmp.copy(Bitmap.Config.ARGB_8888, true)
                         }
                         _undoPathDataList.value = emptyList()
                         _redoPathDataList.value = emptyList()
@@ -228,6 +251,49 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                 }
             }
         }
+    }
+
+    private fun evalCropRegion(bitmap: Bitmap): Rect? {
+        val width = bitmap.width
+        val height = bitmap.height
+        val pixels = IntArray(width * height)
+        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
+
+        val topPixel = pixels.indexOfFirst { it != Color.TRANSPARENT }
+        if (topPixel == -1) {
+            return null
+        }
+
+        val top = topPixel / width
+        val bottom = pixels.indexOfLast { it != Color.TRANSPARENT } / width
+
+        fun findLeft(): Int {
+            for (x in 0 until width) {
+                for (y in top..bottom) {
+                    if (pixels[y * width + x] != Color.TRANSPARENT) {
+                        return x
+                    }
+                }
+            }
+            return -1
+        }
+
+        val left = findLeft()
+
+        fun findRight(): Int {
+            for (x in width - 1 downTo 0) {
+                for (y in top..bottom) {
+                    if (pixels[y * width + x] != Color.TRANSPARENT) {
+                        return x
+                    }
+                }
+            }
+            return -1
+        }
+
+        val right = findRight()
+
+        return Rect(left, top, right + 1, bottom + 1)
     }
 
     private data class PathData(
