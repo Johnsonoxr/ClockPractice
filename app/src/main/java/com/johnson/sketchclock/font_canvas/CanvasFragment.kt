@@ -9,6 +9,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.SeekBar
 import android.widget.Toast
 import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
@@ -16,8 +17,6 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
-import com.jaygoo.widget.OnRangeChangedListener
-import com.jaygoo.widget.RangeSeekBar
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.launchWhenStarted
 import com.johnson.sketchclock.common.scaleIn
@@ -54,8 +53,18 @@ class CanvasFragment : Fragment() {
         }
         launchWhenStarted {
             viewModel.brushSize.collectLatest { size ->
-                vb.seekbarStrokeWidth.setProgress(size)
                 vb.canvasView.brushSize = size
+                if (!viewModel.isEraseMode.value) {
+                    vb.seekbarStrokeWidth.progress = size.toInt()
+                }
+            }
+        }
+        launchWhenStarted {
+            viewModel.eraseSize.collectLatest { size ->
+                vb.canvasView.eraseSize = size
+                if (viewModel.isEraseMode.value) {
+                    vb.seekbarStrokeWidth.progress = size.toInt()
+                }
             }
         }
         launchWhenStarted {
@@ -67,6 +76,7 @@ class CanvasFragment : Fragment() {
                 vb.fab1Container.addView(fab1View)
                 vb.fab2Container.addView(fab2View)
                 vb.canvasView.isEraseMode = isEraseMode
+                vb.seekbarStrokeWidth.progress = if (isEraseMode) viewModel.eraseSize.value.toInt() else viewModel.brushSize.value.toInt()
             }
         }
         launchWhenStarted {
@@ -126,18 +136,22 @@ class CanvasFragment : Fragment() {
             viewModel.onEvent(CanvasEvent.SetBrushColor(color))
         }
 
-        vb.seekbarStrokeWidth.setOnRangeChangedListener(object : OnRangeChangedListener {
-            override fun onRangeChanged(view: RangeSeekBar?, leftValue: Float, rightValue: Float, isFromUser: Boolean) {
-                if (!isFromUser) return
+        vb.seekbarStrokeWidth.setOnSeekBarChangeListener(@SuppressLint("AppCompatCustomView") object : SeekBar.OnSeekBarChangeListener {
+            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
+                if (!fromUser) return
                 if (viewModel.isEraseMode.value) {
-                    viewModel.onEvent(CanvasEvent.SetEraseSize(leftValue))
+                    viewModel.onEvent(CanvasEvent.SetEraseSize(progress.toFloat()))
                 } else {
-                    viewModel.onEvent(CanvasEvent.SetBrushSize(leftValue))
+                    viewModel.onEvent(CanvasEvent.SetBrushSize(progress.toFloat()))
                 }
             }
 
-            override fun onStartTrackingTouch(view: RangeSeekBar?, isLeft: Boolean) {}
-            override fun onStopTrackingTouch(view: RangeSeekBar?, isLeft: Boolean) {}
+            override fun onStartTrackingTouch(seekBar: SeekBar?) {
+            }
+
+            override fun onStopTrackingTouch(seekBar: SeekBar?) {
+            }
+
         })
     }
 

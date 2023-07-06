@@ -73,7 +73,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_margin="16dp"
-            android:src="@drawable/fab_edit_off" />
+            android:src="@drawable/fab_erase" />
     </FrameLayout>
 
     <FrameLayout
@@ -89,18 +89,14 @@
         app:layout_constraintEnd_toEndOf="parent"
         tools:visibility="visible">
 
-        <com.jaygoo.widget.RangeSeekBar
+        <SeekBar
             android:id="@+id/seekbar_stroke_width"
+            android:thumb="@drawable/toggle_circle"
+            android:min="5"
+            android:max="50"
+            android:thumbTint="?attr/colorPrimary"
             android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:layout_gravity="center"
-            app:rsb_gravity="center"
-            app:rsb_max="50"
-            app:rsb_min="5"
-            app:rsb_mode="single"
-            app:rsb_progress_color="?attr/colorPrimary"
-            app:rsb_thumb_height="30dp"
-            app:rsb_thumb_width="30dp" />
+            android:layout_height="match_parent" />
 
     </FrameLayout>
 

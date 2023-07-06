@@ -18,6 +18,7 @@ import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
+import com.johnson.sketchclock.common.Utils.description
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
@@ -161,7 +162,7 @@ class ClockWidget : AppWidgetProvider() {
     }
 
     override fun onAppWidgetOptionsChanged(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int, newOptions: Bundle) {
-        Log.v(TAG, "onAppWidgetOptionsChanged: id = $appWidgetId, newOptions = $newOptions")
+        Log.v(TAG, "onAppWidgetOptionsChanged: id = $appWidgetId, newOptions = ${newOptions.description()}")
     }
 
     override fun onReceive(context: Context, intent: Intent) {

@@ -68,9 +68,6 @@ dependencies {
     implementation "androidx.room:room-ktx:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
 
-    implementation "com.github.skydoves:colorpickerview:2.2.4"
-    implementation 'com.github.Jay-Goo:RangeSeekBar:v3.0.0'
-
     implementation 'com.mig35:carousellayoutmanager:1.4.6'
 
     //Dagger - Hilt

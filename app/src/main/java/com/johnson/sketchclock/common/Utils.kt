@@ -8,6 +8,7 @@ import android.graphics.Canvas
 import android.graphics.drawable.BitmapDrawable
 import android.graphics.drawable.Drawable
 import android.graphics.drawable.VectorDrawable
+import android.os.Bundle
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
@@ -42,5 +43,9 @@ object Utils {
         return ContextCompat.getDrawable(context, drawableResId)
             ?: VectorDrawableCompat.create(resources, drawableResId, context.theme)
             ?: resources.getDrawable(drawableResId, context.theme)
+    }
+
+    fun Bundle.description(): String {
+        return keySet().joinToString(", ", prefix = "Bundle{", postfix = "}") { key -> "$key=${get(key)}" }
     }
 }

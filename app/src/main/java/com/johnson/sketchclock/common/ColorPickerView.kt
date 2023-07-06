@@ -27,17 +27,19 @@ class ColorPickerView @JvmOverloads constructor(
 
     val primaryColors = listOf(
         Color.WHITE,
+        getAttrColor(android.R.attr.colorPrimary),
         Color.RED,
+        Color.YELLOW,
         Color.GREEN,
         Color.BLUE,
-        Color.YELLOW,
-        getAttrColor(android.R.attr.colorPrimary),
+        Color.CYAN,
+        Color.MAGENTA,
     )
 
     private val secondaryColors: Map<Int, List<Int>> = primaryColors.associateWith { primaryColor ->
         val lightnessArray = when (primaryColor) {
-            Color.WHITE -> (0..5).map { it / 5f }
-            else -> (1..6).map { it / 7f }
+            Color.WHITE -> (primaryColors.indices).map { it / primaryColors.lastIndex.toFloat() }
+            else -> (1 .. primaryColors.size).map { it / (primaryColors.size + 1).toFloat() }
         }.asReversed()
         val hsl = FloatArray(3).apply { ColorUtils.colorToHSL(primaryColor, this) }
         return@associateWith lightnessArray.map { ColorUtils.HSLToColor(floatArrayOf(hsl[0], hsl[1], it)) }.toList()
@@ -68,6 +70,9 @@ class ColorPickerView @JvmOverloads constructor(
 
     init {
         vb = ColorPickerBinding.inflate(LayoutInflater.from(context), this, true)
+        vb.root.layoutParams = vb.root.layoutParams.apply {
+            width = (context.resources.displayMetrics.density * (primaryColors.size * 35 + 10)).toInt()
+        }
         vb.rvColorPrimary.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
         vb.rvColorPrimary.adapter = primaryAdapter
         vb.rvColorSecondary.layoutManager = LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false)
