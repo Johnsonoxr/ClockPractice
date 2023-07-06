@@ -21,8 +21,9 @@ class TemplateRepositoryImpl @Inject constructor(
     }
 
     override suspend fun upsertTemplate(template: Template): Long {
-        return when (template.id) {
-            null -> templateDatabase.templateDao().addTemplate(template)
+        val existsInDb = template.id != null && getTemplateById(template.id) != null
+        return when {
+            template.id == null || !existsInDb -> templateDatabase.templateDao().addTemplate(template)
             else -> {
                 templateDatabase.templateDao().updateTemplate(template)
                 template.id.toLong()

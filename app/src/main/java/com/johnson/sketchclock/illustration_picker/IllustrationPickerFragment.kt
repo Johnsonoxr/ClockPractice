@@ -11,6 +11,8 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
+import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Illustration
 import com.johnson.sketchclock.common.launchWhenStarted
@@ -46,7 +48,15 @@ class IllustrationPickerFragment : Fragment() {
             }
         }
 
-        vb.fab.setOnClickListener {
+        launchWhenStarted {
+            viewModel.deletedIllustration.collect {
+                Snackbar.make(vb.rv, "Illustration deleted", Snackbar.LENGTH_LONG)
+                    .setAction("Undo") { viewModel.onEvent(IllustrationPickerEvent.UndoDeleteIllustration) }
+                    .show()
+            }
+        }
+
+        activity?.findViewById<View>(R.id.fab_add_illustration)?.setOnClickListener {
             viewModel.onEvent(IllustrationPickerEvent.AddIllustration(Illustration(title = "new illustration")))
         }
     }
@@ -105,7 +115,7 @@ class IllustrationPickerFragment : Fragment() {
 
                     vb.ivDelete -> {
                         showDialog("Delete Illustration", "Are you sure you want to delete ${illustration.title}?") {
-                            viewModel.onEvent(IllustrationPickerEvent.RemoveIllustration(illustration))
+                            viewModel.onEvent(IllustrationPickerEvent.DeleteIllustration(illustration))
                         }
                     }
 

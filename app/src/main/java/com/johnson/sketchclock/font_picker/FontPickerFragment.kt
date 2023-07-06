@@ -14,6 +14,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
+import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.GlideHelper
@@ -51,14 +52,13 @@ class FontPickerFragment : Fragment() {
         }
         launchWhenStarted {
             viewModel.deletedFont.collect {
-                Log.e("FontPickerFragment", "collect deleted font: $it")
-                Snackbar.make(vb.rv, "Font deleted", Snackbar.LENGTH_INDEFINITE)
+                Snackbar.make(vb.rv, "Font deleted", Snackbar.LENGTH_LONG)
                     .setAction("Undo") { viewModel.onEvent(FontPickerEvent.UndoDeleteFont) }
                     .show()
             }
         }
 
-        vb.fab.setOnClickListener {
+        activity?.findViewById<View>(R.id.fab_add_font)?.setOnClickListener {
             viewModel.onEvent(FontPickerEvent.AddFont(Font(title = "new font")))
         }
     }

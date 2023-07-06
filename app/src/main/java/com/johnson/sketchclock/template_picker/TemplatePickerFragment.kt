@@ -10,6 +10,8 @@ import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.snackbar.Snackbar
+import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.launchWhenStarted
 import com.johnson.sketchclock.common.showDialog
@@ -48,7 +50,15 @@ class TemplatePickerFragment : Fragment() {
             }
         }
 
-        vb.fab.setOnClickListener {
+        launchWhenStarted {
+            viewModel.deletedTemplate.collect {
+                Snackbar.make(vb.root, "Template deleted", Snackbar.LENGTH_LONG)
+                    .setAction("Undo") { viewModel.onEvent(TemplatePickerEvent.UndoDeleteTemplate) }
+                    .show()
+            }
+        }
+
+        activity?.findViewById<View>(R.id.fab_add_template)?.setOnClickListener {
             viewModel.onEvent(TemplatePickerEvent.AddTemplate(Template(name = "new template")))
         }
     }
@@ -103,7 +113,7 @@ class TemplatePickerFragment : Fragment() {
 
                     vb.ivDelete -> {
                         showDialog("Delete template", "Are you sure you want to delete \"${template.name}\"?") {
-                            viewModel.onEvent(TemplatePickerEvent.RemoveTemplate(template))
+                            viewModel.onEvent(TemplatePickerEvent.DeleteTemplate(template))
                         }
                     }
 

@@ -51,6 +51,7 @@ class CanvasActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(vb.root)
+        setSupportActionBar(vb.toolbar)
 
         val font: Font? = intent.getSerializableExtra(KEY_FONT) as? Font
         if (font == null) {

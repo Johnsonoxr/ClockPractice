@@ -60,8 +60,6 @@ class SimpleFontSelectorFragment : DialogFragment() {
         vb.rv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
         vb.rv.adapter = adapter
 
-        vb.fab.isVisible = false
-
         lifecycleScope.launch {
             repeatOnLifecycle(Lifecycle.State.STARTED) {
                 fontRepository.getFonts().collectLatest {

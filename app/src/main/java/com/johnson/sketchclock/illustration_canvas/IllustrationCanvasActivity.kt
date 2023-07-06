@@ -11,7 +11,7 @@ import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Illustration
-import com.johnson.sketchclock.databinding.ActivityIllustrationCanvasBinding
+import com.johnson.sketchclock.databinding.ActivityBasicBinding
 import com.johnson.sketchclock.font_canvas.CanvasEvent
 import com.johnson.sketchclock.font_canvas.CanvasFragment
 import com.johnson.sketchclock.font_canvas.CanvasViewModel
@@ -39,14 +39,15 @@ class IllustrationCanvasActivity : AppCompatActivity() {
 
     private val viewModel: CanvasViewModel by viewModels()
 
-    private lateinit var vb: ActivityIllustrationCanvasBinding
+    private lateinit var vb: ActivityBasicBinding
 
     private var saved = false
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        vb = ActivityIllustrationCanvasBinding.inflate(layoutInflater)
+        vb = ActivityBasicBinding.inflate(layoutInflater)
         setContentView(vb.root)
+        setSupportActionBar(vb.toolbar)
 
         val illustration: Illustration? = intent.getSerializableExtra(KEY_ILLUSTRATION) as? Illustration
         if (illustration == null) {

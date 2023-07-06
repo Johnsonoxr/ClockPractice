@@ -8,26 +8,30 @@ import android.view.animation.OvershootInterpolator
 import com.johnson.sketchclock.R
 import java.lang.ref.WeakReference
 
-fun View.scaleIn() {
+fun View.scaleIn(duration: Int = 200, onEnd: (() -> Unit)? = null) {
     scaleX = 0f
     scaleY = 0f
     visibility = View.VISIBLE
     animate()
         .scaleX(1f)
         .scaleY(1f)
+        .setDuration(duration.toLong())
         .setInterpolator(OvershootInterpolator())
-        .setDuration(300)
+        .withEndAction {
+            onEnd?.invoke()
+        }
         .start()
 }
 
-fun View.scaleOut() {
+fun View.scaleOut(duration: Int = 200, onEnd: (() -> Unit)? = null) {
     animate()
         .scaleX(0f)
         .scaleY(0f)
         .setInterpolator(DecelerateInterpolator())
-        .setDuration(200)
+        .setDuration(duration.toLong())
         .withEndAction {
             visibility = View.GONE
+            onEnd?.invoke()
         }
         .start()
 }

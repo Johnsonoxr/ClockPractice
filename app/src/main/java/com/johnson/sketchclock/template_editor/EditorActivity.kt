@@ -8,9 +8,8 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.Template
-import com.johnson.sketchclock.databinding.ContainerLayoutBinding
+import com.johnson.sketchclock.databinding.ActivityBasicBinding
 import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
 @AndroidEntryPoint
 class EditorActivity : AppCompatActivity() {
@@ -25,18 +24,19 @@ class EditorActivity : AppCompatActivity() {
         }
     }
 
-    lateinit var vb: ContainerLayoutBinding
+    lateinit var vb: ActivityBasicBinding
 
     private val viewModel: EditorViewModel by viewModels()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        vb = ContainerLayoutBinding.inflate(layoutInflater)
+        vb = ActivityBasicBinding.inflate(layoutInflater)
         setContentView(vb.root)
+        setSupportActionBar(vb.toolbar)
 
         val template = intent.getSerializableExtra(TEMPLATE) as? Template
         if (template != null) {
-            supportFragmentManager.beginTransaction().replace(vb.root.id, EditorFragment.newInstance(template)).commit()
+            supportFragmentManager.beginTransaction().replace(vb.fragContainer.id, EditorFragment.newInstance(template)).commit()
         } else {
             finish()
             return
