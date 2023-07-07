@@ -264,8 +264,7 @@ class EditorView @JvmOverloads constructor(
             else -> return
         }
 
-        group.updateCorners()
-        updateElementMatrices()
+        updateElementMatricesAndGroupCorners()
         render()
     }
 
@@ -280,7 +279,7 @@ class EditorView @JvmOverloads constructor(
         val cachedMatrix = cachedGroupMatrix ?: return
 
         group.matrix.set(cachedMatrix)
-        updateElementMatrices()
+        updateElementMatricesAndGroupCorners()
         resetTouchState()
         render()
     }
@@ -291,8 +290,9 @@ class EditorView @JvmOverloads constructor(
         touchDownPoint = null
     }
 
-    private fun updateElementMatrices() {
+    private fun updateElementMatricesAndGroupCorners() {
         val group = selection ?: return
+        group.updateCorners()
         selectedElements.forEach { element ->
             relativeMatrixMap[element]?.let { relativeMatrix ->
                 element.matrix().apply {

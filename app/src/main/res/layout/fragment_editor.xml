@@ -125,7 +125,7 @@
         android:layout_marginStart="16dp"
         android:layout_marginTop="64dp"
         android:src="@drawable/editor_sort"
-        android:visibility="invisible"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent"
         tools:visibility="visible" />
@@ -137,7 +137,7 @@
         android:layout_height="wrap_content"
         android:rotation="180"
         android:src="@drawable/editor_sort"
-        android:visibility="invisible"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="@+id/fab_layer_up"
         app:layout_constraintTop_toBottomOf="@+id/fab_layer_up"
         tools:visibility="visible" />
@@ -148,7 +148,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/editor_fab_color"
-        android:visibility="invisible"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="@+id/fab_layer_down"
         app:layout_constraintTop_toBottomOf="@+id/fab_layer_down"
         tools:visibility="visible" />
@@ -159,7 +159,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/editor_fab_edit"
-        android:visibility="invisible"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="@+id/fab_option_color"
         app:layout_constraintTop_toBottomOf="@+id/fab_option_color"
         tools:visibility="visible" />
@@ -170,7 +170,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:src="@drawable/editor_fab_font"
-        android:visibility="invisible"
+        android:visibility="gone"
         app:layout_constraintStart_toStartOf="@+id/fab_option_edit"
         app:layout_constraintTop_toBottomOf="@+id/fab_option_edit"
         tools:visibility="visible" />
