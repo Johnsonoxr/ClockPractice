@@ -9,11 +9,13 @@ import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.Rect
 import android.util.Log
+import android.util.LruCache
 import androidx.core.graphics.toXfermode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharedFlow
@@ -33,6 +35,10 @@ private const val TAG = "CanvasViewModel"
 class CanvasViewModel @Inject constructor() : ViewModel() {
 
     companion object {
+
+        private const val CACHE_SIZE = 2
+        private const val CACHE_INTERVAL = 50
+
         fun drawPath(canvas: Canvas, paint: Paint, path: Path) {
             canvas.drawPath(path, paint)
         }
@@ -41,8 +47,8 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     private val _fileSaved = MutableSharedFlow<File?>()
     val fileSaved: SharedFlow<File?> = _fileSaved
 
-    private val _bmpUpdated: MutableSharedFlow<Unit> = MutableSharedFlow()
-    val bmpUpdated: SharedFlow<Unit> = _bmpUpdated
+    private val _bitmapUpdated: MutableSharedFlow<Unit> = MutableSharedFlow()
+    val bitmapUpdated: SharedFlow<Unit> = _bitmapUpdated
 
     private val _brushColor = MutableStateFlow(Color.BLACK)
     val brushColor: StateFlow<Int> = _brushColor
@@ -50,8 +56,8 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     private val _brushSize = MutableStateFlow(30f)
     val brushSize: StateFlow<Float> = _brushSize
 
-    private val _bmp: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
-    val bitmap: StateFlow<Bitmap?> = _bmp
+    private val _bitmap: MutableStateFlow<Bitmap?> = MutableStateFlow(null)
+    val bitmap: StateFlow<Bitmap?> = _bitmap
 
     private val _file = MutableStateFlow<File?>(null)
     val file: StateFlow<File?> = _file
@@ -67,6 +73,9 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
 
     val undoable = _undoPathDataList.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
     val redoable = _redoPathDataList.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
+
+    private var baseBitmap: Bitmap? = null
+    private val undoBitmapCache = LruCache<PathData, Bitmap>(CACHE_SIZE)
 
     private var autoCropWhenSaved = false
 
@@ -84,8 +93,7 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
         xfermode = PorterDuff.Mode.CLEAR.toXfermode()
     }
 
-    private var baseBitmap: Bitmap? = null
-
+    @OptIn(ExperimentalCoroutinesApi::class)
     private val singleDispatcher = Dispatchers.Default.limitedParallelism(1)
 
     init {
@@ -104,7 +112,7 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     }
 
     val isInitialized: Boolean
-        get() = _bmp.value != null
+        get() = _bitmap.value != null
 
     fun onEvent(event: CanvasEvent) {
         Log.v(TAG, "onEvent: $event")
@@ -112,21 +120,26 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
             when (event) {
                 is CanvasEvent.Init -> {
                     autoCropWhenSaved = event.autoCrop
-                    baseBitmap = BitmapFactory.decodeFile(event.saveFile.absolutePath)
-                    Log.d(TAG, "onEvent: baseBitmap: $baseBitmap, width: ${baseBitmap?.width}, height: ${baseBitmap?.height}")
-                    val baseBmp = baseBitmap
-                    if (baseBmp != null) {
-                        Log.d(TAG, "onEvent: Found existing bitmap, using it.")
-                        if (baseBmp.width != event.width || baseBmp.height != event.height) {
+                    val initBmp = BitmapFactory.decodeFile(event.saveFile.absolutePath)
+                    if (initBmp != null) {
+                        Log.d(TAG, "onEvent: Found existing bitmap, width=${initBmp.width}, height=${initBmp.height}")
+                        if (initBmp.width != event.width || initBmp.height != event.height) {
                             Log.d(TAG, "onEvent: Existing bitmap size does not match, center and crop.")
-                            baseBitmap = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
-                            Canvas(baseBitmap!!).drawBitmap(baseBmp, (event.width - baseBmp.width) / 2f, (event.height - baseBmp.height) / 2f, null)
+                            val centerCroppedInitBmp = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
+                            Canvas(centerCroppedInitBmp).drawBitmap(
+                                initBmp,
+                                (event.width - initBmp.width) / 2f,
+                                (event.height - initBmp.height) / 2f,
+                                null
+                            )
+                            _bitmap.value = centerCroppedInitBmp
+                        } else {
+                            _bitmap.value = initBmp
                         }
-                        _bmp.value = baseBitmap?.copy(Bitmap.Config.ARGB_8888, true)
+                        baseBitmap = _bitmap.value?.copy(Bitmap.Config.ARGB_8888, false)
                     } else {
-                        Log.d(TAG, "onEvent: Creating new bitmap.")
-                        baseBitmap = null
-                        _bmp.value = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
+                        Log.d(TAG, "onEvent: Create new bitmap.")
+                        _bitmap.value = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
                     }
                     _undoPathDataList.value = emptyList()
                     _redoPathDataList.value = emptyList()
@@ -145,7 +158,8 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                     } else {
                         drawPath(canvas, brushPaint, event.path)
                     }
-                    _bmpUpdated.emit(Unit)
+                    updateCachedBitmap()
+                    _bitmapUpdated.emit(Unit)
                 }
 
                 is CanvasEvent.SetBrushColor -> {
@@ -166,36 +180,41 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
 
                 is CanvasEvent.Clear -> {
                     canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-                    baseBitmap = null
+                    undoBitmapCache.evictAll()
                     _undoPathDataList.value = emptyList()
                     _redoPathDataList.value = emptyList()
-                    _bmpUpdated.emit(Unit)
+                    _bitmapUpdated.emit(Unit)
                 }
 
                 is CanvasEvent.Save -> {
                     _file.value?.parentFile?.mkdirs()
-                    _file.value?.outputStream()?.use {
-                        _bmp.value?.let { bmp ->
 
-                            val bmpToSave = if (autoCropWhenSaved) {
-                                val region: Rect? = evalCropRegion(bmp)
-                                if (region != null) {
-                                    Bitmap.createBitmap(bmp, region.left, region.top, region.width(), region.height())
-                                } else {
-                                    Bitmap.createBitmap(100, 100, Bitmap.Config.ARGB_8888)
-                                }
-                            } else {
-                                bmp
-                            }
+                    val bmpToSave: Bitmap? = _bitmap.value?.let { bmp ->
+                        val region: Rect? = evalCropRegion(bmp)
+                        when {
+                            region == null -> null
+                            autoCropWhenSaved && (region.width() < bmp.width || region.height() < bmp.height) ->
+                                Bitmap.createBitmap(bmp, region.left, region.top, region.width(), region.height())
 
-                            bmpToSave.compress(Bitmap.CompressFormat.PNG, 100, it)
-                            Log.d(TAG, "onEvent: Saved bitmap to ${_file.value} with size ${bmpToSave.width}x${bmpToSave.height}")
-                            baseBitmap?.recycle()
-                            baseBitmap = bmp.copy(Bitmap.Config.ARGB_8888, true)
+                            else -> bmp
                         }
-                        _undoPathDataList.value = emptyList()
-                        _redoPathDataList.value = emptyList()
                     }
+
+                    if (bmpToSave != null) {
+                        _file.value?.outputStream()?.use { fos ->
+                            bmpToSave.compress(Bitmap.CompressFormat.PNG, 100, fos)
+                            Log.d(TAG, "onEvent: Saved bitmap to ${_file.value} with size ${bmpToSave.width}x${bmpToSave.height}")
+                        }
+                        baseBitmap = _bitmap.value?.copy(Bitmap.Config.ARGB_8888, false)
+                    } else {
+                        _file.value?.delete()
+                        baseBitmap = null
+                        Log.d(TAG, "onEvent: Deleted file ${_file.value} since bitmap is empty.")
+                    }
+
+                    undoBitmapCache.evictAll()
+                    _undoPathDataList.value = emptyList()
+                    _redoPathDataList.value = emptyList()
                     _fileSaved.emit(_file.value)
                 }
 
@@ -207,9 +226,26 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                     _undoPathDataList.value = _undoPathDataList.value.dropLast(1)
 
                     canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
-                    baseBitmap?.let { canvas.drawBitmap(it, 0f, 0f, null) }
 
-                    _undoPathDataList.value.forEach { pathData ->
+                    val cachedAnchorIdx: Int = _undoPathDataList.value.indexOfLast { undoBitmapCache.get(it) != null }
+                    if (cachedAnchorIdx >= 0) {
+                        Log.d(TAG, "onEvent: Found cached anchor, draw from it.")
+                        undoBitmapCache.get(_undoPathDataList.value[cachedAnchorIdx])?.let { cachedBitmap ->
+                            canvas.drawBitmap(cachedBitmap, 0f, 0f, null)
+                        }
+                    } else {
+                        baseBitmap?.let {
+                            canvas.drawBitmap(it, 0f, 0f, null)
+                        }
+                    }
+
+                    val pathDataListToDraw = if (cachedAnchorIdx >= 0) {
+                        _undoPathDataList.value.subList(cachedAnchorIdx + 1, _undoPathDataList.value.size)
+                    } else {
+                        _undoPathDataList.value
+                    }
+
+                    pathDataListToDraw.forEach { pathData ->
                         if (pathData.color != null) {
                             brushPaint.color = pathData.color
                             brushPaint.strokeWidth = pathData.size
@@ -223,7 +259,8 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                     brushPaint.strokeWidth = _brushSize.value
                     erasePaint.strokeWidth = _eraseSize.value
 
-                    _bmpUpdated.emit(Unit)
+                    updateCachedBitmap()
+                    _bitmapUpdated.emit(Unit)
                 }
 
                 is CanvasEvent.Redo -> {
@@ -247,8 +284,19 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                     brushPaint.strokeWidth = _brushSize.value
                     erasePaint.strokeWidth = _eraseSize.value
 
-                    _bmpUpdated.emit(Unit)
+                    updateCachedBitmap()
+                    _bitmapUpdated.emit(Unit)
                 }
+            }
+        }
+    }
+
+    private fun updateCachedBitmap() {
+        val dataList = _undoPathDataList.value
+        if (dataList.isNotEmpty() && dataList.size % CACHE_INTERVAL == 0 && undoBitmapCache[dataList.last()] == null) {
+            _bitmap.value?.copy(Bitmap.Config.ARGB_8888, false)?.let { cacheBitmap ->
+                Log.d(TAG, "updateCachedBitmap: Cache bitmap at #${dataList.size}")
+                undoBitmapCache.put(dataList.last(), cacheBitmap)
             }
         }
     }

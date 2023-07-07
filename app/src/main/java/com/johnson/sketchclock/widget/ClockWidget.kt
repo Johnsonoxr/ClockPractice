@@ -12,7 +12,6 @@ import android.graphics.Canvas
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
-import android.util.Size
 import android.widget.RemoteViews
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
@@ -23,8 +22,6 @@ import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
 import javax.inject.Inject
-import kotlin.math.abs
-import kotlin.math.ceil
 
 @AndroidEntryPoint
 class ClockWidget : AppWidgetProvider() {
@@ -119,17 +116,8 @@ class ClockWidget : AppWidgetProvider() {
 
         val template = widgetTemplate ?: return
 
-        val drawRegion = visualizer.evaluateDrawRegion(template.elements)
-        drawRegion.offset(-Constants.TEMPLATE_WIDTH / 2f, -Constants.TEMPLATE_HEIGHT / 2f)
-        val drawSize = Size(
-            ceil(maxOf(abs(drawRegion.left), abs(drawRegion.right)) * 2).toInt(),
-            ceil(maxOf(abs(drawRegion.top), abs(drawRegion.bottom)) * 2).toInt()
-        )
-        val bitmap = Bitmap.createBitmap(drawSize.width, drawSize.height, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap).apply {
-            clipRect(0, 0, drawSize.width, drawSize.height)
-            translate((drawSize.width - Constants.TEMPLATE_WIDTH) / 2f, (drawSize.height - Constants.TEMPLATE_HEIGHT) / 2f)
-        }
+        val bitmap = Bitmap.createBitmap(Constants.TEMPLATE_WIDTH, Constants.TEMPLATE_HEIGHT, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(bitmap).apply { clipRect(0, 0, bitmap.width, bitmap.height) }
         visualizer.draw(canvas, template.elements, thisMinuteMillis)
 
         val remoteViews = RemoteViews(context.packageName, R.layout.widget_clock).apply {

@@ -42,7 +42,7 @@ class CanvasFragment : Fragment() {
             viewModel.bitmap.collectLatest { bmp -> vb.canvasView.bitmap = bmp }
         }
         launchWhenStarted {
-            viewModel.bmpUpdated.collectLatest { vb.canvasView.render() }
+            viewModel.bitmapUpdated.collectLatest { vb.canvasView.render() }
         }
         launchWhenStarted {
             viewModel.brushColor.collectLatest { color ->

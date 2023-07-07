@@ -56,11 +56,9 @@ class CanvasView @JvmOverloads constructor(
 
     var isEraseMode = false
 
-    private var bmpCanvas: Canvas? = null
     var bitmap: Bitmap? = null
         set(value) {
             field = value
-            bmpCanvas = value?.let { Canvas(it) }
             value?.let { canvasSize = SizeF(it.width.toFloat(), it.height.toFloat()) }
             render()
         }

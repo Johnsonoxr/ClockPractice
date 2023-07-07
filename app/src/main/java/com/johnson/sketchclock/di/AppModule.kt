@@ -5,6 +5,7 @@ import android.content.Context
 import android.os.Handler
 import android.os.Looper
 import androidx.room.Room
+import com.johnson.sketchclock.common.BitmapResourceHolder
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.font.FontRepositoryImpl
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
@@ -60,5 +61,15 @@ class AppModule {
     @Singleton
     fun provideClockUpdateHandler(): Handler {
         return Handler(Looper.getMainLooper())
+    }
+
+    @Provides
+    @Singleton
+    fun provideBitmapResourceHolder(
+        context: Context,
+        fontRepository: FontRepository,
+        illustrationRepository: IllustrationRepository
+    ): BitmapResourceHolder {
+        return BitmapResourceHolder(context, fontRepository, illustrationRepository)
     }
 }

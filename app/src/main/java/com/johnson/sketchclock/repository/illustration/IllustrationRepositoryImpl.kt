@@ -58,7 +58,7 @@ class IllustrationRepositoryImpl @Inject constructor(
         return _illustrations
     }
 
-    override suspend fun getIllustrationByRes(resName: String): Illustration? {
+    override fun getIllustrationByRes(resName: String): Illustration? {
         return _illustrations.value.find { it.resName == resName }
     }
 

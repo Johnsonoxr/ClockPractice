@@ -56,7 +56,7 @@ class FontRepositoryImpl @Inject constructor(
         return _fonts
     }
 
-    override suspend fun getFontByRes(resName: String): Font? {
+    override fun getFontByRes(resName: String): Font? {
         return _fonts.value.find { it.resName == resName }
     }
 

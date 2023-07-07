@@ -13,6 +13,7 @@ import android.graphics.PointF
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
+import android.util.Size
 import android.util.SizeF
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
@@ -21,6 +22,7 @@ import com.johnson.sketchclock.common.Element
 import java.lang.ref.WeakReference
 import kotlin.math.atan2
 import kotlin.math.hypot
+import kotlin.math.max
 
 class EditorView @JvmOverloads constructor(
     context: Context,
@@ -102,7 +104,13 @@ class EditorView @JvmOverloads constructor(
             return
         }
 
-        val corners = selectedElements.map { it.corners().toList() }.flatten().chunked(2).map { PointF(it[0], it[1]) }
+        val corners = selectedElements.mapNotNull { it.guideLineCorners()?.toList() }.flatten().chunked(2).map { PointF(it[0], it[1]) }
+
+        if (corners.isEmpty()) {
+            selection = null
+            return
+        }
+
         val left = corners.minOf { it.x }
         val right = corners.maxOf { it.x }
         val top = corners.minOf { it.y }
@@ -141,7 +149,7 @@ class EditorView @JvmOverloads constructor(
         }
 
         val cxy = floatArrayOf(viewX, viewY).apply { v2c.mapPoints(this) }
-        val clickedElements = elements.filter { it.contains(cxy[0], cxy[1]) }
+        val clickedElements = elements.filter { it.isInClickRegion(cxy[0], cxy[1]) }
         when (val clickedElement = clickedElements.minByOrNull { it.distToCenter(cxy[0], cxy[1]) - 1e-5 * elements.indexOf(it) }) {
             null -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(emptyList()))
             in selectedElements -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements - clickedElement))
@@ -159,7 +167,7 @@ class EditorView @JvmOverloads constructor(
         canvas.restore()
 
         selectedElements.forEach { element ->
-            val corners = element.corners()
+            val corners = element.guideLineCorners() ?: return@forEach
             c2v.mapPoints(corners)
             path.apply {
                 reset()
@@ -295,21 +303,32 @@ class EditorView @JvmOverloads constructor(
         }
     }
 
-    private fun Element.corners(): FloatArray {
+    private fun Element.guideLineCorners(): FloatArray? {
+        var elementSize = viewModelRef?.get()?.visualizer?.resourceHolder?.getElementSize(this) ?: return null
+        if (elementSize.width < 100 || elementSize.height < 100) {
+            //  Make sure the element is not too small for drawing guide lines
+            elementSize = Size(max(elementSize.width, 100), max(elementSize.height, 100))
+        }
         val corners = floatArrayOf(
-            -width() / 2f, -height() / 2f,
-            width() / 2f, -height() / 2f,
-            width() / 2f, height() / 2f,
-            -width() / 2f, height() / 2f
+            -elementSize.width / 2f, -elementSize.height / 2f,
+            elementSize.width / 2f, -elementSize.height / 2f,
+            elementSize.width / 2f, elementSize.height / 2f,
+            -elementSize.width / 2f, elementSize.height / 2f
         )
         matrix().mapPoints(corners)
         return corners
     }
 
-    private fun Element.contains(x: Float, y: Float): Boolean {
+    private fun Element.isInClickRegion(x: Float, y: Float): Boolean {
+        var elementSize = viewModelRef?.get()?.visualizer?.resourceHolder?.getElementSize(this) ?: return false
+        if (elementSize.width < 100 || elementSize.height < 100) {
+            //  Make sure the element is not too small for user to select
+            elementSize = Size(max(elementSize.width, 100), max(elementSize.height, 100))
+        }
         val inv = Matrix().apply { matrix().invert(this) }
         val pt = floatArrayOf(x, y).apply { inv.mapPoints(this) }
-        return pt[0] >= -width() / 2f && pt[0] <= width() / 2f && pt[1] >= -height() / 2f && pt[1] <= height() / 2f
+        return pt[0] >= -elementSize.width / 2f && pt[0] <= elementSize.width / 2f &&
+                pt[1] >= -elementSize.height / 2f && pt[1] <= elementSize.height / 2f
     }
 
     private fun Element.distToCenter(x: Float, y: Float): Float {

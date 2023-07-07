@@ -16,9 +16,6 @@ class Element(
     @Transient
     private var m: Matrix? = null
 
-    fun width() = eType.width()
-    fun height() = eType.height()
-
     fun matrix(): Matrix {
         return m ?: Matrix().apply {
             setValues(matrixArray)

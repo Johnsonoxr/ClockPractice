@@ -1,32 +1,27 @@
 package com.johnson.sketchclock.common
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.ColorFilter
 import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
-import android.graphics.RectF
 import android.util.LruCache
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 import javax.inject.Inject
-import kotlin.math.max
-import kotlin.math.min
 
 private const val TAG = "TemplateVisualizer"
 
 class TemplateVisualizer @Inject constructor(
-    private val context: Context,
     private val fontRepository: FontRepository,
-    private val illustrationRepository: IllustrationRepository
+    private val illustrationRepository: IllustrationRepository,
+    val resourceHolder: BitmapResourceHolder
 ) {
 
     private val bitmapPaint = Paint().apply {
@@ -34,53 +29,30 @@ class TemplateVisualizer @Inject constructor(
 //        isFilterBitmap = true
 //        isDither = true
     }
-    private val bitmaps = mutableMapOf<String, Bitmap?>()
     private val matrix = Matrix()
 
     private val hardColorFilterCache = LruCache<Int, PorterDuffColorFilter>(10)
     private val softColorFilterCache = LruCache<Int, ColorMatrixColorFilter>(10)
 
     fun draw(canvas: Canvas, elements: List<Element>, timeMillis: Long? = null) {
-        canvas.save()
         elements.forEach { element ->
-            matrix.set(element.matrix())
-            matrix.preTranslate(-element.width() / 2f, -element.height() / 2f)
-            loadBitmap(element, timeMillis)?.let {
-                val hartTint = element.hardTintColor
+
+            loadBitmap(element, timeMillis)?.let { bmp ->
+                val hardTint = element.hardTintColor
                 val softTint = element.softTintColor
 
+                matrix.set(element.matrix())
+                matrix.preTranslate(-bmp.width / 2f, -bmp.height / 2f)
+
                 bitmapPaint.colorFilter = when {
-                    hartTint != null -> hardColorFilterCache[hartTint] ?: PorterDuffColorFilter(
-                        hartTint,
-                        PorterDuff.Mode.SRC_IN
-                    ).also { hardColorFilter -> hardColorFilterCache.put(hartTint, hardColorFilter) }
-
-                    softTint != null -> softColorFilterCache[softTint] ?: ColorMatrixColorFilter(
-                        ColorMatrix().apply {
-                            setScale(
-                                Color.red(softTint) / 255f,
-                                Color.green(softTint) / 255f,
-                                Color.blue(softTint) / 255f,
-                                Color.alpha(softTint) / 255f
-                            )
-                        }
-                    ).also { softColorFilter -> softColorFilterCache.put(softTint, softColorFilter) }
-
+                    hardTint != null -> getHardColorFilter(hardTint)
+                    softTint != null -> getSoftColorFilter(softTint)
                     else -> null
                 }
 
-                canvas.drawBitmap(it, matrix, bitmapPaint)
+                canvas.drawBitmap(bmp, matrix, bitmapPaint)
             }
         }
-        canvas.restore()
-    }
-
-    private fun bitmapKey(resName: String, character: Character): String {
-        return "${resName}_${character.name}"
-    }
-
-    private fun bitmapKey(resName: String): String {
-        return resName
     }
 
     private fun loadBitmap(element: Element, timeMillis: Long? = null): Bitmap? {
@@ -111,26 +83,13 @@ class TemplateVisualizer @Inject constructor(
             EType.Illustration -> null
         }
 
-        val key = when (char) {
-            null -> bitmapKey(elementResName)
-            else -> bitmapKey(elementResName, char)
+        return if (char == null) {
+            val illustration = illustrationRepository.getIllustrationByRes(elementResName)
+            illustration?.let { resourceHolder.getIllustrationBitmap(it) }
+        } else {
+            val font = fontRepository.getFontByRes(elementResName)
+            font?.let { resourceHolder.getFontBitmap(it, char) }
         }
-
-        bitmaps[key]?.let { return it }
-
-        var bitmap: Bitmap?
-
-        runBlocking(Dispatchers.IO) {
-            bitmap = if (char == null) {
-                val illustration = illustrationRepository.getIllustrationByRes(elementResName)
-                illustration?.let { illustrationRepository.getIllustrationFile(it) }?.let { GlideHelper.loadBitmap(context, it) }
-            } else {
-                val font = fontRepository.getFontByRes(elementResName)
-                font?.let { fontRepository.getFontFile(it, char) }?.let { GlideHelper.loadBitmap(context, it) }
-            }
-        }
-
-        return bitmap
     }
 
     private fun numberToCharacter(number: Int): Character {
@@ -148,33 +107,23 @@ class TemplateVisualizer @Inject constructor(
         }
     }
 
-    fun evaluateDrawRegion(elements: List<Element>): RectF {
-
-        var maxX = Float.MIN_VALUE
-        var minX = Float.MAX_VALUE
-        var maxY = Float.MIN_VALUE
-        var minY = Float.MAX_VALUE
-
-        elements.forEach { element ->
-            val halfWidth = element.width() / 2f
-            val halfHeight = element.height() / 2f
-
-            val cornerArray = floatArrayOf(
-                -halfWidth, -halfHeight,
-                halfWidth, -halfHeight,
-                halfWidth, halfHeight,
-                -halfWidth, halfHeight
-            )
-            element.matrix().mapPoints(cornerArray)
-
-            cornerArray.asList().chunked(2).forEach { (x, y) ->
-                maxX = max(maxX, x)
-                minX = min(minX, x)
-                maxY = max(maxY, y)
-                minY = min(minY, y)
+    private fun getSoftColorFilter(color: Int): ColorFilter {
+        return softColorFilterCache[color] ?: ColorMatrixColorFilter(
+            ColorMatrix().apply {
+                setScale(
+                    Color.red(color) / 255f,
+                    Color.green(color) / 255f,
+                    Color.blue(color) / 255f,
+                    Color.alpha(color) / 255f
+                )
             }
-        }
+        ).also { softColorFilter -> softColorFilterCache.put(color, softColorFilter) }
+    }
 
-        return RectF(minX, minY, maxX, maxY)
+    private fun getHardColorFilter(color: Int): ColorFilter {
+        return hardColorFilterCache[color] ?: PorterDuffColorFilter(
+            color,
+            PorterDuff.Mode.SRC_IN
+        ).also { hardColorFilter -> hardColorFilterCache.put(color, hardColorFilter) }
     }
 }
