@@ -14,6 +14,7 @@ import android.view.animation.OvershootInterpolator
 import android.widget.Toast
 import androidx.core.os.bundleOf
 import androidx.core.view.MenuProvider
+import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
@@ -30,17 +31,23 @@ import com.johnson.sketchclock.common.removeCancelObserverView
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentEditorBinding
+import com.johnson.sketchclock.illustration_canvas.IllustrationCanvasActivity
+import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.Companion.showFontSelectorDialog
 import com.johnson.sketchclock.template_editor.SimpleIllustrationSelectorFragment.Companion.showIllustrationSelectorDialog
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import java.lang.ref.WeakReference
+import javax.inject.Inject
 
 private const val TEMPLATE = "template"
 
 @SuppressLint("NotifyDataSetChanged")
 @AndroidEntryPoint
 class EditorFragment : Fragment() {
+
+    @Inject
+    lateinit var illustrationRepository: IllustrationRepository
 
     private val viewModel: EditorViewModel by activityViewModels()
 
@@ -99,6 +106,18 @@ class EditorFragment : Fragment() {
             }
         }
 
+        launchWhenStarted {
+            viewModel.errorMessage.collectLatest { message ->
+                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
+            }
+        }
+
+        launchWhenStarted {
+            illustrationRepository.getIllustrations().collectLatest { illustrations ->
+                vb.controlView.render()
+            }
+        }
+
         vb.controlView.viewModelRef = WeakReference(viewModel)
 
         vb.fabAdd.setOnClickListener {
@@ -140,6 +159,14 @@ class EditorFragment : Fragment() {
             vb.colorPicker.addCancelObserverView {
                 showTintControlPanel(false)
                 showOptionButtons(true)
+            }
+        }
+
+        vb.fabOptionEdit.setOnClickListener {
+            val illustration = viewModel.selectedElements.value.firstOrNull()?.resName
+                ?.let { resName -> illustrationRepository.getIllustrationByRes(resName) }
+            if (illustration != null) {
+                startActivity(IllustrationCanvasActivity.createIntent(requireContext(), illustration))
             }
         }
 
@@ -218,25 +245,33 @@ class EditorFragment : Fragment() {
             vb.fabAdd.addCancelObserverView {
                 showAddTemplateButtons(false)
             }
-            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddIllustration).forEach { fab -> fab.scaleIn() }
+            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddIllustration).forEach { it.scaleIn() }
         } else {
             vb.fabAdd.animate().setInterpolator(OvershootInterpolator()).rotation(0f).setDuration(300).start()
             vb.fabAdd.removeCancelObserverView()
-            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddIllustration).forEach { fab -> fab.scaleOut() }
+            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddIllustration).forEach { it.scaleOut() }
         }
     }
 
     private fun showOptionButtons(show: Boolean) {
         val elements = viewModel.selectedElements.value
 
+        val editable = elements.size == 1
+                && elements.firstOrNull()?.eType == EType.Illustration
+                && elements.firstOrNull()?.resName?.let { illustrationRepository.getIllustrationByRes(it)?.editable } == true
+
         mapOf(
             vb.fabLayerUp to true,
             vb.fabLayerDown to true,
             vb.fabOptionColor to true,
-            vb.fabOptionEdit to viewModel.isSelectedElementsEditable.value,
+            vb.fabOptionEdit to editable,
             vb.fabOptionFont to (elements.all { it.eType.isCharacter() }),   //  only characters can be changed font
-        ).forEach { (fab, visible) ->
-            if (show && visible) fab.scaleIn() else fab.scaleOut()
+        ).forEach { (fab, validOption) ->
+            if (show && validOption) {
+                if (!fab.isVisible) fab.scaleIn()
+            } else {
+                if (fab.isVisible) fab.scaleOut()
+            }
         }
     }
 

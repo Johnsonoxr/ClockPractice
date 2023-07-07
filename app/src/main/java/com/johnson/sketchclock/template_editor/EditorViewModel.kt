@@ -4,7 +4,6 @@ import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.gson.Gson
-import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
@@ -36,12 +35,6 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _elements = MutableStateFlow<List<Element>>(emptyList())
     val elements: StateFlow<List<Element>> = _elements
 
-    private val _templateId = MutableStateFlow<Int?>(null)
-    val templateId: StateFlow<Int?> = _templateId
-
-    private val _name = MutableStateFlow<String?>(null)
-    val name: StateFlow<String?> = _name
-
     private val _selectedElements = MutableStateFlow<List<Element>>(emptyList())
     val selectedElements: StateFlow<List<Element>> = _selectedElements
 
@@ -51,6 +44,9 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     private val _contentUpdated = MutableSharedFlow<String>()
     val contentUpdated: SharedFlow<String> = _contentUpdated
 
+    private val _errorMessage = MutableSharedFlow<String>()
+    val errorMessage: SharedFlow<String> = _errorMessage
+
     val layerUpEnabled: StateFlow<Boolean> = combine(_elements, _selectedElements) { es, ses ->
         ses.none { se -> es.indexOf(se) == es.lastIndex }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
@@ -59,11 +55,11 @@ class EditorViewModel @Inject constructor() : ViewModel() {
         ses.none { se -> es.indexOf(se) == 0 }
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
 
-    private val _isSelectedElementsEditable = MutableStateFlow(false)
-    val isSelectedElementsEditable: StateFlow<Boolean> = _isSelectedElementsEditable
+    private var templateId: Int? = null
+    private var templateName: String? = null
 
     val isInitialized: Boolean
-        get() = _templateId.value != null
+        get() = templateId != null
 
     // check if template is saved
     private var savedElements: List<Element>? = null
@@ -76,24 +72,25 @@ class EditorViewModel @Inject constructor() : ViewModel() {
         viewModelScope.launch {
             when (event) {
                 is EditorEvent.Init -> {
+                    templateId = event.template.id
+                    templateName = event.template.name
+                    savedElements = event.template.elements.filter { visualizer.resourceHolder.getElementSize(it) != null }.map { it.deepClone() }
                     _elements.value = event.template.elements
-                    _templateId.value = event.template.id
-                    _name.value = event.template.name
-                    savedElements = event.template.elements.map { it.deepClone() }
                 }
 
                 is EditorEvent.Reset -> {
                     _elements.value = emptyList()
-                    _templateId.value = null
-                    _name.value = null
+                    templateId = null
+                    templateName = null
+                    savedElements = null
                 }
 
                 is EditorEvent.Save -> {
                     val elements = _elements.value
-                    val templateId = _templateId.value ?: return@launch
+                    val templateId = templateId ?: return@launch
                     val template = Template(
                         id = templateId,
-                        name = _name.value ?: "",
+                        name = templateName ?: "",
                         elements = elements.toMutableList()
                     )
                     savedElements = elements.map { it.deepClone() }
@@ -102,12 +99,19 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.ChangeRes -> {
-                    event.elements.forEach { it.resName = event.font.resName }
+                    event.elements.filter { it in _elements.value }.forEach { it.resName = event.font.resName }
                     _contentUpdated.emit("font")
                 }
 
                 is EditorEvent.AddElements -> {
-                    _elements.value += event.elements
+                    val validElements = event.elements.filter { visualizer.resourceHolder.getElementSize(it) != null }
+                    if (validElements.isEmpty()) {
+                        _errorMessage.emit("No valid elements")
+                        return@launch
+                    } else if (validElements.size < event.elements.size) {
+                        _errorMessage.emit("Some elements are invalid")
+                    }
+                    _elements.value += validElements
                 }
 
                 is EditorEvent.DeleteElements -> {
@@ -116,15 +120,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.SetSelectedElements -> {
-                    if (event.elements.size == 1 && event.elements.firstOrNull()?.eType == EType.Illustration) {
-                        val element = event.elements.firstOrNull()
-                        val illustration = element?.resName?.let { illustrationRepository.getIllustrationByRes(it) }
-                        _isSelectedElementsEditable.value = illustration?.editable == true
-                    } else {
-                        _isSelectedElementsEditable.value = false
-                    }
-
-                    _selectedElements.value = event.elements
+                    val validElements = event.elements.filter { it in _elements.value }
+                    _selectedElements.value = validElements
                 }
 
                 is EditorEvent.SetTint -> {
@@ -136,11 +133,12 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.LayerUp -> {
-                    if (event.elements.any { elements.value.indexOf(it) == elements.value.lastIndex }) {  // if any element is already at the top
+                    val validElements = event.elements.filter { it in _elements.value }
+                    if (validElements.any { elements.value.indexOf(it) == elements.value.lastIndex }) {  // if any element is already at the top
                         return@launch
                     }
                     val mutableElements = elements.value.toMutableList()
-                    event.elements.sortedByDescending { elements.value.indexOf(it) }.forEach {
+                    validElements.sortedByDescending { elements.value.indexOf(it) }.forEach {
                         val index = elements.value.indexOf(it)
                         mutableElements[index] = mutableElements[index + 1].also { mutableElements[index + 1] = mutableElements[index] }
                     }
@@ -148,11 +146,12 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.LayerDown -> {
-                    if (event.elements.any { elements.value.indexOf(it) == 0 }) {  // if any element is already at the bottom
+                    val validElements = event.elements.filter { it in _elements.value }
+                    if (validElements.any { elements.value.indexOf(it) == 0 }) {  // if any element is already at the bottom
                         return@launch
                     }
                     val mutableElements = elements.value.toMutableList()
-                    event.elements.sortedBy { elements.value.indexOf(it) }.forEach {
+                    validElements.sortedBy { elements.value.indexOf(it) }.forEach {
                         val index = elements.value.indexOf(it)
                         mutableElements[index] = mutableElements[index - 1].also { mutableElements[index - 1] = mutableElements[index] }
                     }
