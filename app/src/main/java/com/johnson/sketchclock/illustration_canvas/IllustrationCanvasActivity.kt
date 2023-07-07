@@ -41,8 +41,6 @@ class IllustrationCanvasActivity : AppCompatActivity() {
 
     private lateinit var vb: ActivityBasicBinding
 
-    private var saved = false
-
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         vb = ActivityBasicBinding.inflate(layoutInflater)
@@ -73,12 +71,6 @@ class IllustrationCanvasActivity : AppCompatActivity() {
             }
         }
 
-        lifecycleScope.launch {
-            viewModel.undoable.collectLatest {
-                saved = !it
-            }
-        }
-
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
 
         supportFragmentManager.beginTransaction()
@@ -87,7 +79,7 @@ class IllustrationCanvasActivity : AppCompatActivity() {
     }
 
     private fun showSaveDialogIfNeed(block: () -> Unit) {
-        if (saved) {
+        if (viewModel.isSaved) {
             block()
             return
         }

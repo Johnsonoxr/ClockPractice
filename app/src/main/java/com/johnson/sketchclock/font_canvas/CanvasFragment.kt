@@ -11,6 +11,8 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.SeekBar
 import android.widget.Toast
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
@@ -32,6 +34,12 @@ class CanvasFragment : Fragment() {
     private val viewModel: CanvasViewModel by activityViewModels()
 
     private lateinit var vb: FragmentCanvasBinding
+
+    private val pickImageLauncher = registerForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            viewModel.onEvent(CanvasEvent.ImportImage(uri))
+        }
+    }
 
     @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -126,6 +134,10 @@ class CanvasFragment : Fragment() {
                     viewModel.onEvent(CanvasEvent.Clear)
                 }.setNegativeButton("No", null)
                 .show()
+        }
+
+        vb.fabImport.setOnClickListener {
+            pickImageLauncher.launch(PickVisualMediaRequest(mediaType = ActivityResultContracts.PickVisualMedia.ImageOnly))
         }
 
         vb.canvasView.addPathListener = { path ->

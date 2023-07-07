@@ -1,15 +1,19 @@
 package com.johnson.sketchclock.font_canvas
 
+import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.Rect
+import android.net.Uri
 import android.util.Log
 import android.util.LruCache
+import android.util.Size
 import androidx.core.graphics.toXfermode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -27,12 +31,15 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import java.io.File
 import javax.inject.Inject
+import kotlin.math.min
 
 
 private const val TAG = "CanvasViewModel"
 
 @HiltViewModel
-class CanvasViewModel @Inject constructor() : ViewModel() {
+class CanvasViewModel @Inject constructor(
+    private val context: Context
+) : ViewModel() {
 
     companion object {
 
@@ -74,8 +81,12 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
     val undoable = _undoPathDataList.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
     val redoable = _redoPathDataList.map { it.isNotEmpty() }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(), false)
 
+    val isSaved: Boolean
+        get() = !undoable.value && !hasImportWithoutSaved
+
     private var baseBitmap: Bitmap? = null
     private val undoBitmapCache = LruCache<PathData, Bitmap>(CACHE_SIZE)
+    private var hasImportWithoutSaved = false
 
     private var autoCropWhenSaved = false
 
@@ -120,7 +131,7 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
             when (event) {
                 is CanvasEvent.Init -> {
                     autoCropWhenSaved = event.autoCrop
-                    val initBmp = BitmapFactory.decodeFile(event.saveFile.absolutePath)
+                    val initBmp = BitmapFactory.decodeFile(event.saveFile.absolutePath, BitmapFactory.Options().apply { inMutable = true })
                     if (initBmp != null) {
                         Log.d(TAG, "onEvent: Found existing bitmap, width=${initBmp.width}, height=${initBmp.height}")
                         if (initBmp.width != event.width || initBmp.height != event.height) {
@@ -141,9 +152,37 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                         Log.d(TAG, "onEvent: Create new bitmap.")
                         _bitmap.value = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
                     }
+                    hasImportWithoutSaved = false
                     _undoPathDataList.value = emptyList()
                     _redoPathDataList.value = emptyList()
                     _file.value = event.saveFile
+                }
+
+                is CanvasEvent.ImportImage -> {
+                    val bmpSize = _bitmap.value?.let { Size(it.width, it.height) } ?: return@launch
+                    Log.d(TAG, "onEvent: Import image, width=${bmpSize.width}, height=${bmpSize.height}")
+                    val importedBitmap = decodeBitmapInProperSize(event.uri, bmpSize.width, bmpSize.height) ?: return@launch
+                    Log.d(TAG, "onEvent: Imported bitmap, width=${importedBitmap.width}, height=${importedBitmap.height}")
+                    canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
+                    val fitScale = min(bmpSize.width / importedBitmap.width.toFloat(), bmpSize.height / importedBitmap.height.toFloat())
+                    val scale = min(fitScale, 1f)   //  centerInside, not fitCenter
+                    canvas.drawBitmap(
+                        importedBitmap,
+                        Matrix().apply {
+                            postScale(scale, scale)
+                            postTranslate(
+                                (bmpSize.width - importedBitmap.width * scale) / 2f,
+                                (bmpSize.height - importedBitmap.height * scale) / 2f
+                            )
+                        },
+                        null
+                    )
+                    baseBitmap = _bitmap.value?.copy(Bitmap.Config.ARGB_8888, false)
+                    hasImportWithoutSaved = true
+                    _undoPathDataList.value = emptyList()
+                    _redoPathDataList.value = emptyList()
+                    updateCachedBitmap()
+                    _bitmapUpdated.emit(Unit)
                 }
 
                 is CanvasEvent.AddPath -> {
@@ -181,6 +220,7 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                 is CanvasEvent.Clear -> {
                     canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
                     undoBitmapCache.evictAll()
+                    hasImportWithoutSaved = false
                     _undoPathDataList.value = emptyList()
                     _redoPathDataList.value = emptyList()
                     _bitmapUpdated.emit(Unit)
@@ -212,6 +252,7 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
                         Log.d(TAG, "onEvent: Deleted file ${_file.value} since bitmap is empty.")
                     }
 
+                    hasImportWithoutSaved = false
                     undoBitmapCache.evictAll()
                     _undoPathDataList.value = emptyList()
                     _redoPathDataList.value = emptyList()
@@ -342,6 +383,25 @@ class CanvasViewModel @Inject constructor() : ViewModel() {
         val right = findRight()
 
         return Rect(left, top, right + 1, bottom + 1)
+    }
+
+    private fun decodeBitmapInProperSize(uri: Uri, maxWidth: Int, maxHeight: Int): Bitmap? {
+        val options = BitmapFactory.Options().apply {
+            inJustDecodeBounds = true
+        }
+        try {
+            context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, options) }
+        } catch (e: Exception) {
+            Log.e(TAG, "decodeBitmapInProperSize: Failed to open file $uri", e)
+            return null
+        }
+        Log.d(TAG, "decodeBitmapInProperSize: ${options.outWidth}x${options.outHeight}")
+
+        val ratio = min(options.outWidth / maxWidth.toFloat(), options.outHeight / maxHeight.toFloat())
+        Log.d(TAG, "decodeBitmapInProperSize: ratio=$ratio")
+        options.inJustDecodeBounds = false
+        options.inSampleSize = ratio.toInt()
+        return context.contentResolver.openInputStream(uri).use { BitmapFactory.decodeStream(it, null, options) }
     }
 
     private data class PathData(

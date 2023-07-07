@@ -24,11 +24,7 @@ class TemplateVisualizer @Inject constructor(
     val resourceHolder: BitmapResourceHolder
 ) {
 
-    private val bitmapPaint = Paint().apply {
-        isAntiAlias = true
-//        isFilterBitmap = true
-//        isDither = true
-    }
+    private val bitmapPaint = Paint()
     private val matrix = Matrix()
 
     private val hardColorFilterCache = LruCache<Int, PorterDuffColorFilter>(10)

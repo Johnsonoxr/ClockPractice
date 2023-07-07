@@ -123,7 +123,7 @@ class CanvasActivity : AppCompatActivity() {
         if (saveDialog?.isShowing == true) {
             return
         }
-        if (!viewModel.undoable.value) {
+        if (viewModel.isSaved) {
             block()
             return
         }

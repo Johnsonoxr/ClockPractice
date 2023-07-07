@@ -113,7 +113,7 @@ class EditorFragment : Fragment() {
         }
 
         launchWhenStarted {
-            illustrationRepository.getIllustrations().collectLatest { illustrations ->
+            illustrationRepository.getIllustrations().collectLatest {
                 vb.controlView.render()
             }
         }
@@ -306,7 +306,7 @@ class EditorFragment : Fragment() {
     private fun createIllustrationElement(illustration: Illustration): Element {
         return Element(eType = EType.Illustration, resName = illustration.resName, matrixArray = Matrix().let { matrix ->
             matrix.preTranslate(.5f * Constants.TEMPLATE_WIDTH, .5f * Constants.TEMPLATE_HEIGHT)
-            matrix.preScale(0.8f, 0.8f)
+//            matrix.preScale(0.8f, 0.8f)
             FloatArray(9).apply { matrix.getValues(this) }
         })
     }

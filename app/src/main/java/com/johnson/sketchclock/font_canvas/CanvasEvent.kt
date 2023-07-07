@@ -1,6 +1,7 @@
 package com.johnson.sketchclock.font_canvas
 
 import android.graphics.Path
+import android.net.Uri
 import java.io.File
 
 sealed class CanvasEvent {
@@ -10,6 +11,7 @@ sealed class CanvasEvent {
     data class SetBrushSize(val size: Float) : CanvasEvent()
     data class SetIsEraseMode(val isEraseMode: Boolean) : CanvasEvent()
     data class SetEraseSize(val size: Float) : CanvasEvent()
+    data class ImportImage(val uri: Uri) : CanvasEvent()
     object Undo : CanvasEvent()
     object Redo : CanvasEvent()
     object Clear : CanvasEvent()

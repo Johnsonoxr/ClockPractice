@@ -43,7 +43,7 @@ open class ControlView @JvmOverloads constructor(
         private const val CANVAS_LIGHT_COLOR = 0xFF9F9F9F.toInt()
     }
 
-    private val bgBitmap = Bitmap.createBitmap(10, 10, Bitmap.Config.ARGB_8888).apply {
+    private val bgBitmap = Bitmap.createBitmap(50, 50, Bitmap.Config.ARGB_8888).apply {
         val oddLine = IntArray(width) { if (it % 2 == 0) CANVAS_DARK_COLOR else CANVAS_LIGHT_COLOR }
         val evenLine = IntArray(height) { if (it % 2 == 0) CANVAS_LIGHT_COLOR else CANVAS_DARK_COLOR }
         for (i in 0 until height) {
