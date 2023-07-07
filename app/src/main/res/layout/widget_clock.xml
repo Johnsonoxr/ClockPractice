@@ -9,4 +9,11 @@
         android:layout_height="match_parent"
         android:scaleType="center" />
 
+    <ImageView
+        android:id="@+id/mask"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:src="#7FFFFFFF"
+        android:visibility="gone" />
+
 </FrameLayout>

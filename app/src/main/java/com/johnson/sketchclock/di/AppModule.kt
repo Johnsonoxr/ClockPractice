@@ -72,4 +72,10 @@ class AppModule {
     ): BitmapResourceHolder {
         return BitmapResourceHolder(context, fontRepository, illustrationRepository)
     }
+
+    @Provides
+    @Singleton
+    fun widgetStateHolder(): MutableMap<String, String> {   //  holding state for the widget since widget is stateless.
+        return mutableMapOf()
+    }
 }

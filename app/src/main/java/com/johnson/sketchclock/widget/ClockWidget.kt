@@ -1,5 +1,6 @@
 package com.johnson.sketchclock.widget
 
+import android.animation.ValueAnimator
 import android.app.AlarmManager
 import android.app.PendingIntent
 import android.appwidget.AppWidgetManager
@@ -12,7 +13,10 @@ import android.graphics.Canvas
 import android.os.Bundle
 import android.os.Handler
 import android.util.Log
+import android.view.View
 import android.widget.RemoteViews
+import androidx.core.animation.doOnEnd
+import androidx.core.animation.doOnStart
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Template
@@ -33,6 +37,8 @@ class ClockWidget : AppWidgetProvider() {
         private const val ACTION_FORCE_UPDATE_CLOCK = "com.johnson.sketchclock.FORCE_UPDATE_CLOCK"
         private const val MILLIS_IN_MINUTE = 60000L
         private const val PREF_LAST_UPDATE_TIME = "last_update_time"
+
+        private const val STATE_KEY_IS_ANIMATING = "is_animating"
 
         const val EXTRA_TEMPLATE_ID = "template_id"
 
@@ -75,6 +81,9 @@ class ClockWidget : AppWidgetProvider() {
 
     @Inject
     lateinit var clockUpdateHandler: Handler
+
+    @Inject
+    lateinit var widgetStateHolder: MutableMap<String, String>
 
     private fun postNextMinuteUpdate(context: Context) {
         val currentTimeMillis = System.currentTimeMillis()
@@ -120,17 +129,54 @@ class ClockWidget : AppWidgetProvider() {
         val canvas = Canvas(bitmap).apply { clipRect(0, 0, bitmap.width, bitmap.height) }
         visualizer.draw(canvas, template.elements, thisMinuteMillis)
 
-        val remoteViews = RemoteViews(context.packageName, R.layout.widget_clock).apply {
+        partialUpdateWidget(context, appWidgetManager, appWidgetIds) {
             setImageViewBitmap(R.id.iv, bitmap)
             setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context, forceUpdate = true))
         }
+    }
 
-        AppWidgetManager.getInstance(context).updateAppWidget(appWidgetIds, remoteViews)
+    private fun performClickAnimation(context: Context) {
+        if (STATE_KEY_IS_ANIMATING in widgetStateHolder) {
+            Log.v(TAG, "performClickAnimation: already animating")
+            return
+        }
+        widgetStateHolder[STATE_KEY_IS_ANIMATING] = "true"
+
+        ValueAnimator.ofFloat(1f, 0f).apply {
+            doOnStart {
+                partialUpdateWidget(context) {
+                    setViewVisibility(R.id.mask, View.VISIBLE)
+                }
+            }
+            addUpdateListener {
+                val value = it.animatedValue as Float
+                partialUpdateWidget(context) {
+                    setFloat(R.id.mask, "setAlpha", value)
+                }
+            }
+            doOnEnd {
+                partialUpdateWidget(context) {
+                    setViewVisibility(R.id.mask, View.GONE)
+                }
+                widgetStateHolder.remove(STATE_KEY_IS_ANIMATING)
+            }
+            duration = 1500
+        }.start()
+    }
+
+    private fun partialUpdateWidget(
+        context: Context,
+        appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context),
+        appWidgetIds: IntArray = appWidgetManager.getAppWidgetIds(ComponentName(context, ClockWidget::class.java)),
+        modifier: RemoteViews.() -> Unit
+    ) {
+        val remoteViews = RemoteViews(context.packageName, R.layout.widget_clock).apply(modifier)
+        appWidgetManager.partiallyUpdateAppWidget(appWidgetIds, remoteViews)
     }
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         Log.v(TAG, "onUpdate: ids = ${appWidgetIds.contentToString()}")
-        updateWidget(context, appWidgetManager, appWidgetIds)
+        updateWidget(context, appWidgetManager, appWidgetIds, forceUpdate = true)
         setupAlarmManager(context)
     }
 
@@ -167,8 +213,14 @@ class ClockWidget : AppWidgetProvider() {
             }
 
             ACTION_FORCE_UPDATE_CLOCK -> {
+                if (STATE_KEY_IS_ANIMATING in widgetStateHolder) {
+                    Log.v(TAG, "onReceive: skip forced update")
+                    return
+                }
                 postNextMinuteUpdate(context)
                 updateWidget(context, forceUpdate = true)
+                setupAlarmManager(context)
+                performClickAnimation(context)
             }
         }
     }
