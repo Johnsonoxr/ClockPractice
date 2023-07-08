@@ -9,6 +9,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.lifecycleScope
@@ -76,6 +77,13 @@ class TemplatePickerFragment : Fragment() {
         var templates: List<Template> = emptyList()
             set(value) {
                 DiffUtil.calculateDiff(DiffCallback(field, value)).dispatchUpdatesTo(this)
+
+                // smooth scroll to new added template
+                value.find { it.id !in field.map { oldTemplates -> oldTemplates.id } }?.let { newTemplate ->
+                    val position = value.indexOf(newTemplate)
+                    vb.rv.postDelayed(100) { vb.rv.smoothScrollToPosition(position) }
+                }
+
                 field = value
             }
 
@@ -144,8 +152,12 @@ class TemplatePickerFragment : Fragment() {
                     }
 
                     vb.ivDelete -> {
-                        showDialog("Delete template", "Are you sure you want to delete \"${template.name}\"?") {
+                        if (template.elements.isEmpty()) {
                             viewModel.onEvent(TemplatePickerEvent.DeleteTemplate(template))
+                        } else {
+                            showDialog("Delete template", "Are you sure you want to delete \"${template.name}\"?") {
+                                viewModel.onEvent(TemplatePickerEvent.DeleteTemplate(template))
+                            }
                         }
                     }
 

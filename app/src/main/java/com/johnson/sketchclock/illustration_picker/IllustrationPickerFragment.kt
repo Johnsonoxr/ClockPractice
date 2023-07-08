@@ -6,6 +6,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.view.isVisible
+import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DiffUtil
@@ -62,6 +63,12 @@ class IllustrationPickerFragment : Fragment() {
         var illustrations: List<Illustration> = emptyList()
             set(value) {
                 DiffUtil.calculateDiff(DiffCallback(field, value)).dispatchUpdatesTo(this)
+
+                value.find { it !in field }?.let { newIllustration ->
+                    val position = value.indexOf(newIllustration)
+                    vb.rv.postDelayed(100) { vb.rv.smoothScrollToPosition(position) }
+                }
+
                 field = value
             }
 
@@ -107,8 +114,12 @@ class IllustrationPickerFragment : Fragment() {
                     }
 
                     vb.ivDelete -> {
-                        showDialog("Delete Illustration", "Are you sure you want to delete ${illustration.title}?") {
+                        if (!illustrationRepository.getIllustrationFile(illustration).exists()) {
                             viewModel.onEvent(IllustrationPickerEvent.DeleteIllustration(illustration))
+                        } else {
+                            showDialog("Delete Illustration", "Are you sure you want to delete ${illustration.title}?") {
+                                viewModel.onEvent(IllustrationPickerEvent.DeleteIllustration(illustration))
+                            }
                         }
                     }
 

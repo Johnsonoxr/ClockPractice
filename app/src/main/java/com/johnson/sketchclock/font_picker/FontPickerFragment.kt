@@ -7,6 +7,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.core.view.isVisible
+import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.recyclerview.widget.DiffUtil
@@ -64,6 +65,12 @@ class FontPickerFragment : Fragment() {
         var fonts: List<Font> = emptyList()
             set(value) {
                 DiffUtil.calculateDiff(DiffCallback(field, value)).dispatchUpdatesTo(this)
+
+                value.find { it !in field }?.let { newFont ->
+                    val position = value.indexOf(newFont)
+                    vb.rv.postDelayed(100) { vb.rv.smoothScrollToPosition(position) }
+                }
+
                 field = value
             }
 
@@ -115,8 +122,12 @@ class FontPickerFragment : Fragment() {
                     }
 
                     vb.ivDelete -> {
-                        showDialog("Delete Font", "Are you sure you want to delete \"${font.title}\"?") {
+                        if (Character.values().none { fontRepository.getFontFile(font, it).exists() }) {
                             viewModel.onEvent(FontPickerEvent.DeleteFont(font))
+                        } else {
+                            showDialog("Delete Font", "Are you sure you want to delete \"${font.title}\"?") {
+                                viewModel.onEvent(FontPickerEvent.DeleteFont(font))
+                            }
                         }
                     }
 
