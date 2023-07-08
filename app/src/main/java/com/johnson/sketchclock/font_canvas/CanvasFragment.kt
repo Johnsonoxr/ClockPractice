@@ -20,11 +20,10 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.R
-import com.johnson.sketchclock.common.launchWhenStarted
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentCanvasBinding
-import kotlinx.coroutines.flow.collectLatest
 
 
 private const val TAG = "CanvasFragment"
@@ -46,56 +45,46 @@ class CanvasFragment : Fragment() {
 
         activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
 
-        launchWhenStarted {
-            viewModel.bitmap.collectLatest { bmp -> vb.canvasView.bitmap = bmp }
+        viewModel.bitmap.collectLatestWhenStarted(this) { bmp -> vb.canvasView.bitmap = bmp }
+
+        viewModel.bitmapUpdated.collectLatestWhenStarted(this) { vb.canvasView.render() }
+
+        viewModel.brushColor.collectLatestWhenStarted(this) { color ->
+            vb.fabPaint.imageTintList = ColorStateList.valueOf(color)
+            vb.colorPicker.selectedColor = color
+            vb.canvasView.brushColor = color
         }
-        launchWhenStarted {
-            viewModel.bitmapUpdated.collectLatest { vb.canvasView.render() }
-        }
-        launchWhenStarted {
-            viewModel.brushColor.collectLatest { color ->
-                vb.fabPaint.imageTintList = ColorStateList.valueOf(color)
-                vb.colorPicker.selectedColor = color
-                vb.canvasView.brushColor = color
+
+        viewModel.brushSize.collectLatestWhenStarted(this) { size ->
+            vb.canvasView.brushSize = size
+            if (!viewModel.isEraseMode.value) {
+                vb.seekbarStrokeWidth.progress = size.toInt()
             }
         }
-        launchWhenStarted {
-            viewModel.brushSize.collectLatest { size ->
-                vb.canvasView.brushSize = size
-                if (!viewModel.isEraseMode.value) {
-                    vb.seekbarStrokeWidth.progress = size.toInt()
-                }
+
+        viewModel.eraseSize.collectLatestWhenStarted(this) { size ->
+            vb.canvasView.eraseSize = size
+            if (viewModel.isEraseMode.value) {
+                vb.seekbarStrokeWidth.progress = size.toInt()
             }
         }
-        launchWhenStarted {
-            viewModel.eraseSize.collectLatest { size ->
-                vb.canvasView.eraseSize = size
-                if (viewModel.isEraseMode.value) {
-                    vb.seekbarStrokeWidth.progress = size.toInt()
-                }
-            }
+
+        viewModel.isEraseMode.collectLatestWhenStarted(this) { isEraseMode ->
+            val fab1View = if (isEraseMode) vb.fabErase else vb.fabPaint
+            val fab2View = if (isEraseMode) vb.fabPaint else vb.fabErase
+            vb.fab1Container.removeAllViews()
+            vb.fab2Container.removeAllViews()
+            vb.fab1Container.addView(fab1View)
+            vb.fab2Container.addView(fab2View)
+            vb.canvasView.isEraseMode = isEraseMode
+            vb.seekbarStrokeWidth.progress = if (isEraseMode) viewModel.eraseSize.value.toInt() else viewModel.brushSize.value.toInt()
         }
-        launchWhenStarted {
-            viewModel.isEraseMode.collectLatest { isEraseMode ->
-                val fab1View = if (isEraseMode) vb.fabErase else vb.fabPaint
-                val fab2View = if (isEraseMode) vb.fabPaint else vb.fabErase
-                vb.fab1Container.removeAllViews()
-                vb.fab2Container.removeAllViews()
-                vb.fab1Container.addView(fab1View)
-                vb.fab2Container.addView(fab2View)
-                vb.canvasView.isEraseMode = isEraseMode
-                vb.seekbarStrokeWidth.progress = if (isEraseMode) viewModel.eraseSize.value.toInt() else viewModel.brushSize.value.toInt()
-            }
-        }
-        launchWhenStarted {
-            viewModel.undoable.collectLatest { vb.fabUndo.isEnabled = it }
-        }
-        launchWhenStarted {
-            viewModel.redoable.collectLatest { vb.fabRedo.isEnabled = it }
-        }
-        launchWhenStarted {
-            viewModel.fileSaved.collectLatest { Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show() }
-        }
+
+        viewModel.undoable.collectLatestWhenStarted(this) { vb.fabUndo.isEnabled = it }
+
+        viewModel.redoable.collectLatestWhenStarted(this) { vb.fabRedo.isEnabled = it }
+
+        viewModel.fileSaved.collectLatestWhenStarted(this) { Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show() }
 
         vb.fabPaint.setOnClickListener {
             if (viewModel.isEraseMode.value) {

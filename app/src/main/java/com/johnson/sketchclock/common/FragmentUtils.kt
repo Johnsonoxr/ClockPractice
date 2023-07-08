@@ -3,6 +3,7 @@ package com.johnson.sketchclock.common
 import android.content.Context
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
@@ -10,12 +11,34 @@ import androidx.lifecycle.repeatOnLifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.databinding.DialogEdittextBinding
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
 fun Fragment.launchWhenStarted(block: suspend () -> Unit) {
     viewLifecycleOwner.lifecycleScope.launch {
         viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
             block()
+        }
+    }
+}
+
+fun <T> Flow<T>.collectLatestWhenStarted(fragment: Fragment, block: suspend (T) -> Unit) {
+    fragment.viewLifecycleOwner.lifecycleScope.launch {
+        fragment.viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            collectLatest {
+                block(it)
+            }
+        }
+    }
+}
+
+fun <T> Flow<T>.collectLatestWhenStarted(activity: ComponentActivity, block: suspend (T) -> Unit) {
+    activity.lifecycleScope.launch {
+        activity.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
+            collectLatest {
+                block(it)
+            }
         }
     }
 }

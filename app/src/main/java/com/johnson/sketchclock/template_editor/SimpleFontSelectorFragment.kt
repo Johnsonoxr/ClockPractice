@@ -13,21 +13,17 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
 import androidx.fragment.app.setFragmentResultListener
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.GlideHelper
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemFontBinding
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -60,13 +56,7 @@ class SimpleFontSelectorFragment : DialogFragment() {
         vb.rv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
         vb.rv.adapter = adapter
 
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                fontRepository.getFonts().collectLatest {
-                    adapter.fonts = it
-                }
-            }
-        }
+        fontRepository.getFonts().collectLatestWhenStarted(this) { adapter.fonts = it }
 
         return MaterialAlertDialogBuilder(requireContext())
             .setTitle("Select Font")

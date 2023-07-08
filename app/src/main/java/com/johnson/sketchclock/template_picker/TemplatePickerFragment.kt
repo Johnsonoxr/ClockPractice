@@ -13,7 +13,7 @@ import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Template
-import com.johnson.sketchclock.common.launchWhenStarted
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
@@ -44,18 +44,12 @@ class TemplatePickerFragment : Fragment() {
         vb.rv.layoutManager = LinearLayoutManager(context)
         vb.rv.adapter = adapter
 
-        launchWhenStarted {
-            templateRepository.getTemplateFlow().collect {
-                adapter.templates = it
-            }
-        }
+        templateRepository.getTemplateFlow().collectLatestWhenStarted(this) { adapter.templates = it }
 
-        launchWhenStarted {
-            viewModel.deletedTemplate.collect {
-                Snackbar.make(vb.root, "Template deleted", Snackbar.LENGTH_LONG)
-                    .setAction("Undo") { viewModel.onEvent(TemplatePickerEvent.UndoDeleteTemplate) }
-                    .show()
-            }
+        viewModel.deletedTemplate.collectLatestWhenStarted(this) {
+            Snackbar.make(vb.root, "Template deleted", Snackbar.LENGTH_LONG)
+                .setAction("Undo") { viewModel.onEvent(TemplatePickerEvent.UndoDeleteTemplate) }
+                .show()
         }
 
         activity?.findViewById<View>(R.id.fab_add_template)?.setOnClickListener {

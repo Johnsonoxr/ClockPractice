@@ -8,12 +8,12 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.getAttrColor
 import com.johnson.sketchclock.databinding.ActivityCanvasBinding
 import com.johnson.sketchclock.databinding.ItemCharacterBinding
@@ -22,8 +22,6 @@ import com.mig35.carousellayoutmanager.CarouselLayoutManager
 import com.mig35.carousellayoutmanager.CarouselZoomPostLayoutListener
 import com.mig35.carousellayoutmanager.CenterScrollListener
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -106,10 +104,8 @@ class CanvasActivity : AppCompatActivity() {
             viewModel.onEvent(CanvasEvent.Init(centerCh.width(), centerCh.height(), fontRepository.getFontFile(font, centerCh)))
         }
 
-        lifecycleScope.launch {
-            viewModel.fileSaved.collectLatest {
-                fontRepository.upsertFont(font)
-            }
+        viewModel.fileSaved.collectLatestWhenStarted(this) {
+            fontRepository.upsertFont(font)
         }
 
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)

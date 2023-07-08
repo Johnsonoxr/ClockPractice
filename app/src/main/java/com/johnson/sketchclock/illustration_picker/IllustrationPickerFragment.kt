@@ -15,7 +15,7 @@ import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Illustration
-import com.johnson.sketchclock.common.launchWhenStarted
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
@@ -23,7 +23,6 @@ import com.johnson.sketchclock.databinding.ItemIllustrationBinding
 import com.johnson.sketchclock.illustration_canvas.IllustrationCanvasActivity
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -42,18 +41,12 @@ class IllustrationPickerFragment : Fragment() {
         val adapter = IllustrationAdapter()
         vb.rv.adapter = adapter
 
-        launchWhenStarted {
-            illustrationRepository.getIllustrations().collectLatest {
-                adapter.illustrations = it
-            }
-        }
+        illustrationRepository.getIllustrations().collectLatestWhenStarted(this) { adapter.illustrations = it }
 
-        launchWhenStarted {
-            viewModel.deletedIllustration.collect {
-                Snackbar.make(vb.rv, "Illustration deleted", Snackbar.LENGTH_LONG)
-                    .setAction("Undo") { viewModel.onEvent(IllustrationPickerEvent.UndoDeleteIllustration) }
-                    .show()
-            }
+        viewModel.deletedIllustration.collectLatestWhenStarted(this) {
+            Snackbar.make(vb.rv, "Illustration deleted", Snackbar.LENGTH_LONG)
+                .setAction("Undo") { viewModel.onEvent(IllustrationPickerEvent.UndoDeleteIllustration) }
+                .show()
         }
 
         activity?.findViewById<View>(R.id.fab_add_illustration)?.setOnClickListener {

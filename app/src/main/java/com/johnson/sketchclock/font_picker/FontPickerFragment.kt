@@ -2,7 +2,6 @@ package com.johnson.sketchclock.font_picker
 
 import android.content.Intent
 import android.os.Bundle
-import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -18,7 +17,7 @@ import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.GlideHelper
-import com.johnson.sketchclock.common.launchWhenStarted
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
@@ -26,7 +25,6 @@ import com.johnson.sketchclock.databinding.ItemFontBinding
 import com.johnson.sketchclock.font_canvas.CanvasActivity
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -45,17 +43,12 @@ class FontPickerFragment : Fragment() {
         val adapter = FontAdapter()
         vb.rv.adapter = adapter
 
-        launchWhenStarted {
-            fontRepository.getFonts().collectLatest {
-                adapter.fonts = it
-            }
-        }
-        launchWhenStarted {
-            viewModel.deletedFont.collect {
-                Snackbar.make(vb.rv, "Font deleted", Snackbar.LENGTH_LONG)
-                    .setAction("Undo") { viewModel.onEvent(FontPickerEvent.UndoDeleteFont) }
-                    .show()
-            }
+        fontRepository.getFonts().collectLatestWhenStarted(this) { adapter.fonts = it }
+
+        viewModel.deletedFont.collectLatestWhenStarted(this) {
+            Snackbar.make(vb.rv, "Font deleted", Snackbar.LENGTH_LONG)
+                .setAction("Undo") { viewModel.onEvent(FontPickerEvent.UndoDeleteFont) }
+                .show()
         }
 
         activity?.findViewById<View>(R.id.fab_add_font)?.setOnClickListener {

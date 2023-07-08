@@ -12,12 +12,14 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.OvershootInterpolator
 import android.widget.Toast
+import androidx.activity.addCallback
 import androidx.core.os.bundleOf
 import androidx.core.view.MenuProvider
 import androidx.core.view.isVisible
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.EType
@@ -26,7 +28,7 @@ import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.Illustration
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.addCancelObserverView
-import com.johnson.sketchclock.common.launchWhenStarted
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.removeCancelObserverView
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
@@ -36,7 +38,6 @@ import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.Companion.showFontSelectorDialog
 import com.johnson.sketchclock.template_editor.SimpleIllustrationSelectorFragment.Companion.showIllustrationSelectorDialog
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
 import java.lang.ref.WeakReference
 import javax.inject.Inject
 
@@ -64,59 +65,35 @@ class EditorFragment : Fragment() {
             }
         }
 
-        launchWhenStarted {
-            viewModel.contentUpdated.collectLatest {
-                vb.controlView.render()
-                if (it == "tint") {
-                    handleTintTypeChange(viewModel.selectedElements.value)
-                }
+        viewModel.contentUpdated.collectLatestWhenStarted(this) {
+            vb.controlView.render()
+            if (it == "tint") {
+                handleTintTypeChange(viewModel.selectedElements.value)
             }
         }
 
-        launchWhenStarted {
-            viewModel.elements.collectLatest {
-                vb.controlView.render()
-            }
+        viewModel.elements.collectLatestWhenStarted(this) { vb.controlView.render() }
+
+        viewModel.selectedElements.collectLatestWhenStarted(this) { selectedElements ->
+            vb.controlView.selectedElements = selectedElements
+            showAddFab(selectedElements.isEmpty())
+            showOptionButtons(selectedElements.isNotEmpty())
+            handleTintTypeChange(selectedElements)
         }
 
-        launchWhenStarted {
-            viewModel.selectedElements.collectLatest { selectedElements ->
-                vb.controlView.selectedElements = selectedElements
-                showAddFab(selectedElements.isEmpty())
-                showOptionButtons(selectedElements.isNotEmpty())
-                handleTintTypeChange(selectedElements)
-            }
+        viewModel.templateSaved.collectLatestWhenStarted(this) {
+            Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show()
         }
 
-        launchWhenStarted {
-            viewModel.templateSaved.collectLatest {
-                Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show()
-            }
+        viewModel.layerUpEnabled.collectLatestWhenStarted(this) { enabled -> vb.fabLayerUp.isEnabled = enabled }
+
+        viewModel.layerDownEnabled.collectLatestWhenStarted(this) { enabled -> vb.fabLayerDown.isEnabled = enabled }
+
+        viewModel.errorMessage.collectLatestWhenStarted(this) { message ->
+            Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
 
-        launchWhenStarted {
-            viewModel.layerUpEnabled.collectLatest { enabled ->
-                vb.fabLayerUp.isEnabled = enabled
-            }
-        }
-
-        launchWhenStarted {
-            viewModel.layerDownEnabled.collectLatest { enabled ->
-                vb.fabLayerDown.isEnabled = enabled
-            }
-        }
-
-        launchWhenStarted {
-            viewModel.errorMessage.collectLatest { message ->
-                Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-            }
-        }
-
-        launchWhenStarted {
-            illustrationRepository.getIllustrations().collectLatest {
-                vb.controlView.render()
-            }
-        }
+        illustrationRepository.getIllustrations().collectLatestWhenStarted(this) { vb.controlView.render() }
 
         vb.controlView.viewModelRef = WeakReference(viewModel)
 
@@ -192,6 +169,27 @@ class EditorFragment : Fragment() {
                 else -> viewModel.onEvent(EditorEvent.SetTint(viewModel.selectedElements.value, hardTint = color))  // for both none and hard
             }
         }
+
+        activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner, true) {
+            showSaveDialogIfNeed {
+                activity?.finish()
+            }
+        }
+    }
+
+    private fun showSaveDialogIfNeed(block: () -> Unit) {
+        if (viewModel.isTemplateSaved) {
+            block()
+            return
+        }
+        MaterialAlertDialogBuilder(requireContext())
+            .setMessage("Save changes?")
+            .setPositiveButton("Yes") { _, _ ->
+                viewModel.onEvent(EditorEvent.Save)
+                block()
+            }
+            .setNegativeButton("No") { _, _ -> block() }
+            .show()
     }
 
     private fun handleTintTypeChange(selectedElements: List<Element>) {

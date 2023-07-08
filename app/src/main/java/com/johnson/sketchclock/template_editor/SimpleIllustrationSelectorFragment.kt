@@ -13,20 +13,16 @@ import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
 import androidx.fragment.app.setFragmentResultListener
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Illustration
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemIllustrationBinding
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -59,13 +55,7 @@ class SimpleIllustrationSelectorFragment : DialogFragment() {
         vb.rv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
         vb.rv.adapter = adapter
 
-        lifecycleScope.launch {
-            repeatOnLifecycle(Lifecycle.State.STARTED) {
-                illustrationRepository.getIllustrations().collectLatest {
-                    adapter.illustrations = it
-                }
-            }
-        }
+        illustrationRepository.getIllustrations().collectLatestWhenStarted(this) { adapter.illustrations = it }
 
         return MaterialAlertDialogBuilder(requireContext())
             .setTitle("Select Illustration")

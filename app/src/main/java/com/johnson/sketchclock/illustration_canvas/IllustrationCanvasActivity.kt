@@ -7,18 +7,16 @@ import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.lifecycleScope
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Illustration
+import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.databinding.ActivityBasicBinding
 import com.johnson.sketchclock.font_canvas.CanvasEvent
 import com.johnson.sketchclock.font_canvas.CanvasFragment
 import com.johnson.sketchclock.font_canvas.CanvasViewModel
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import dagger.hilt.android.AndroidEntryPoint
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -65,11 +63,7 @@ class IllustrationCanvasActivity : AppCompatActivity() {
             viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, illustrationFile, autoCrop = true))
         }
 
-        lifecycleScope.launch {
-            viewModel.fileSaved.collectLatest {
-                illustrationRepository.upsertIllustration(illustration)
-            }
-        }
+        viewModel.fileSaved.collectLatestWhenStarted(this) { illustrationRepository.upsertIllustration(illustration) }
 
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
 
