@@ -1,18 +1,25 @@
 package com.johnson.sketchclock.template_picker
 
+import android.graphics.Bitmap
+import android.graphics.Canvas
 import android.os.Bundle
+import android.util.Log
+import android.util.LruCache
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.R
+import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Template
+import com.johnson.sketchclock.common.TemplateVisualizer
 import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
@@ -21,6 +28,8 @@ import com.johnson.sketchclock.databinding.ItemTemplateBinding
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import com.johnson.sketchclock.template_editor.EditorActivity
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -31,7 +40,12 @@ class TemplatePickerFragment : Fragment() {
 
     private lateinit var vb: FragmentPickerBinding
 
+    @Inject
+    lateinit var templateVisualizer: TemplateVisualizer
+
     private val viewModel: TemplatePickerViewModel by activityViewModels()
+
+    private val previewCache = LruCache<Int, Bitmap>(30)
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         return FragmentPickerBinding.inflate(inflater, container, false).also { vb = it }.root
@@ -44,7 +58,7 @@ class TemplatePickerFragment : Fragment() {
         vb.rv.layoutManager = LinearLayoutManager(context)
         vb.rv.adapter = adapter
 
-        templateRepository.getTemplateFlow().collectLatestWhenStarted(this) { adapter.templates = it }
+        templateRepository.getTemplateListFlow().collectLatestWhenStarted(this) { adapter.templates = it }
 
         viewModel.deletedTemplate.collectLatestWhenStarted(this) {
             Snackbar.make(vb.root, "Template deleted", Snackbar.LENGTH_LONG)
@@ -90,7 +104,30 @@ class TemplatePickerFragment : Fragment() {
             }
 
             fun bind() {
+                val template = template
                 vb.tvName.text = template.name
+
+                val previewBitmap = previewCache[template.id]
+                if (previewBitmap != null) {
+                    vb.ivPreview.setImageBitmap(previewBitmap)
+                } else {
+                    vb.ivPreview.setImageBitmap(null)
+                    vb.ivPreview.tag = template
+                    viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+                        Log.d("TemplatePickerFragment", "generating preview for id=${template.id}")
+                        val bitmap = Bitmap.createBitmap(Constants.TEMPLATE_WIDTH / 2, Constants.TEMPLATE_HEIGHT / 3, Bitmap.Config.ARGB_8888)
+                        val canvas = Canvas(bitmap)
+                        canvas.clipRect(0, 0, bitmap.width, bitmap.height)
+                        canvas.translate(-(Constants.TEMPLATE_WIDTH - bitmap.width) / 2f, -(Constants.TEMPLATE_HEIGHT - bitmap.height) / 2f)
+                        templateVisualizer.draw(canvas, template.elements)
+                        previewCache.put(template.id, bitmap)
+                        viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+                            if (vb.ivPreview.tag == template) {
+                                vb.ivPreview.setImageBitmap(bitmap)
+                            }
+                        }
+                    }
+                }
             }
 
             override fun onClick(v: View) {
@@ -102,6 +139,7 @@ class TemplatePickerFragment : Fragment() {
                     }
 
                     vb.ivEdit -> {
+                        previewCache.remove(template.id)
                         startActivity(EditorActivity.createIntent(requireContext(), template))
                     }
 

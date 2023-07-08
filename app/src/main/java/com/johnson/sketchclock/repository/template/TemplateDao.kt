@@ -12,7 +12,10 @@ import kotlinx.coroutines.flow.Flow
 interface TemplateDao {
 
     @Query("SELECT * FROM templates")
-    fun getTemplateFlow(): Flow<List<Template>>
+    fun getTemplateListFlow(): Flow<List<Template>>
+
+    @Query("SELECT * FROM templates WHERE id = :id")
+    fun getTemplateFlow(id: Int): Flow<Template>?
 
     @Query("SELECT * FROM templates WHERE id = :id")
     suspend fun getTemplateById(id: Int): Template?

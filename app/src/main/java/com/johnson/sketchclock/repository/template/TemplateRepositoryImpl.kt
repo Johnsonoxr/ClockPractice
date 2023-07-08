@@ -8,8 +8,12 @@ class TemplateRepositoryImpl @Inject constructor(
     private val templateDatabase: TemplateDatabase
 ) : TemplateRepository {
 
-    override fun getTemplateFlow(): Flow<List<Template>> {
-        return templateDatabase.templateDao().getTemplateFlow()
+    override fun getTemplateListFlow(): Flow<List<Template>> {
+        return templateDatabase.templateDao().getTemplateListFlow()
+    }
+
+    override fun getTemplateFlow(id: Int): Flow<Template>? {
+        return templateDatabase.templateDao().getTemplateFlow(id)
     }
 
     override suspend fun getTemplateById(id: Int): Template? {

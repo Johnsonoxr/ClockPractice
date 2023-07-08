@@ -4,7 +4,8 @@ import com.johnson.sketchclock.common.Template
 import kotlinx.coroutines.flow.Flow
 
 interface TemplateRepository {
-    fun getTemplateFlow(): Flow<List<Template>>
+    fun getTemplateListFlow(): Flow<List<Template>>
+    fun getTemplateFlow(id: Int): Flow<Template>?
     suspend fun getTemplateById(id: Int): Template?
     suspend fun getTemplates(): List<Template>
     suspend fun upsertTemplate(template: Template): Long

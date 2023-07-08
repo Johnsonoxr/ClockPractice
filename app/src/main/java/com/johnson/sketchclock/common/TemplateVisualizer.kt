@@ -31,22 +31,24 @@ class TemplateVisualizer @Inject constructor(
     private val softColorFilterCache = LruCache<Int, ColorMatrixColorFilter>(10)
 
     fun draw(canvas: Canvas, elements: List<Element>, timeMillis: Long? = null) {
-        elements.forEach { element ->
+        synchronized(this) {
+            elements.forEach { element ->
 
-            loadBitmap(element, timeMillis)?.let { bmp ->
-                val hardTint = element.hardTintColor
-                val softTint = element.softTintColor
+                loadBitmap(element, timeMillis)?.let { bmp ->
+                    val hardTint = element.hardTintColor
+                    val softTint = element.softTintColor
 
-                matrix.set(element.matrix())
-                matrix.preTranslate(-bmp.width / 2f, -bmp.height / 2f)
+                    matrix.set(element.matrix())
+                    matrix.preTranslate(-bmp.width / 2f, -bmp.height / 2f)
 
-                bitmapPaint.colorFilter = when {
-                    hardTint != null -> getHardColorFilter(hardTint)
-                    softTint != null -> getSoftColorFilter(softTint)
-                    else -> null
+                    bitmapPaint.colorFilter = when {
+                        hardTint != null -> getHardColorFilter(hardTint)
+                        softTint != null -> getSoftColorFilter(softTint)
+                        else -> null
+                    }
+
+                    canvas.drawBitmap(bmp, matrix, bitmapPaint)
                 }
-
-                canvas.drawBitmap(bmp, matrix, bitmapPaint)
             }
         }
     }
