@@ -151,6 +151,7 @@ class CanvasViewModel @Inject constructor(
                     } else {
                         Log.d(TAG, "onEvent: Create new bitmap.")
                         _bitmap.value = Bitmap.createBitmap(event.width, event.height, Bitmap.Config.ARGB_8888)
+                        baseBitmap = null
                     }
                     hasImportWithoutSaved = false
                     _undoPathDataList.value = emptyList()
@@ -220,6 +221,7 @@ class CanvasViewModel @Inject constructor(
                 is CanvasEvent.Clear -> {
                     canvas.drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR)
                     undoBitmapCache.evictAll()
+                    baseBitmap = null
                     hasImportWithoutSaved = false
                     _undoPathDataList.value = emptyList()
                     _redoPathDataList.value = emptyList()
