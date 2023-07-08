@@ -1,5 +1,7 @@
 package com.johnson.sketchclock.font_canvas
 
+import android.content.Context
+import android.content.Intent
 import android.os.Bundle
 import android.view.View
 import android.view.ViewGroup
@@ -29,6 +31,12 @@ class CanvasActivity : AppCompatActivity() {
 
     companion object {
         const val KEY_FONT = "fontName"
+
+        fun createIntent(context: Context, font: Font): Intent {
+            return Intent(context, CanvasActivity::class.java).apply {
+                putExtra(KEY_FONT, font)
+            }
+        }
     }
 
     @Inject
@@ -105,7 +113,7 @@ class CanvasActivity : AppCompatActivity() {
         }
 
         viewModel.fileSaved.collectLatestWhenStarted(this) {
-            fontRepository.upsertFont(font)
+            fontRepository.upsertFonts(listOf(font))
         }
 
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)

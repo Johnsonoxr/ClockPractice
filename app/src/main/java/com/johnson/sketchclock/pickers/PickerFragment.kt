@@ -1,5 +1,6 @@
-package com.johnson.sketchclock.font_picker
+package com.johnson.sketchclock.pickers
 
+import android.content.Intent
 import android.os.Bundle
 import android.view.LayoutInflater
 import android.view.Menu
@@ -7,21 +8,18 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
 import androidx.core.view.MenuProvider
 import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
-import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.R
-import com.johnson.sketchclock.common.Character
-import com.johnson.sketchclock.common.Font
-import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
@@ -29,34 +27,36 @@ import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.common.tintBackgroundAttr
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
-import com.johnson.sketchclock.databinding.ItemFontBinding
-import com.johnson.sketchclock.font_canvas.CanvasActivity
-import com.johnson.sketchclock.pickers.ControlMode
-import com.johnson.sketchclock.pickers.ControllableFabHolder
-import com.johnson.sketchclock.pickers.OnFabClickListener
-import com.johnson.sketchclock.repository.font.FontRepository
-import dagger.hilt.android.AndroidEntryPoint
-import javax.inject.Inject
 
-@AndroidEntryPoint
-class FontPickerFragment : Fragment(), OnFabClickListener {
-
-    @Inject
-    lateinit var fontRepository: FontRepository
+abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fragment(), OnFabClickListener {
 
     private lateinit var vb: FragmentPickerBinding
 
-    private val viewModel: FontPickerViewModel by activityViewModels()
+    abstract val viewModel: VM
+    abstract val repositoryAdapter: RepositoryAdapter<T>
+    abstract fun createEmptyItem(): T
+    abstract fun T.editable(): Boolean
+    abstract fun T.title(): String
+    abstract fun createCopyItemWithNewTitle(item: T, title: String): T
+    abstract fun createEditItemIntent(item: T): Intent
+
+    abstract fun areItemsTheSame(oldItem: T, newItem: T): Boolean
+    abstract fun areContentsTheSame(oldItem: T, newItem: T): Boolean
+
+    abstract fun createItemViewBinding(parent: ViewGroup): ViewBinding
+    abstract val ViewBinding.rootView: View
+    abstract val ViewBinding.title: TextView
+    abstract fun ViewBinding.bind(item: T)
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
         vb.rv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
-        val adapter = FontAdapter()
+        val adapter = ItemAdapter()
         vb.rv.adapter = adapter
 
-        fontRepository.getFonts().collectLatestWhenStarted(this) { adapter.fonts = it }
+        repositoryAdapter.getFlow().collectLatestWhenStarted(this) { adapter.items = it }
 
-        viewModel.selectedFonts.collectLatestWhenStarted(this) { adapter.selectedFonts = it }
+        viewModel.selectedItems.collectLatestWhenStarted(this) { adapter.selectedItems = it }
 
         viewModel.controlMode.collectLatestWhenStarted(this) { controlMode ->
             backPressedCallback.isEnabled = controlMode != ControlMode.NORMAL
@@ -78,9 +78,9 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
             }
         }
 
-        viewModel.deletedFont.collectLatestWhenStarted(this) {
-            Snackbar.make(vb.rv, "Font deleted", Snackbar.LENGTH_LONG)
-                .setAction("Undo") { viewModel.onEvent(FontPickerEvent.UndoDeleteFont) }
+        viewModel.deletedItem.collectLatestWhenStarted(this) {
+            Snackbar.make(vb.rv, "Deleted", Snackbar.LENGTH_LONG)
+                .setAction("Undo") { viewModel.onEvent(PickerEvent.UndoDelete()) }
                 .setAnchorView(R.id.fab_add)
                 .show()
         }
@@ -91,20 +91,20 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
     override fun onFabClick() {
         when (viewModel.controlMode.value) {
             ControlMode.DELETE -> {
-                if (viewModel.selectedFonts.value.isEmpty()) {
-                    viewModel.onEvent(FontPickerEvent.ChangeControlMode(ControlMode.NORMAL))
+                if (viewModel.selectedItems.value.isEmpty()) {
+                    viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
                     return
                 }
-                if (viewModel.selectedFonts.value.isEmpty()) return
+                if (viewModel.selectedItems.value.isEmpty()) return
                 showDialog("Delete Font", "Are you sure you want to delete these fonts?") {
-                    viewModel.onEvent(FontPickerEvent.DeleteFonts(viewModel.selectedFonts.value))
-                    viewModel.onEvent(FontPickerEvent.ChangeControlMode(ControlMode.NORMAL))
+                    viewModel.onEvent(PickerEvent.Delete(viewModel.selectedItems.value))
+                    viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
                 }
             }
 
             ControlMode.BOOKMARK -> Toast.makeText(context, "Bookmark", Toast.LENGTH_SHORT).show()
 
-            else -> viewModel.onEvent(FontPickerEvent.AddFonts(listOf(Font(title = "new font"))))
+            else -> viewModel.onEvent(PickerEvent.Add(listOf(createEmptyItem())))
         }
     }
 
@@ -119,8 +119,8 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
 
         override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
             when (menuItem.itemId) {
-                R.id.menu_delete -> viewModel.onEvent(FontPickerEvent.ChangeControlMode(ControlMode.DELETE))
-                R.id.menu_bookmark -> viewModel.onEvent(FontPickerEvent.ChangeControlMode(ControlMode.BOOKMARK))
+                R.id.menu_delete -> viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.DELETE))
+                R.id.menu_bookmark -> viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.BOOKMARK))
             }
             return true
         }
@@ -129,7 +129,7 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
             if (viewModel.controlMode.value != ControlMode.NORMAL) {
-                viewModel.onEvent(FontPickerEvent.ChangeControlMode(ControlMode.NORMAL))
+                viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
             } else {
                 isEnabled = false
                 activity?.onBackPressedDispatcher?.onBackPressed()
@@ -137,9 +137,9 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
         }
     }
 
-    private inner class FontAdapter : RecyclerView.Adapter<FontAdapter.ViewHolder>() {
+    private inner class ItemAdapter : RecyclerView.Adapter<ItemAdapter.ViewHolder>() {
 
-        var fonts: List<Font> = emptyList()
+        var items: List<T> = emptyList()
             set(value) {
                 DiffUtil.calculateDiff(DiffCallback(field, value)).dispatchUpdatesTo(this)
 
@@ -151,70 +151,66 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
                 field = value
             }
 
-        var selectedFonts: List<Font> = emptyList()
+        var selectedItems: List<T> = emptyList()
             set(value) {
-                val diffIndices = ((value - field.toSet()) + (field - value.toSet())).map { fonts.indexOf(it) }
+                val diffIndices = ((value - field.toSet()) + (field - value.toSet())).map { items.indexOf(it) }
                 field = value
                 diffIndices.forEach { notifyItemChanged(it) }
             }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            return ViewHolder(ItemFontBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            return ViewHolder(createItemViewBinding(parent))
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            holder.bind(fonts[position])
+            holder.bind(items[position])
         }
 
         override fun getItemCount(): Int {
-            return fonts.size
+            return items.size
         }
 
-        inner class ViewHolder(val vb: ItemFontBinding) : RecyclerView.ViewHolder(vb.root), View.OnClickListener {
+        inner class ViewHolder(val vb: ViewBinding) : RecyclerView.ViewHolder(vb.rootView), View.OnClickListener {
 
-            private val font: Font
-                get() = fonts[adapterPosition]
+            private val item: T
+                get() = items[adapterPosition]
 
             init {
-                vb.tvName.setOnClickListener(this)
-                vb.root.setOnClickListener(this)
+                vb.title.setOnClickListener(this)
+                vb.rootView.setOnClickListener(this)
             }
 
-            fun bind(font: Font) {
-                vb.tvName.text = font.title
-                vb.root.tintBackgroundAttr(
-                    when (font) {
-                        in selectedFonts -> com.google.android.material.R.attr.colorErrorContainer
+            fun bind(item: T) {
+                vb.title.text = item.title()
+                vb.rootView.tintBackgroundAttr(
+                    when (item) {
+                        in selectedItems -> com.google.android.material.R.attr.colorErrorContainer
                         else -> com.google.android.material.R.attr.colorPrimaryContainer
                     }
                 )
-                fontRepository.getFontFile(font, Character.ZERO).let { GlideHelper.load(vb.ivPreview0, it) }
-                fontRepository.getFontFile(font, Character.ONE).let { GlideHelper.load(vb.ivPreview1, it) }
-                fontRepository.getFontFile(font, Character.TWO).let { GlideHelper.load(vb.ivPreview2, it) }
-                fontRepository.getFontFile(font, Character.THREE).let { GlideHelper.load(vb.ivPreview3, it) }
-                fontRepository.getFontFile(font, Character.FOUR).let { GlideHelper.load(vb.ivPreview4, it) }
+                vb.bind(item)
             }
 
             override fun onClick(v: View) {
                 when (v) {
-                    vb.root -> {
+                    vb.rootView -> {
                         when (viewModel.controlMode.value) {
                             ControlMode.DELETE, ControlMode.BOOKMARK -> {
-                                if (ControlMode.DELETE == viewModel.controlMode.value && !font.editable) {
+                                if (ControlMode.DELETE == viewModel.controlMode.value && !item.editable()) {
                                     Toast.makeText(context, "This font is not deletable", Toast.LENGTH_SHORT).show()
                                     return
                                 }
-                                val selectedFonts = if (font in viewModel.selectedFonts.value) {
-                                    viewModel.selectedFonts.value - font
+                                val selected = if (item in viewModel.selectedItems.value) {
+                                    viewModel.selectedItems.value - item
                                 } else {
-                                    viewModel.selectedFonts.value + font
+                                    viewModel.selectedItems.value + item
                                 }
-                                viewModel.onEvent(FontPickerEvent.SetSelectFonts(selectedFonts))
+                                viewModel.onEvent(PickerEvent.Select(selected))
                             }
 
                             else -> {
-                                if (font.editable) {
-                                    startActivity(CanvasActivity.createIntent(requireContext(), font))
+                                if (item.editable()) {
+                                    startActivity(createEditItemIntent(item))
                                 } else {
                                     Toast.makeText(context, "This font is not editable", Toast.LENGTH_SHORT).show()
                                 }
@@ -222,13 +218,13 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
                         }
                     }
 
-                    vb.tvName -> {
-                        if (!font.editable) {
+                    vb.title -> {
+                        if (!item.editable()) {
                             Toast.makeText(context, "This font is not editable", Toast.LENGTH_SHORT).show()
                             return
                         }
-                        showEditTextDialog("Rename Font", font.title) { newName ->
-                            viewModel.onEvent(FontPickerEvent.UpdateFont(font.copy(title = newName)))
+                        showEditTextDialog("Rename", item.title()) { newName ->
+                            viewModel.onEvent(PickerEvent.Update(createCopyItemWithNewTitle(item, newName)))
                         }
                     }
                 }
@@ -236,7 +232,7 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
         }
     }
 
-    private class DiffCallback(private val oldList: List<Font>, private val newList: List<Font>) : DiffUtil.Callback() {
+    private inner class DiffCallback(private val oldList: List<T>, private val newList: List<T>) : DiffUtil.Callback() {
         override fun getOldListSize(): Int {
             return oldList.size
         }
@@ -246,13 +242,11 @@ class FontPickerFragment : Fragment(), OnFabClickListener {
         }
 
         override fun areItemsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].resName == newList[newItemPosition].resName
+            return areItemsTheSame(oldList[oldItemPosition], newList[newItemPosition])
         }
 
         override fun areContentsTheSame(oldItemPosition: Int, newItemPosition: Int): Boolean {
-            return oldList[oldItemPosition].resName == newList[newItemPosition].resName
-                    && oldList[oldItemPosition].lastModified == newList[newItemPosition].lastModified
-                    && oldList[oldItemPosition].title == newList[newItemPosition].title
+            return areContentsTheSame(oldList[oldItemPosition], newList[newItemPosition])
         }
     }
 }

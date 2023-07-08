@@ -62,49 +62,48 @@ class IllustrationRepositoryImpl @Inject constructor(
         return _illustrations.value.find { it.resName == resName }
     }
 
-    override suspend fun upsertIllustration(illustration: Illustration): String? {
+    override suspend fun upsertIllustrations(illustrations: Collection<Illustration>) {
 
-        val id = when {
-            illustration.resName == null -> getNewIllustrationId()
-            illustration.isUser -> illustration.id
-            else -> null
-        }
+        illustrations.forEach { illustration ->
 
-        if (id == null || id < 0) {
-            Log.e(TAG, "upsertIllustration(): Invalid resName=${illustration.resName}")
-            return null
-        }
+            val id = when {
+                illustration.resName == null -> getNewIllustrationId()
+                illustration.isUser -> illustration.id
+                else -> null
+            }
 
-        val resName = "$USER_DIR/$id"
-        val newIllustration = illustration.copy(resName = resName)
+            if (id == null || id < 0) {
+                Log.e(TAG, "upsertIllustration(): Invalid resName=${illustration.resName}")
+                return@forEach
+            }
 
-        if (!newIllustration.dir.exists() && newIllustration.deletedDir.exists()) {
-            Log.d(TAG, "upsertIllustration(): Restoring deleted illustration, res=${newIllustration.resName}")
-            newIllustration.deletedDir.renameTo(newIllustration.dir)
-        } else {
-            newIllustration.dir.mkdirs()
-        }
-        val gsonString = gson.toJson(
-            mapOf(
-                KEY_ILLUSTRATION_NAME to newIllustration.title,
-                KEY_LAST_MODIFIED to System.currentTimeMillis()
+            val resName = "$USER_DIR/$id"
+            val newIllustration = illustration.copy(resName = resName)
+
+            if (!newIllustration.dir.exists() && newIllustration.deletedDir.exists()) {
+                Log.d(TAG, "upsertIllustration(): Restoring deleted illustration, res=${newIllustration.resName}")
+                newIllustration.deletedDir.renameTo(newIllustration.dir)
+            } else {
+                newIllustration.dir.mkdirs()
+            }
+            val gsonString = gson.toJson(
+                mapOf(
+                    KEY_ILLUSTRATION_NAME to newIllustration.title,
+                    KEY_LAST_MODIFIED to System.currentTimeMillis()
+                )
             )
-        )
-        File(newIllustration.dir, DESCRIPTION_FILE).writeText(gsonString)
+            File(newIllustration.dir, DESCRIPTION_FILE).writeText(gsonString)
 
-        _illustrations.value = loadIllustrationList()
+            _illustrations.value = loadIllustrationList()
 
-        Log.d(TAG, "upsertIllustration(): Save illustration: $resName")
-
-        return resName
+            Log.d(TAG, "upsertIllustration(): Save illustration: $resName")
+        }
     }
 
-    override suspend fun deleteIllustration(illustration: Illustration) {
-        if (!illustration.isUser) {
-            Log.e(TAG, "deleteIllustration(): Invalid resName=${illustration.resName}")
-            return
+    override suspend fun deleteIllustrations(illustrations: Collection<Illustration>) {
+        illustrations.filter { it.isUser }.forEach { illustration ->
+            illustration.dir.renameTo(illustration.deletedDir)
         }
-        illustration.dir.renameTo(illustration.deletedDir)
         _illustrations.value = loadIllustrationList()
     }
 

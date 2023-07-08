@@ -63,7 +63,7 @@ class IllustrationCanvasActivity : AppCompatActivity() {
             viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, illustrationFile, autoCrop = true))
         }
 
-        viewModel.fileSaved.collectLatestWhenStarted(this) { illustrationRepository.upsertIllustration(illustration) }
+        viewModel.fileSaved.collectLatestWhenStarted(this) { illustrationRepository.upsertIllustrations(listOf(illustration)) }
 
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
 

@@ -79,3 +79,11 @@ fun View.removeCancelObserverView() {
         (cancelView.parent as? ViewGroup)?.removeView(cancelView)
     }
 }
+
+fun View.tintBackground(color: Int) {
+    background?.setTint(color)
+}
+
+fun View.tintBackgroundAttr(attr: Int) {
+    background?.setTint(getAttrColor(attr))
+}

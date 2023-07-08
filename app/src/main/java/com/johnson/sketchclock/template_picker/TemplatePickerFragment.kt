@@ -6,12 +6,17 @@ import android.os.Bundle
 import android.util.Log
 import android.util.LruCache
 import android.view.LayoutInflater
+import android.view.Menu
+import android.view.MenuInflater
+import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Toast
+import androidx.core.view.MenuProvider
 import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -26,6 +31,7 @@ import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
 import com.johnson.sketchclock.databinding.ItemTemplateBinding
+import com.johnson.sketchclock.pickers.OnFabClickListener
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import com.johnson.sketchclock.template_editor.EditorActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -34,7 +40,7 @@ import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class TemplatePickerFragment : Fragment() {
+class TemplatePickerFragment : Fragment(), OnFabClickListener {
 
     @Inject
     lateinit var templateRepository: TemplateRepository
@@ -64,11 +70,25 @@ class TemplatePickerFragment : Fragment() {
         viewModel.deletedTemplate.collectLatestWhenStarted(this) {
             Snackbar.make(vb.root, "Template deleted", Snackbar.LENGTH_LONG)
                 .setAction("Undo") { viewModel.onEvent(TemplatePickerEvent.UndoDeleteTemplate) }
+                .setAnchorView(R.id.fab_add)
                 .show()
         }
 
-        activity?.findViewById<View>(R.id.fab_add_template)?.setOnClickListener {
-            viewModel.onEvent(TemplatePickerEvent.AddTemplate(Template(name = "new template")))
+        activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
+    }
+
+    override fun onFabClick() {
+        viewModel.onEvent(TemplatePickerEvent.AddTemplate(Template(name = "new template")))
+    }
+
+    private val menuProvider = object : MenuProvider {
+        override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
+            menuInflater.inflate(R.menu.menu_picker_bottombar, menu)
+        }
+
+        override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
+            Log.e("TemplatePickerFragment", "onMenuItemSelected: ${menuItem.itemId}")
+            return true
         }
     }
 

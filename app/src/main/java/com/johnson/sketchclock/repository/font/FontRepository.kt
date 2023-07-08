@@ -8,8 +8,8 @@ import java.io.File
 interface FontRepository {
     fun getFonts(): StateFlow<List<Font>>
     fun getFontByRes(resName: String): Font?
-    suspend fun upsertFont(font: Font): String? // returns resName
-    suspend fun deleteFont(font: Font)
+    suspend fun upsertFonts(fonts: Collection<Font>)
+    suspend fun deleteFonts(fonts: Collection<Font>)
 
     fun getFontFile(font: Font, character: Character): File
 }

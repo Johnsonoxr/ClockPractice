@@ -8,7 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
-import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
@@ -103,8 +102,6 @@ class SimpleIllustrationSelectorFragment : DialogFragment() {
 
             fun bind(illustration: Illustration) {
                 vb.tvName.text = illustration.title
-                vb.ivDelete.isVisible = false
-                vb.ivEdit.isVisible = false
                 illustrationRepository.getIllustrationFile(illustration).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview, it) }
             }
 

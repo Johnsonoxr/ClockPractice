@@ -7,8 +7,8 @@ import java.io.File
 interface IllustrationRepository {
     fun getIllustrations(): StateFlow<List<Illustration>>
     fun getIllustrationByRes(resName: String): Illustration?
-    suspend fun upsertIllustration(illustration: Illustration): String? // returns resName
-    suspend fun deleteIllustration(illustration: Illustration)
+    suspend fun upsertIllustrations(illustrations: Collection<Illustration>)
+    suspend fun deleteIllustrations(illustrations: Collection<Illustration>)
 
     fun getIllustrationFile(illustration: Illustration): File
 }

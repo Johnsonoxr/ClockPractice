@@ -8,7 +8,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.core.os.bundleOf
-import androidx.core.view.isVisible
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
@@ -109,8 +108,6 @@ class SimpleFontSelectorFragment : DialogFragment() {
 
             fun bind(font: Font) {
                 vb.tvName.text = font.title
-                vb.ivDelete.isVisible = false
-                vb.ivEdit.isVisible = false
                 fontRepository.getFontFile(font, Character.ZERO).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview0, it) }
                 fontRepository.getFontFile(font, Character.ONE).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview1, it) }
                 fontRepository.getFontFile(font, Character.TWO).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview2, it) }

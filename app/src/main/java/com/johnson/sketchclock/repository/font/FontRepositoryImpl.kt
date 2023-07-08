@@ -60,51 +60,49 @@ class FontRepositoryImpl @Inject constructor(
         return _fonts.value.find { it.resName == resName }
     }
 
-    override suspend fun upsertFont(font: Font): String? {
+    override suspend fun upsertFonts(fonts: Collection<Font>) {
 
-        val id = when {
-            font.resName == null -> getNewFontId()
-            font.isUser -> font.id
-            else -> null
-        }
+        fonts.forEach { font ->
 
-        if (id == null || id < 0) {
-            Log.e(TAG, "upsertFont(): Invalid font resName=${font.resName}")
-            return null
-        }
+            val id = when {
+                font.resName == null -> getNewFontId()
+                font.isUser -> font.id
+                else -> null
+            }
 
-        val resName = "$USER_DIR/$id"
-        val newFont = font.copy(resName = resName)
+            if (id == null || id < 0) {
+                Log.e(TAG, "upsertFont(): Invalid font resName=${font.resName}")
+                return@forEach
+            }
 
-        if (!newFont.dir.exists() && newFont.deletedDir.exists()) {
-            Log.d(TAG, "upsertFont(): Restoring deleted font: $resName")
-            newFont.deletedDir.renameTo(newFont.dir)
-        } else {
-            newFont.dir.mkdirs()
-        }
+            val resName = "$USER_DIR/$id"
+            val newFont = font.copy(resName = resName)
 
-        val descriptionFile = File(newFont.dir, DESCRIPTION_FILE)
-        val gsonString = gson.toJson(
-            mapOf(
-                KEY_FONT_NAME to newFont.title,
-                KEY_LAST_MODIFIED to System.currentTimeMillis()
+            if (!newFont.dir.exists() && newFont.deletedDir.exists()) {
+                Log.d(TAG, "upsertFont(): Restoring deleted font: $resName")
+                newFont.deletedDir.renameTo(newFont.dir)
+            } else {
+                newFont.dir.mkdirs()
+            }
+
+            val descriptionFile = File(newFont.dir, DESCRIPTION_FILE)
+            val gsonString = gson.toJson(
+                mapOf(
+                    KEY_FONT_NAME to newFont.title,
+                    KEY_LAST_MODIFIED to System.currentTimeMillis()
+                )
             )
-        )
-        descriptionFile.writeText(gsonString)
+            descriptionFile.writeText(gsonString)
+            Log.d(TAG, "upsertFont(): Saved font: $resName")
+        }
 
         _fonts.value = loadFontList()
-
-        Log.d(TAG, "upsertFont(): Saved font: $resName")
-
-        return resName
     }
 
-    override suspend fun deleteFont(font: Font) {
-        if (!font.isUser) {
-            Log.e(TAG, "deleteFont(): Cannot delete default font: ${font.resName}")
-            return
+    override suspend fun deleteFonts(fonts: Collection<Font>) {
+        fonts.filter { it.isUser }.forEach { font ->
+            font.dir.renameTo(font.deletedDir)
         }
-        font.dir.renameTo(font.deletedDir)
         _fonts.value = loadFontList()
     }
 
