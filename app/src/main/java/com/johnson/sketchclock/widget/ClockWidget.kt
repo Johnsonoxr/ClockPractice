@@ -25,6 +25,7 @@ import com.johnson.sketchclock.common.Utils.description
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
+import java.util.Calendar
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -91,10 +92,10 @@ class ClockWidget : AppWidgetProvider() {
         val delayMillis = nextMinuteMillis - currentTimeMillis + 10
 
         clockUpdateHandler.removeCallbacksAndMessages(null)
-        clockUpdateHandler.postDelayed({ updateWidget(context) }, delayMillis)
+        clockUpdateHandler.postDelayed({ updateWidgetImage(context) }, delayMillis)
     }
 
-    private fun updateWidget(
+    private fun updateWidgetImage(
         context: Context,
         appWidgetManager: AppWidgetManager = AppWidgetManager.getInstance(context),
         appWidgetIds: IntArray = appWidgetManager.getAppWidgetIds(ComponentName(context, ClockWidget::class.java)),
@@ -142,21 +143,22 @@ class ClockWidget : AppWidgetProvider() {
         }
         widgetStateHolder[STATE_KEY_IS_ANIMATING] = "true"
 
-        ValueAnimator.ofFloat(1f, 0f).apply {
+        ValueAnimator.ofFloat(.5f, 0f).apply {
             doOnStart {
                 partialUpdateWidget(context) {
-                    setViewVisibility(R.id.mask, View.VISIBLE)
+                    setViewVisibility(R.id.overlay, View.VISIBLE)
+                    setTextViewText(R.id.tv, "${Calendar.getInstance().get(Calendar.SECOND)}")
                 }
             }
             addUpdateListener {
                 val value = it.animatedValue as Float
                 partialUpdateWidget(context) {
-                    setFloat(R.id.mask, "setAlpha", value)
+                    setFloat(R.id.overlay, "setAlpha", value)
                 }
             }
             doOnEnd {
                 partialUpdateWidget(context) {
-                    setViewVisibility(R.id.mask, View.GONE)
+                    setViewVisibility(R.id.overlay, View.GONE)
                 }
                 widgetStateHolder.remove(STATE_KEY_IS_ANIMATING)
             }
@@ -176,7 +178,7 @@ class ClockWidget : AppWidgetProvider() {
 
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
         Log.v(TAG, "onUpdate: ids = ${appWidgetIds.contentToString()}")
-        updateWidget(context, appWidgetManager, appWidgetIds, forceUpdate = true)
+        updateWidgetImage(context, appWidgetManager, appWidgetIds, forceUpdate = true)
         setupAlarmManager(context)
     }
 
@@ -209,7 +211,7 @@ class ClockWidget : AppWidgetProvider() {
 
             ACTION_UPDATE_CLOCK -> {
                 postNextMinuteUpdate(context)
-                updateWidget(context)
+                updateWidgetImage(context)
             }
 
             ACTION_FORCE_UPDATE_CLOCK -> {
@@ -218,7 +220,7 @@ class ClockWidget : AppWidgetProvider() {
                     return
                 }
                 postNextMinuteUpdate(context)
-                updateWidget(context, forceUpdate = true)
+                updateWidgetImage(context, forceUpdate = true)
                 setupAlarmManager(context)
                 performClickAnimation(context)
             }

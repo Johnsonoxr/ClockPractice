@@ -74,8 +74,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 is EditorEvent.Init -> {
                     templateId = event.template.id
                     templateName = event.template.name
-                    savedElements = event.template.elements.filter { visualizer.resourceHolder.getElementSize(it) != null }.map { it.deepClone() }
-                    _elements.value = event.template.elements
+                    savedElements = event.template.elements.filter { it.isValid() }.map { it.deepClone() }
+                    _elements.value = savedElements?.map { it.deepClone() } ?: emptyList()
                 }
 
                 is EditorEvent.Reset -> {
@@ -104,7 +104,7 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.AddElements -> {
-                    val validElements = event.elements.filter { visualizer.resourceHolder.getElementSize(it) != null }
+                    val validElements = event.elements.filter { it.isValid() }
                     if (validElements.isEmpty()) {
                         _errorMessage.emit("No valid elements")
                         return@launch
@@ -159,6 +159,10 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
             }
         }
+    }
+
+    private fun Element.isValid(): Boolean {
+        return visualizer.resourceHolder.getElementSize(this) != null
     }
 
     private fun Element.deepClone(): Element {
