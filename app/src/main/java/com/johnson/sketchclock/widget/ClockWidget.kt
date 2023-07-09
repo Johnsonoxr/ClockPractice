@@ -231,6 +231,7 @@ class ClockWidget : AppWidgetProvider() {
                 }
                 postNextMinuteUpdate(context)
                 updateWidgetImage(context, forceUpdate = intent.getBooleanExtra(EXTRA_FORCE_UPDATE, false))
+                setupAlarmManager(context)
                 if (intent.getBooleanExtra(EXTRA_CLICK_EFFECT, false)) {
                     performClickAnimation(context)
                 }
