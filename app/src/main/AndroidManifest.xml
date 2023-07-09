@@ -44,7 +44,6 @@
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
                 <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
                 <action android:name="com.johnson.sketchclock.UPDATE_CLOCK" />
-                <action android:name="com.johnson.sketchclock.FORCE_UPDATE_CLOCK" />
             </intent-filter>
 
             <meta-data
