@@ -24,6 +24,9 @@ abstract class PickerViewModel<Item> : ViewModel() {
     private val _selectedItems = MutableStateFlow(emptyList<Item>())
     val selectedItems: StateFlow<List<Item>> = _selectedItems
 
+    private val _adapterColumnCount = MutableStateFlow(1)
+    val adapterColumnCount: StateFlow<Int> = _adapterColumnCount
+
     abstract val repository: RepositoryAdapter<Item>
 
     fun onEvent(event: PickerEvent<Item>) {
@@ -59,6 +62,10 @@ abstract class PickerViewModel<Item> : ViewModel() {
 
                 is PickerEvent.Select -> {
                     _selectedItems.value = event.items
+                }
+
+                is PickerEvent.ChangeAdapterColumns -> {
+                    _adapterColumnCount.value = event.adapterColumnCount
                 }
             }
         }

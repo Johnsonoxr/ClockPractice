@@ -12,4 +12,16 @@
         android:icon="@drawable/bottom_delete"
         android:title="delete"
         app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_grid"
+        android:icon="@drawable/bottom_grid"
+        android:title="grid"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_rows"
+        android:icon="@drawable/bottom_rows"
+        android:title="rows"
+        app:showAsAction="always" />
 </menu>

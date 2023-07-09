@@ -57,7 +57,7 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
             ivPreview.tag = item
             viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
                 Log.d(TAG, "generating preview for id=${item.id}")
-                val bitmap = Bitmap.createBitmap(Constants.TEMPLATE_WIDTH / 2, Constants.TEMPLATE_HEIGHT / 3, Bitmap.Config.ARGB_8888)
+                val bitmap = Bitmap.createBitmap(Constants.TEMPLATE_WIDTH / 2, Constants.TEMPLATE_HEIGHT / 4, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
                 canvas.clipRect(0, 0, bitmap.width, bitmap.height)
                 canvas.translate(-(Constants.TEMPLATE_WIDTH - bitmap.width) / 2f, -(Constants.TEMPLATE_HEIGHT - bitmap.height) / 2f)

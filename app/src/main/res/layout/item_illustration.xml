@@ -4,8 +4,7 @@
     style="?attr/materialCardViewOutlinedStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginHorizontal="16dp"
-    android:layout_marginVertical="8dp"
+    android:layout_margin="8dp"
     android:backgroundTint="?attr/colorPrimaryContainer">
 
     <androidx.constraintlayout.widget.ConstraintLayout
@@ -24,10 +23,14 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageView
+        <com.johnson.sketchclock.pickers.illustration_picker.SquareImageView
             android:id="@+id/ivPreview"
-            android:layout_width="64dp"
-            android:layout_height="64dp"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@drawable/item_template_iv_roundcorner"
+            android:clipToOutline="true"
+            android:backgroundTint="@android:color/transparent"
+            android:scaleType="fitCenter"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toBottomOf="@+id/tvName" />

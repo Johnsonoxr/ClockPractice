@@ -17,6 +17,7 @@ import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
 import androidx.recyclerview.widget.DiffUtil
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
@@ -27,6 +28,7 @@ import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.common.tintBackgroundAttr
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
+import java.lang.ref.WeakReference
 
 abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fragment(), OnFabClickListener {
 
@@ -51,9 +53,18 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     abstract val ViewBinding.title: TextView
     abstract fun ViewBinding.bind(item: T)
 
+    open val isAdapterColumnChangeable: Boolean = true
+
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
-        vb.rv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+        fun createLayoutManager(columnCount: Int): RecyclerView.LayoutManager {
+            return when (columnCount) {
+                1 -> LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+                else -> GridLayoutManager(context, viewModel.adapterColumnCount.value)
+            }
+        }
+
+        vb.rv.layoutManager = createLayoutManager(viewModel.adapterColumnCount.value)
         val adapter = ItemAdapter()
         vb.rv.adapter = adapter
 
@@ -61,7 +72,12 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
 
         viewModel.selectedItems.collectLatestWhenStarted(this) { adapter.selectedItems = it }
 
-        //  since we handle FAB which is shared with other fragments, we'd like to handle it in resume state
+        viewModel.adapterColumnCount.collectLatestWhenStarted(this) { columnCount ->
+            vb.rv.layoutManager = createLayoutManager(columnCount)
+            setupMenuItemVisibility(columnCount)
+        }
+
+        //  since the FAB is shared with other fragments, we'd like to handle it in resume state
         viewModel.controlMode.collectLatestWhenResumed(this) { controlMode ->
             Log.d(TAG, "controlMode=$controlMode")
             backPressedCallback.isEnabled = controlMode != ControlMode.NORMAL
@@ -102,7 +118,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                     return
                 }
                 if (viewModel.selectedItems.value.isEmpty()) return
-                showDialog("Delete Font", "Are you sure you want to delete these fonts?") {
+                showDialog("Delete", "Are you sure you want to delete these items?") {
                     viewModel.onEvent(PickerEvent.Delete(viewModel.selectedItems.value))
                     viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
                 }
@@ -110,7 +126,12 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
 
             ControlMode.BOOKMARK -> Toast.makeText(context, "Bookmark", Toast.LENGTH_SHORT).show()
 
-            else -> viewModel.onEvent(PickerEvent.Add(listOf(createEmptyItem())))
+            else -> {
+                val newItem = createEmptyItem()
+                showEditTextDialog("Create", newItem.title()) { title ->
+                    viewModel.onEvent(PickerEvent.Add(listOf(createCopyItemWithNewTitle(newItem, title))))
+                }
+            }
         }
     }
 
@@ -121,16 +142,29 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     private val menuProvider = object : MenuProvider {
         override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
             menuInflater.inflate(R.menu.menu_picker_bottombar, menu)
+            _menu = WeakReference(menu)
+            setupMenuItemVisibility(viewModel.adapterColumnCount.value)
         }
 
         override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
             when (menuItem.itemId) {
                 R.id.menu_delete -> viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.DELETE))
                 R.id.menu_bookmark -> viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.BOOKMARK))
+                R.id.menu_grid -> viewModel.onEvent(PickerEvent.ChangeAdapterColumns(1))
+                R.id.menu_rows -> viewModel.onEvent(PickerEvent.ChangeAdapterColumns(2))
             }
             return true
         }
     }
+
+    private fun setupMenuItemVisibility(columnCount: Int) {
+        menu?.findItem(R.id.menu_grid)?.isVisible = isAdapterColumnChangeable && columnCount > 1
+        menu?.findItem(R.id.menu_rows)?.isVisible = isAdapterColumnChangeable && columnCount == 1
+    }
+
+    private var _menu: WeakReference<Menu>? = null
+    private val menu: Menu?
+        get() = _menu?.get()
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {

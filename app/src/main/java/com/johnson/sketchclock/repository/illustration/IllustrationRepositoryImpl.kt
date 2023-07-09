@@ -122,8 +122,8 @@ class IllustrationRepositoryImpl @Inject constructor(
             }
             val title = when {
                 description?.containsKey(KEY_ILLUSTRATION_NAME) == true -> description[KEY_ILLUSTRATION_NAME] as? String ?: "Untitled"
-                dir == defaultRootDir -> "Default Illustration #$id"
-                else -> "User Illustration #$id"
+                dir == defaultRootDir -> "Default #$id"
+                else -> "Custom #$id"
             }
             return@map Illustration(
                 title = title,

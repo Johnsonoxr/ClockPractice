@@ -41,6 +41,8 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
         return ItemFontBinding.inflate(layoutInflater, parent, false)
     }
 
+    override val isAdapterColumnChangeable: Boolean = false
+
     override fun ItemFontBinding.bind(item: Font) {
         tvName.text = item.title
         root.tintBackgroundAttr(
