@@ -37,9 +37,9 @@ class ClockWidget : AppWidgetProvider() {
         private const val MILLIS_IN_MINUTE = 60000L
         private const val PREF_LAST_UPDATE_TIME = "last_update_time"
 
-        private const val ACTION_UPDATE_CLOCK = "com.johnson.sketchclock.UPDATE_CLOCK"
-        private const val EXTRA_FORCE_UPDATE = "force_update"
-        private const val EXTRA_CLICK_EFFECT = "click_effect"
+        private const val ACTION_UPDATE_CLOCK = "com.johnson.sketchclock.action.UPDATE_CLOCK"   //  by AlarmManager
+        private const val ACTION_FORCE_UPDATE_CLOCK = "com.johnson.sketchclock.action.FORCE_UPDATE_CLOCK"   //  when app suspend
+        private const val ACTION_CLICK_WIDGET_ROOT = "com.johnson.sketchclock.action.CLICK_WIDGET_ROOT" //  when click widget root
 
         private const val STATE_KEY_IS_ANIMATING = "is_animating"
 
@@ -51,7 +51,7 @@ class ClockWidget : AppWidgetProvider() {
 
             Log.i("ClockWidget", "setupAlarmManager: isWidgetsExists = $isWidgetsExists")
 
-            val pendingIntent = createUpdateClockPendingIntent(context)
+            val pendingIntent = createUpdateClockPendingIntent(context, ACTION_UPDATE_CLOCK)
 
             val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
             alarmManager.cancel(pendingIntent)
@@ -70,21 +70,16 @@ class ClockWidget : AppWidgetProvider() {
         }
 
         fun forceUpdateWidget(context: Context) {
-            val intent = createUpdateClockIntent(context, forceUpdate = true)
+            val intent = Intent(context, ClockWidget::class.java).apply {
+                action = ACTION_FORCE_UPDATE_CLOCK
+            }
             context.sendBroadcast(intent)
         }
 
-        private fun createUpdateClockIntent(context: Context, forceUpdate: Boolean = false, clickEffect: Boolean = false): Intent {
+        private fun createUpdateClockPendingIntent(context: Context, action: String): PendingIntent {
             val intent = Intent(context, ClockWidget::class.java).apply {
-                action = ACTION_UPDATE_CLOCK
-                if (forceUpdate) putExtra(EXTRA_FORCE_UPDATE, true)
-                if (clickEffect) putExtra(EXTRA_CLICK_EFFECT, true)
+                this.action = action
             }
-            return intent
-        }
-
-        private fun createUpdateClockPendingIntent(context: Context, forceUpdate: Boolean = false, clickEffect: Boolean = false): PendingIntent {
-            val intent = createUpdateClockIntent(context, forceUpdate, clickEffect)
             return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
         }
     }
@@ -147,7 +142,7 @@ class ClockWidget : AppWidgetProvider() {
 
         partialUpdateWidget(context, appWidgetManager, appWidgetIds) {
             setImageViewBitmap(R.id.iv, bitmap)
-            setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context, forceUpdate = true, clickEffect = true))
+            setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context, ACTION_CLICK_WIDGET_ROOT))
         }
     }
 
@@ -221,19 +216,31 @@ class ClockWidget : AppWidgetProvider() {
         Log.v(TAG, "onReceive: action = ${intent.action}")
         when (intent.action) {
             Intent.ACTION_BOOT_COMPLETED -> {
+                postNextMinuteUpdate(context)
+                updateWidgetImage(context)
                 setupAlarmManager(context)
             }
 
             ACTION_UPDATE_CLOCK -> {
+                postNextMinuteUpdate(context)
+                updateWidgetImage(context)
+            }
+
+            ACTION_FORCE_UPDATE_CLOCK -> {
+                postNextMinuteUpdate(context)
+                updateWidgetImage(context, forceUpdate = true)
+                setupAlarmManager(context)
+            }
+
+            ACTION_CLICK_WIDGET_ROOT -> {
                 if (STATE_KEY_IS_ANIMATING in widgetStateHolder) {
                     Log.v(TAG, "onReceive: skip forced update")
                     return
                 }
+                performClickAnimation(context)
                 postNextMinuteUpdate(context)
-                updateWidgetImage(context, forceUpdate = intent.getBooleanExtra(EXTRA_FORCE_UPDATE, false))
-                if (intent.getBooleanExtra(EXTRA_CLICK_EFFECT, false)) {
-                    performClickAnimation(context)
-                }
+                updateWidgetImage(context, forceUpdate = true)
+                setupAlarmManager(context)
             }
         }
     }
