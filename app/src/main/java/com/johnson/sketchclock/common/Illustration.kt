@@ -7,4 +7,5 @@ data class Illustration(
     val resName: String? = null,
     val lastModified: Long = 0,
     val editable: Boolean = true,
+    val bookmarked: Boolean = false
 ) : Serializable

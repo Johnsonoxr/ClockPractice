@@ -11,8 +11,8 @@ class IllustrationRepositoryAdapter(private val illustrationRepository: Illustra
         return illustrationRepository.getIllustrations()
     }
 
-    override suspend fun updateItem(item: Illustration) {
-        illustrationRepository.upsertIllustrations(listOf(item))
+    override suspend fun updateItems(items: List<Illustration>) {
+        illustrationRepository.upsertIllustrations(items)
     }
 
     override suspend fun deleteItems(items: List<Illustration>) {

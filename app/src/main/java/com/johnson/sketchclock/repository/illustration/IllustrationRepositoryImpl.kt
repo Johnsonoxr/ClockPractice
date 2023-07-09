@@ -23,7 +23,6 @@ class IllustrationRepositoryImpl @Inject constructor(
     private val gson = GsonBuilder().setPrettyPrinting().setNumberToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
     private val _illustrations: MutableStateFlow<List<Illustration>> = MutableStateFlow(emptyList())
-    private lateinit var defaultIllustrations: List<Illustration>
 
     companion object {
 
@@ -34,6 +33,7 @@ class IllustrationRepositoryImpl @Inject constructor(
 
         private const val KEY_ILLUSTRATION_NAME = "illustration_name"
         private const val KEY_LAST_MODIFIED = "last_modified"
+        private const val KEY_BOOKMARKED = "bookmarked"
 
         private const val DESCRIPTION_FILE = "description.txt"
         private const val ILLUSTRATION_FILE = "illustration.png"
@@ -42,7 +42,6 @@ class IllustrationRepositoryImpl @Inject constructor(
     init {
         GlobalScope.launch(Dispatchers.IO) {
             copyAssetFilesIntoDirRecursively(DEFAULT_DIR, defaultRootDir)
-            defaultIllustrations = loadIllustrationList(defaultRootDir)
 
             userRootDir.mkdirs()
             userRootDir.listFiles { file -> file?.name?.startsWith(".") == true }?.forEach {
@@ -66,18 +65,9 @@ class IllustrationRepositoryImpl @Inject constructor(
 
         illustrations.forEach { illustration ->
 
-            val id = when {
-                illustration.resName == null -> getNewIllustrationId()
-                illustration.isUser -> illustration.id
-                else -> null
-            }
+            val id = illustration.id.takeIf { it >= 0 } ?: getNewIllustrationId()
+            val resName = illustration.resName ?: "$USER_DIR/$id"
 
-            if (id == null || id < 0) {
-                Log.e(TAG, "upsertIllustration(): Invalid resName=${illustration.resName}")
-                return@forEach
-            }
-
-            val resName = "$USER_DIR/$id"
             val newIllustration = illustration.copy(resName = resName)
 
             if (!newIllustration.dir.exists() && newIllustration.deletedDir.exists()) {
@@ -89,15 +79,15 @@ class IllustrationRepositoryImpl @Inject constructor(
             val gsonString = gson.toJson(
                 mapOf(
                     KEY_ILLUSTRATION_NAME to newIllustration.title,
-                    KEY_LAST_MODIFIED to System.currentTimeMillis()
+                    KEY_LAST_MODIFIED to System.currentTimeMillis(),
+                    KEY_BOOKMARKED to newIllustration.bookmarked
                 )
             )
             File(newIllustration.dir, DESCRIPTION_FILE).writeText(gsonString)
-
-            _illustrations.value = loadIllustrationList()
-
             Log.d(TAG, "upsertIllustration(): Save illustration: $resName")
         }
+
+        _illustrations.value = loadIllustrationList()
     }
 
     override suspend fun deleteIllustrations(illustrations: Collection<Illustration>) {
@@ -129,7 +119,8 @@ class IllustrationRepositoryImpl @Inject constructor(
                 title = title,
                 resName = "${dir.name}/$id",
                 lastModified = (description?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
-                editable = dir == userRootDir
+                editable = dir == userRootDir,
+                bookmarked = (description?.get(KEY_BOOKMARKED) as? Boolean) ?: false
             )
         }.sortedBy { it.id }
     }
@@ -142,7 +133,7 @@ class IllustrationRepositoryImpl @Inject constructor(
     }
 
     private fun loadIllustrationList(): List<Illustration> {
-        return defaultIllustrations + loadIllustrationList(userRootDir)
+        return loadIllustrationList(defaultRootDir) + loadIllustrationList(userRootDir)
     }
 
     private val Illustration.id: Int

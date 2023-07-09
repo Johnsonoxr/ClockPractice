@@ -8,7 +8,6 @@ import androidx.fragment.app.activityViewModels
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.GlideHelper
-import com.johnson.sketchclock.common.tintBackgroundAttr
 import com.johnson.sketchclock.databinding.ItemFontBinding
 import com.johnson.sketchclock.font_canvas.CanvasActivity
 import com.johnson.sketchclock.pickers.PickerFragment
@@ -44,13 +43,7 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
     override val isAdapterColumnChangeable: Boolean = false
 
     override fun ItemFontBinding.bind(item: Font) {
-        tvName.text = item.title
-        root.tintBackgroundAttr(
-            when (item) {
-                in viewModel.selectedItems.value -> com.google.android.material.R.attr.colorErrorContainer
-                else -> com.google.android.material.R.attr.colorPrimaryContainer
-            }
-        )
+        ivBookmark.visibility = if (item.bookmarked) View.VISIBLE else View.GONE
         fontRepository.getFontFile(item, Character.ZERO).let { GlideHelper.load(ivPreview0, it) }
         fontRepository.getFontFile(item, Character.ONE).let { GlideHelper.load(ivPreview1, it) }
         fontRepository.getFontFile(item, Character.TWO).let { GlideHelper.load(ivPreview2, it) }
@@ -80,11 +73,13 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
         return CanvasActivity.createIntent(requireContext(), item)
     }
 
-    override fun createCopyItemWithNewTitle(item: Font, title: String): Font {
-        return item.copy(title = title)
+    override fun Font.clone(title: String?, bookmark: Boolean?): Font {
+        return this.copy(title = title ?: this.title, bookmarked = bookmark ?: this.bookmarked)
     }
 
     override fun Font.editable(): Boolean = this.editable
 
     override fun Font.title(): String = this.title
+
+    override fun Font.isBookmark(): Boolean = this.bookmarked
 }

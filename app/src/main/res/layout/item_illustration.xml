@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     style="?attr/materialCardViewOutlinedStyle"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
@@ -11,6 +12,17 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:padding="8dp">
+
+        <ImageView
+            android:id="@+id/ivBookmark"
+            tools:visibility="visible"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:src="@drawable/bottom_bookmark"
+            android:visibility="gone"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:tint="?attr/colorPrimary" />
 
         <TextView
             android:id="@+id/tvName"
@@ -23,7 +35,7 @@
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <com.johnson.sketchclock.pickers.illustration_picker.SquareImageView
+        <com.johnson.sketchclock.pickers.illustration_picker.RatioImageView
             android:id="@+id/ivPreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

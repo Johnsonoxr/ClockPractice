@@ -10,8 +10,8 @@ class TemplateRepositoryAdapter(private val templateRepository: TemplateReposito
         return templateRepository.getTemplateListFlow()
     }
 
-    override suspend fun updateItem(item: Template) {
-        templateRepository.upsertTemplate(item)
+    override suspend fun updateItems(items: List<Template>) {
+        items.forEach { templateRepository.upsertTemplate(it) }
     }
 
     override suspend fun deleteItems(items: List<Template>) {

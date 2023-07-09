@@ -24,7 +24,6 @@ class FontRepositoryImpl @Inject constructor(
     private val gson = GsonBuilder().setPrettyPrinting().setNumberToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
     private val _fonts: MutableStateFlow<List<Font>> = MutableStateFlow(emptyList())
-    private lateinit var defaultFonts: List<Font>
 
     companion object {
         private const val TAG = "FontRepositoryImpl"
@@ -35,12 +34,12 @@ class FontRepositoryImpl @Inject constructor(
         private const val DESCRIPTION_FILE = "description.txt"
         private const val KEY_FONT_NAME = "font_name"
         private const val KEY_LAST_MODIFIED = "last_modified"
+        private const val KEY_BOOKMARKED = "bookmarked"
     }
 
     init {
         GlobalScope.launch(Dispatchers.IO) {
             copyAssetFilesIntoDirRecursively(DEFAULT_DIR, defaultRootDir)
-            defaultFonts = loadFontList(defaultRootDir)
 
             userRootDir.mkdirs()
             userRootDir.listFiles { pathname -> pathname?.name?.startsWith(".") == true }?.forEach {
@@ -64,18 +63,9 @@ class FontRepositoryImpl @Inject constructor(
 
         fonts.forEach { font ->
 
-            val id = when {
-                font.resName == null -> getNewFontId()
-                font.isUser -> font.id
-                else -> null
-            }
+            val id = font.id.takeIf { it >= 0 } ?: getNewFontId()
+            val resName = font.resName ?: "$USER_DIR/$id"
 
-            if (id == null || id < 0) {
-                Log.e(TAG, "upsertFont(): Invalid font resName=${font.resName}")
-                return@forEach
-            }
-
-            val resName = "$USER_DIR/$id"
             val newFont = font.copy(resName = resName)
 
             if (!newFont.dir.exists() && newFont.deletedDir.exists()) {
@@ -89,7 +79,8 @@ class FontRepositoryImpl @Inject constructor(
             val gsonString = gson.toJson(
                 mapOf(
                     KEY_FONT_NAME to newFont.title,
-                    KEY_LAST_MODIFIED to System.currentTimeMillis()
+                    KEY_LAST_MODIFIED to System.currentTimeMillis(),
+                    KEY_BOOKMARKED to newFont.bookmarked
                 )
             )
             descriptionFile.writeText(gsonString)
@@ -129,7 +120,8 @@ class FontRepositoryImpl @Inject constructor(
                 title = title,
                 resName = "${dir.name}/$index",
                 lastModified = (descriptions?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
-                editable = dir == userRootDir
+                editable = dir == userRootDir,
+                bookmarked = descriptions?.get(KEY_BOOKMARKED) as? Boolean ?: false
             )
         }.sortedBy { it.id }
     }
@@ -142,7 +134,7 @@ class FontRepositoryImpl @Inject constructor(
     }
 
     private fun loadFontList(): List<Font> {
-        return defaultFonts + loadFontList(userRootDir)
+        return loadFontList(defaultRootDir) + loadFontList(userRootDir)
     }
 
     private val Font.id: Int

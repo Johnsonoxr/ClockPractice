@@ -7,7 +7,6 @@ import android.widget.TextView
 import androidx.fragment.app.activityViewModels
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Illustration
-import com.johnson.sketchclock.common.tintBackgroundAttr
 import com.johnson.sketchclock.databinding.ItemIllustrationBinding
 import com.johnson.sketchclock.illustration_canvas.IllustrationCanvasActivity
 import com.johnson.sketchclock.pickers.PickerFragment
@@ -40,13 +39,7 @@ class IllustrationPickerFragment : PickerFragment<Illustration, ItemIllustration
     }
 
     override fun ItemIllustrationBinding.bind(item: Illustration) {
-        tvName.text = item.title
-        root.tintBackgroundAttr(
-            when (item) {
-                in viewModel.selectedItems.value -> com.google.android.material.R.attr.colorErrorContainer
-                else -> com.google.android.material.R.attr.colorPrimaryContainer
-            }
-        )
+        ivBookmark.visibility = if (item.bookmarked) View.VISIBLE else View.GONE
         GlideHelper.load(ivPreview, illustrationRepository.getIllustrationFile(item))
     }
 
@@ -67,11 +60,13 @@ class IllustrationPickerFragment : PickerFragment<Illustration, ItemIllustration
         return IllustrationCanvasActivity.createIntent(requireContext(), item)
     }
 
-    override fun createCopyItemWithNewTitle(item: Illustration, title: String): Illustration {
-        return item.copy(title = title)
+    override fun Illustration.clone(title: String?, bookmark: Boolean?): Illustration {
+        return this.copy(title = title ?: this.title, bookmarked = bookmark ?: this.bookmarked)
     }
 
     override fun Illustration.editable(): Boolean = this.editable
 
     override fun Illustration.title(): String = this.title
+
+    override fun Illustration.isBookmark(): Boolean = this.bookmarked
 }

@@ -11,8 +11,8 @@ class FontRepositoryAdapter(private val fontRepository: FontRepository) : Reposi
         return fontRepository.getFonts()
     }
 
-    override suspend fun updateItem(item: Font) {
-        fontRepository.upsertFonts(listOf(item))
+    override suspend fun updateItems(items: List<Font>) {
+        fontRepository.upsertFonts(items)
     }
 
     override suspend fun deleteItems(items: List<Font>) {

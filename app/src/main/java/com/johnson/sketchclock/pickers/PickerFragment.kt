@@ -1,5 +1,6 @@
 package com.johnson.sketchclock.pickers
 
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.os.Bundle
 import android.util.Log
@@ -37,24 +38,34 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     @Suppress("PropertyName")
     abstract val TAG: String
 
+    //  view model
     abstract val viewModel: VM
+
+    //  repository
     abstract val repositoryAdapter: RepositoryAdapter<T>
-    abstract fun createEmptyItem(): T
+
+    //  item
     abstract fun T.editable(): Boolean
     abstract fun T.title(): String
-    abstract fun createCopyItemWithNewTitle(item: T, title: String): T
-    abstract fun createEditItemIntent(item: T): Intent
+    abstract fun T.clone(title: String? = null, bookmark: Boolean? = null): T
+    abstract fun createEmptyItem(): T
+    abstract fun T.isBookmark(): Boolean
 
+    //  adapter
     abstract fun areItemsTheSame(oldItem: T, newItem: T): Boolean
     abstract fun areContentsTheSame(oldItem: T, newItem: T): Boolean
+    abstract fun createEditItemIntent(item: T): Intent
 
+    //  view binding
     abstract fun createItemViewBinding(parent: ViewGroup): ViewBinding
     abstract val ViewBinding.rootView: View
     abstract val ViewBinding.title: TextView
     abstract fun ViewBinding.bind(item: T)
 
+    //  menu
     open val isAdapterColumnChangeable: Boolean = true
 
+    @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
         fun createLayoutManager(columnCount: Int): RecyclerView.LayoutManager {
@@ -86,6 +97,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 else -> activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
             }
             (activity as? ControllableFabHolder)?.changeFabControlMode(controlMode)
+            adapter.notifyDataSetChanged()
         }
 
         viewModel.deletedItem.collectLatestWhenResumed(this) {
@@ -113,23 +125,31 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     override fun onFabClick() {
         when (viewModel.controlMode.value) {
             ControlMode.DELETE -> {
-                if (viewModel.selectedItems.value.isEmpty()) {
+                val items = viewModel.selectedItems.value
+                if (items.isEmpty()) {
                     viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
                     return
                 }
-                if (viewModel.selectedItems.value.isEmpty()) return
                 showDialog("Delete", "Are you sure you want to delete these items?") {
-                    viewModel.onEvent(PickerEvent.Delete(viewModel.selectedItems.value))
+                    viewModel.onEvent(PickerEvent.Delete(items))
                     viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
                 }
             }
 
-            ControlMode.BOOKMARK -> Toast.makeText(context, "Bookmark", Toast.LENGTH_SHORT).show()
+            ControlMode.BOOKMARK -> {
+                val items = viewModel.selectedItems.value
+                if (items.isEmpty()) {
+                    viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
+                    return
+                }
+                viewModel.onEvent(PickerEvent.Update(items.map { it.clone(bookmark = !it.isBookmark()) }))
+                viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
+            }
 
             else -> {
                 val newItem = createEmptyItem()
                 showEditTextDialog("Create", newItem.title()) { title ->
-                    viewModel.onEvent(PickerEvent.Add(listOf(createCopyItemWithNewTitle(newItem, title))))
+                    viewModel.onEvent(PickerEvent.Add(listOf(newItem.clone(title = title))))
                 }
             }
         }
@@ -219,18 +239,23 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 get() = items[adapterPosition]
 
             init {
-                vb.title.setOnClickListener(this)
                 vb.rootView.setOnClickListener(this)
+                vb.title.setOnClickListener(this)
             }
 
             fun bind(item: T) {
+                vb.title.isClickable = viewModel.controlMode.value == ControlMode.NORMAL
+                val isVisuallySelected = when (viewModel.controlMode.value) {
+                    ControlMode.DELETE -> item in viewModel.selectedItems.value
+                    ControlMode.BOOKMARK -> item.isBookmark() xor (item in viewModel.selectedItems.value)
+                    ControlMode.NORMAL -> false
+                }
+                val tintBackgroundAttr = when {
+                    isVisuallySelected -> com.google.android.material.R.attr.colorErrorContainer
+                    else -> com.google.android.material.R.attr.colorPrimaryContainer
+                }
+                vb.rootView.tintBackgroundAttr(tintBackgroundAttr)
                 vb.title.text = item.title()
-                vb.rootView.tintBackgroundAttr(
-                    when (item) {
-                        in selectedItems -> com.google.android.material.R.attr.colorErrorContainer
-                        else -> com.google.android.material.R.attr.colorPrimaryContainer
-                    }
-                )
                 vb.bind(item)
             }
 
@@ -240,7 +265,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                         when (viewModel.controlMode.value) {
                             ControlMode.DELETE, ControlMode.BOOKMARK -> {
                                 if (ControlMode.DELETE == viewModel.controlMode.value && !item.editable()) {
-                                    Toast.makeText(context, "This font is not deletable", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Cannot delete this item", Toast.LENGTH_SHORT).show()
                                     return
                                 }
                                 val selected = if (item in viewModel.selectedItems.value) {
@@ -255,7 +280,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                                 if (item.editable()) {
                                     startActivity(createEditItemIntent(item))
                                 } else {
-                                    Toast.makeText(context, "This font is not editable", Toast.LENGTH_SHORT).show()
+                                    Toast.makeText(context, "Cannot edit this item", Toast.LENGTH_SHORT).show()
                                 }
                             }
                         }
@@ -263,11 +288,11 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
 
                     vb.title -> {
                         if (!item.editable()) {
-                            Toast.makeText(context, "This font is not editable", Toast.LENGTH_SHORT).show()
+                            Toast.makeText(context, "Cannot edit this item", Toast.LENGTH_SHORT).show()
                             return
                         }
                         showEditTextDialog("Rename", item.title()) { newName ->
-                            viewModel.onEvent(PickerEvent.Update(createCopyItemWithNewTitle(item, newName)))
+                            viewModel.onEvent(PickerEvent.Update(listOf(item.clone(title = newName))))
                         }
                     }
                 }

@@ -47,8 +47,7 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
     }
 
     override fun ItemTemplateBinding.bind(item: Template) {
-        tvName.text = item.name
-
+        ivBookmark.visibility = if (item.bookmarked) View.VISIBLE else View.GONE
         val previewBitmap = previewCache[item.id]
         if (previewBitmap != null) {
             ivPreview.setImageBitmap(previewBitmap)
@@ -89,12 +88,14 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
         return EditorActivity.createIntent(requireContext(), item)
     }
 
-    override fun createCopyItemWithNewTitle(item: Template, title: String): Template {
-        return item.copy(name = title)
+    override fun Template.clone(title: String?, bookmark: Boolean?): Template {
+        return copy(name = title ?: this.name, bookmarked = bookmark ?: this.bookmarked)
     }
 
     override fun Template.title(): String = name
 
     //  There might be default template in the future
     override fun Template.editable(): Boolean = true
+
+    override fun Template.isBookmark(): Boolean = bookmarked
 }

@@ -45,7 +45,7 @@ abstract class PickerViewModel<Item> : ViewModel() {
                 }
 
                 is PickerEvent.Update -> {
-                    repository.updateItem(event.item)
+                    repository.updateItems(event.items)
                 }
 
                 is PickerEvent.UndoDelete -> {
