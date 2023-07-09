@@ -2,6 +2,7 @@ package com.johnson.sketchclock.pickers
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.Menu
 import android.view.MenuInflater
@@ -20,9 +21,8 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.R
+import com.johnson.sketchclock.common.collectLatestWhenResumed
 import com.johnson.sketchclock.common.collectLatestWhenStarted
-import com.johnson.sketchclock.common.scaleIn
-import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.common.tintBackgroundAttr
@@ -31,6 +31,9 @@ import com.johnson.sketchclock.databinding.FragmentPickerBinding
 abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fragment(), OnFabClickListener {
 
     private lateinit var vb: FragmentPickerBinding
+
+    @Suppress("PropertyName")
+    abstract val TAG: String
 
     abstract val viewModel: VM
     abstract val repositoryAdapter: RepositoryAdapter<T>
@@ -58,34 +61,37 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
 
         viewModel.selectedItems.collectLatestWhenStarted(this) { adapter.selectedItems = it }
 
-        viewModel.controlMode.collectLatestWhenStarted(this) { controlMode ->
+        //  since we handle FAB which is shared with other fragments, we'd like to handle it in resume state
+        viewModel.controlMode.collectLatestWhenResumed(this) { controlMode ->
+            Log.d(TAG, "controlMode=$controlMode")
             backPressedCallback.isEnabled = controlMode != ControlMode.NORMAL
             when (controlMode) {
                 ControlMode.DELETE, ControlMode.BOOKMARK -> activity?.removeMenuProvider(menuProvider)
                 else -> activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
             }
-            (activity as? ControllableFabHolder)?.editFab { fab ->
-                fab.scaleOut(100) {
-                    fab.setImageResource(
-                        when (controlMode) {
-                            ControlMode.DELETE -> R.drawable.bottom_delete
-                            ControlMode.BOOKMARK -> R.drawable.bottom_bookmark
-                            else -> R.drawable.fab_add
-                        }
-                    )
-                    fab.scaleIn(100)
-                }
-            }
+            (activity as? ControllableFabHolder)?.changeFabControlMode(controlMode)
         }
 
-        viewModel.deletedItem.collectLatestWhenStarted(this) {
+        viewModel.deletedItem.collectLatestWhenResumed(this) {
             Snackbar.make(vb.rv, "Deleted", Snackbar.LENGTH_LONG)
                 .setAction("Undo") { viewModel.onEvent(PickerEvent.UndoDelete()) }
                 .setAnchorView(R.id.fab_add)
                 .show()
         }
 
-        activity?.onBackPressedDispatcher?.addCallback(viewLifecycleOwner, backPressedCallback)
+        activity?.onBackPressedDispatcher?.addCallback(backPressedCallback.apply { isEnabled = true })
+    }
+
+    override fun onPause() {
+        super.onPause()
+        viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
+        backPressedCallback.isEnabled = false
+    }
+
+    override fun onResume() {
+        super.onResume()
+        //  though the control mode is always NORMAL when resumed, I think it's better to set it explicitly.
+        backPressedCallback.isEnabled = viewModel.controlMode.value != ControlMode.NORMAL
     }
 
     override fun onFabClick() {
@@ -143,9 +149,12 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
             set(value) {
                 DiffUtil.calculateDiff(DiffCallback(field, value)).dispatchUpdatesTo(this)
 
-                value.findLast { it !in field }?.let { newFont ->
-                    val position = value.indexOf(newFont)
-                    vb.rv.postDelayed(100) { vb.rv.smoothScrollToPosition(position) }
+                if (field.isNotEmpty()) {
+                    //  scroll to the last added item, except the first time
+                    value.findLast { it !in field }?.let { newFont ->
+                        val position = value.indexOf(newFont)
+                        vb.rv.postDelayed(100) { vb.rv.smoothScrollToPosition(position) }
+                    }
                 }
 
                 field = value

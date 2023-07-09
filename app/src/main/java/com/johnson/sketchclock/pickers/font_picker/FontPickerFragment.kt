@@ -20,6 +20,8 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewModel>() {
 
+    override val TAG: String = "FontPickerFragment"
+
     override val viewModel: FontPickerViewModel by activityViewModels()
 
     @Inject
@@ -52,6 +54,11 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
         fontRepository.getFontFile(item, Character.TWO).let { GlideHelper.load(ivPreview2, it) }
         fontRepository.getFontFile(item, Character.THREE).let { GlideHelper.load(ivPreview3, it) }
         fontRepository.getFontFile(item, Character.FOUR).let { GlideHelper.load(ivPreview4, it) }
+        fontRepository.getFontFile(item, Character.FIVE).let { GlideHelper.load(ivPreview5, it) }
+        fontRepository.getFontFile(item, Character.SIX).let { GlideHelper.load(ivPreview6, it) }
+        fontRepository.getFontFile(item, Character.SEVEN).let { GlideHelper.load(ivPreview7, it) }
+        fontRepository.getFontFile(item, Character.EIGHT).let { GlideHelper.load(ivPreview8, it) }
+        fontRepository.getFontFile(item, Character.NINE).let { GlideHelper.load(ivPreview9, it) }
     }
 
     override val ItemFontBinding.rootView: View

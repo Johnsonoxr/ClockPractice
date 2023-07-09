@@ -10,4 +10,5 @@ interface TemplateRepository {
     suspend fun getTemplates(): List<Template>
     suspend fun upsertTemplate(template: Template): Long
     suspend fun deleteTemplate(template: Template)
+    suspend fun deleteTemplates(ids: List<Int>)
 }

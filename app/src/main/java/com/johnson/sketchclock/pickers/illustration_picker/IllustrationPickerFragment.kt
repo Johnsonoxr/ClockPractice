@@ -19,6 +19,7 @@ import javax.inject.Inject
 @AndroidEntryPoint
 class IllustrationPickerFragment : PickerFragment<Illustration, ItemIllustrationBinding, IllustrationPickerViewModel>() {
 
+    override val TAG: String = "IllustrationPickerFragment"
     override val viewModel: IllustrationPickerViewModel by activityViewModels()
 
     @Inject

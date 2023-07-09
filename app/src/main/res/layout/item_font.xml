@@ -3,7 +3,7 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     style="?attr/materialCardViewOutlinedStyle"
     android:layout_width="match_parent"
-    android:layout_height="100dp"
+    android:layout_height="wrap_content"
     android:layout_marginHorizontal="16dp"
     android:layout_marginVertical="8dp"
     android:backgroundTint="?attr/colorPrimaryContainer">
@@ -11,7 +11,7 @@
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingHorizontal="10dp">
+        android:padding="8dp">
 
         <TextView
             android:id="@+id/tvName"
@@ -20,49 +20,88 @@
             android:text="TextView"
             android:textSize="20sp"
             android:textStyle="bold"
-            app:layout_constraintBottom_toTopOf="@+id/ivPreview0"
+            app:layout_constraintBottom_toTopOf="@+id/llPreview"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
 
-        <ImageView
-            android:id="@+id/ivPreview0"
-            android:layout_width="36dp"
-            android:layout_height="64dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tvName" />
+        <LinearLayout
+            android:id="@+id/llPreview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            app:layout_constraintBottom_toBottomOf="parent">
 
-        <ImageView
-            android:id="@+id/ivPreview1"
-            android:layout_width="36dp"
-            android:layout_height="64dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/ivPreview0"
-            app:layout_constraintTop_toBottomOf="@+id/tvName" />
+            <ImageView
+                android:id="@+id/ivPreview0"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
 
-        <ImageView
-            android:id="@+id/ivPreview2"
-            android:layout_width="36dp"
-            android:layout_height="64dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/ivPreview1"
-            app:layout_constraintTop_toBottomOf="@+id/tvName" />
+            <ImageView
+                android:id="@+id/ivPreview1"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
 
-        <ImageView
-            android:id="@+id/ivPreview3"
-            android:layout_width="36dp"
-            android:layout_height="64dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/ivPreview2"
-            app:layout_constraintTop_toBottomOf="@+id/tvName" />
+            <ImageView
+                android:id="@+id/ivPreview2"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
 
-        <ImageView
-            android:id="@+id/ivPreview4"
-            android:layout_width="36dp"
-            android:layout_height="64dp"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/ivPreview3"
-            app:layout_constraintTop_toBottomOf="@+id/tvName" />
+            <ImageView
+                android:id="@+id/ivPreview3"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
+
+            <ImageView
+                android:id="@+id/ivPreview4"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
+
+            <ImageView
+                android:id="@+id/ivPreview5"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
+
+            <ImageView
+                android:id="@+id/ivPreview6"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
+
+            <ImageView
+                android:id="@+id/ivPreview7"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
+
+            <ImageView
+                android:id="@+id/ivPreview8"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
+
+            <ImageView
+                android:id="@+id/ivPreview9"
+                android:layout_width="0dp"
+                android:layout_height="64dp"
+                android:layout_weight="1"
+                android:scaleType="centerInside" />
+
+        </LinearLayout>
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 

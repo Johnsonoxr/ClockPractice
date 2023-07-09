@@ -8,9 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
-class FontPickerViewModel @Inject constructor(
-    private val fontRepository: FontRepository
-) : PickerViewModel<Font>() {
-
+class FontPickerViewModel @Inject constructor(private val fontRepository: FontRepository) : PickerViewModel<Font>() {
+    override val TAG: String = "FontPickerViewModel"
     override val repository: RepositoryAdapter<Font> by lazy { FontRepositoryAdapter(fontRepository) }
 }

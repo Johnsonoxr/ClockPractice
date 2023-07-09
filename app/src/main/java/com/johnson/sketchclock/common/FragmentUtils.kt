@@ -33,6 +33,16 @@ fun <T> Flow<T>.collectLatestWhenStarted(fragment: Fragment, block: suspend (T) 
     }
 }
 
+fun <T> Flow<T>.collectLatestWhenResumed(fragment: Fragment, block: suspend (T) -> Unit) {
+    fragment.viewLifecycleOwner.lifecycleScope.launch {
+        fragment.viewLifecycleOwner.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            collectLatest {
+                block(it)
+            }
+        }
+    }
+}
+
 fun <T> Flow<T>.collectLatestWhenStarted(activity: ComponentActivity, block: suspend (T) -> Unit) {
     activity.lifecycleScope.launch {
         activity.lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {

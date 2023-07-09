@@ -3,11 +3,11 @@ package com.johnson.sketchclock.pickers.font_picker
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.pickers.RepositoryAdapter
 import com.johnson.sketchclock.repository.font.FontRepository
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 
 class FontRepositoryAdapter(private val fontRepository: FontRepository) : RepositoryAdapter<Font> {
 
-    override fun getFlow(): StateFlow<List<Font>> {
+    override fun getFlow(): Flow<List<Font>> {
         return fontRepository.getFonts()
     }
 

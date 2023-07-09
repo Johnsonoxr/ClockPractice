@@ -6,11 +6,13 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.FragmentManager
 import androidx.fragment.app.FragmentPagerAdapter
-import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.johnson.sketchclock.R
+import com.johnson.sketchclock.common.scaleIn
+import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.ActivityPickersBinding
-import com.johnson.sketchclock.illustration_picker.IllustrationPickerFragment
 import com.johnson.sketchclock.pickers.font_picker.FontPickerFragment
-import com.johnson.sketchclock.template_picker.TemplatePickerFragment
+import com.johnson.sketchclock.pickers.illustration_picker.IllustrationPickerFragment
+import com.johnson.sketchclock.pickers.template_picker.TemplatePickerFragment
 import dagger.hilt.android.AndroidEntryPoint
 
 @AndroidEntryPoint
@@ -18,13 +20,11 @@ class PickersActivity : AppCompatActivity(), ControllableFabHolder {
 
     private lateinit var vb: ActivityPickersBinding
 
-    private val pageInfoList by lazy {
-        listOf(
-            PageInfo("Templates", TemplatePickerFragment::class.java),
-            PageInfo("Fonts", FontPickerFragment::class.java),
-            PageInfo("Illustrations", IllustrationPickerFragment::class.java)
-        )
-    }
+    private val pageInfoList = listOf(
+        PageInfo("Templates", TemplatePickerFragment::class.java),
+        PageInfo("Fonts", FontPickerFragment::class.java),
+        PageInfo("Illustrations", IllustrationPickerFragment::class.java)
+    )
 
     private data class PageInfo(val title: String, val fragmentClass: Class<out Fragment>)
 
@@ -45,8 +45,20 @@ class PickersActivity : AppCompatActivity(), ControllableFabHolder {
         }
     }
 
-    override fun editFab(action: (FloatingActionButton) -> Unit) {
-        action(vb.fabAdd)
+    override fun changeFabControlMode(controlMode: ControlMode) {
+        val prevControlMode = vb.fabAdd.tag as? ControlMode ?: ControlMode.NORMAL
+        vb.fabAdd.tag = controlMode
+        val resId = when (controlMode) {
+            ControlMode.NORMAL -> R.drawable.fab_add
+            ControlMode.DELETE -> R.drawable.bottom_delete
+            ControlMode.BOOKMARK -> R.drawable.bottom_bookmark
+        }
+        if (prevControlMode != controlMode) {
+            vb.fabAdd.scaleOut(100) {
+                vb.fabAdd.setImageResource(resId)
+                vb.fabAdd.scaleIn(100)
+            }
+        }
     }
 
     private inner class SectionsPagerAdapter(fm: FragmentManager) : FragmentPagerAdapter(fm, BEHAVIOR_RESUME_ONLY_CURRENT_FRAGMENT) {

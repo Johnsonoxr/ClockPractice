@@ -1,5 +1,6 @@
 package com.johnson.sketchclock.pickers
 
+import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -8,6 +9,9 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.launch
 
 abstract class PickerViewModel<Item> : ViewModel() {
+
+    @Suppress("PropertyName")
+    protected abstract val TAG: String
 
     private val _deletedItem = MutableSharedFlow<List<Item>>()
     val deletedItem = _deletedItem
@@ -23,6 +27,7 @@ abstract class PickerViewModel<Item> : ViewModel() {
     abstract val repository: RepositoryAdapter<Item>
 
     fun onEvent(event: PickerEvent<Item>) {
+        Log.v(TAG, "onEvent: $event")
         viewModelScope.launch {
             when (event) {
                 is PickerEvent.Add -> {

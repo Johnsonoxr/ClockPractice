@@ -38,4 +38,8 @@ class TemplateRepositoryImpl @Inject constructor(
     override suspend fun deleteTemplate(template: Template) {
         template.id?.let { templateDatabase.templateDao().deleteTemplate(it) }
     }
+
+    override suspend fun deleteTemplates(ids: List<Int>) {
+        templateDatabase.templateDao().deleteTemplates(ids)
+    }
 }

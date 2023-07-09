@@ -8,9 +8,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import javax.inject.Inject
 
 @HiltViewModel
-class IllustrationPickerViewModel @Inject constructor(
-    private val illustrationRepository: IllustrationRepository
-) : PickerViewModel<Illustration>() {
-
+class IllustrationPickerViewModel @Inject constructor(private val illustrationRepository: IllustrationRepository) : PickerViewModel<Illustration>() {
+    override val TAG: String = "IllustrationPickerViewModel"
     override val repository: RepositoryAdapter<Illustration> by lazy { IllustrationRepositoryAdapter(illustrationRepository) }
 }
