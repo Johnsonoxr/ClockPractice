@@ -10,6 +10,8 @@ import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.font.FontRepositoryImpl
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import com.johnson.sketchclock.repository.illustration.IllustrationRepositoryImpl
+import com.johnson.sketchclock.repository.pref.PreferenceRepository
+import com.johnson.sketchclock.repository.pref.PreferenceRepositoryImpl
 import com.johnson.sketchclock.repository.template.TemplateDatabase
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import com.johnson.sketchclock.repository.template.TemplateRepositoryImpl
@@ -75,5 +77,11 @@ class AppModule {
     @Singleton
     fun widgetStateHolder(): MutableMap<String, String> {   //  holding state for the widget since widget is stateless.
         return mutableMapOf()
+    }
+
+    @Provides
+    @Singleton
+    fun getPreferenceRepository(context: Context): PreferenceRepository {
+        return PreferenceRepositoryImpl(context)
     }
 }

@@ -3,15 +3,21 @@ package com.johnson.sketchclock.pickers
 import android.util.Log
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.johnson.sketchclock.repository.pref.PreferenceRepository
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 abstract class PickerViewModel<Item> : ViewModel() {
 
     @Suppress("PropertyName")
     protected abstract val TAG: String
+
+    protected abstract val preferenceRepository: PreferenceRepository
 
     private val _deletedItem = MutableSharedFlow<List<Item>>()
     val deletedItem = _deletedItem
@@ -24,10 +30,15 @@ abstract class PickerViewModel<Item> : ViewModel() {
     private val _selectedItems = MutableStateFlow(emptyList<Item>())
     val selectedItems: StateFlow<List<Item>> = _selectedItems
 
-    private val _adapterColumnCount = MutableStateFlow(1)
-    val adapterColumnCount: StateFlow<Int> = _adapterColumnCount
+    val adapterColumnCount: StateFlow<Int> by lazy {
+        preferenceRepository.getIntFlow("$TAG-adapterColumnCount")
+            .map { it ?: defaultColumnCount }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), defaultColumnCount)
+    }
 
     abstract val repository: RepositoryAdapter<Item>
+
+    open val defaultColumnCount: Int = 1
 
     fun onEvent(event: PickerEvent<Item>) {
         Log.v(TAG, "onEvent: $event")
@@ -65,7 +76,7 @@ abstract class PickerViewModel<Item> : ViewModel() {
                 }
 
                 is PickerEvent.ChangeAdapterColumns -> {
-                    _adapterColumnCount.value = event.adapterColumnCount
+                    preferenceRepository.put("$TAG-adapterColumnCount", event.adapterColumnCount)
                 }
             }
         }

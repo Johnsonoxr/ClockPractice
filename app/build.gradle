@@ -68,7 +68,11 @@ dependencies {
     implementation "androidx.room:room-ktx:$room_version"
     kapt "androidx.room:room-compiler:$room_version"
 
+    //  font page characters adapter layout
     implementation 'com.mig35:carousellayoutmanager:1.4.6'
+
+    //  datastore
+    implementation "androidx.datastore:datastore-preferences:1.0.0"
 
     //Dagger - Hilt
     implementation "com.google.dagger:hilt-android:2.44"
