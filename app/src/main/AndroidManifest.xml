@@ -16,6 +16,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.SketchClock">
         <activity
+            android:name=".widget.WidgetConfigureActivity"
+            android:exported="false" />
+        <activity
             android:name=".pickers.PickersActivity"
             android:exported="false" />
         <activity

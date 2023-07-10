@@ -36,7 +36,7 @@ class ClockWidget : AppWidgetProvider() {
 
         private const val TAG = "ClockWidget"
         private const val MILLIS_IN_MINUTE = 60000L
-        private const val PREF_LAST_UPDATE_TIME = "last_update_time"
+        const val PREF_LAST_UPDATE_TIME = "last_update_time"
 
         private const val ACTION_UPDATE_CLOCK = "com.johnson.sketchclock.action.UPDATE_CLOCK"   //  by AlarmManager
         private const val ACTION_FORCE_UPDATE_CLOCK = "com.johnson.sketchclock.action.FORCE_UPDATE_CLOCK"   //  when app suspend
@@ -44,7 +44,7 @@ class ClockWidget : AppWidgetProvider() {
 
         private const val STATE_KEY_IS_ANIMATING = "is_animating"
 
-        const val EXTRA_TEMPLATE_ID = "template_id"
+        fun templateKey(appWidgetId: Int) = "templateId_of_widget_$appWidgetId"
 
         fun setupAlarmManager(context: Context) {
 
@@ -115,38 +115,39 @@ class ClockWidget : AppWidgetProvider() {
         appWidgetIds: IntArray = appWidgetManager.getAppWidgetIds(ComponentName(context, ClockWidget::class.java)),
         forceUpdate: Boolean = false
     ) {
-        Log.v(TAG, "updateWidget: ids = ${appWidgetIds.contentToString()}, this=$this")
-
-        val sharedPreferences = context.getSharedPreferences("widget", Context.MODE_PRIVATE)
+        Log.v(TAG, "updateWidget: ids = ${appWidgetIds.contentToString()}")
 
         val thisMinuteMillis = System.currentTimeMillis() / MILLIS_IN_MINUTE * MILLIS_IN_MINUTE
 
         if (forceUpdate) {
             Log.v(TAG, "updateWidget: forced update")
-        } else if (sharedPreferences.getLong(PREF_LAST_UPDATE_TIME, 0L) == thisMinuteMillis) {
+        } else if (preferenceRepository.getLongFlow(PREF_LAST_UPDATE_TIME).value == thisMinuteMillis) {
             Log.v(TAG, "updateWidget: already updated")
             return
         }
-        sharedPreferences.edit().putLong(PREF_LAST_UPDATE_TIME, thisMinuteMillis).apply()
 
-        var widgetTemplate: Template?
+        preferenceRepository.put(PREF_LAST_UPDATE_TIME, thisMinuteMillis)
 
-        runBlocking {
+        appWidgetIds.forEach { appWidgetId ->
 
-//            val templateId = sharedPreferences.getInt(EXTRA_TEMPLATE_ID, -1)
-//            val template = templateRepository.getTemplateById(templateId) ?: return@runBlocking
-            widgetTemplate = templateRepository.getTemplates().firstOrNull()
-        }
+            val template: Template? = runBlocking {
+                preferenceRepository.getIntFlow(templateKey(appWidgetId), -1).value.also { Log.v(TAG, "updateWidget: templateId = $it") }
+                    .takeIf { it >= 0 }?.let { templateRepository.getTemplateById(it) }
+            }
 
-        val template = widgetTemplate ?: return
+            if (template == null) {
+                Log.w(TAG, "updateWidget: template not found for widget $appWidgetId")
+                return@forEach
+            }
 
-        val bitmap = Bitmap.createBitmap(Constants.TEMPLATE_WIDTH, Constants.TEMPLATE_HEIGHT, Bitmap.Config.ARGB_8888)
-        val canvas = Canvas(bitmap).apply { clipRect(0, 0, bitmap.width, bitmap.height) }
-        visualizer.draw(canvas, template.elements, thisMinuteMillis)
+            val bitmap = Bitmap.createBitmap(Constants.TEMPLATE_WIDTH, Constants.TEMPLATE_HEIGHT, Bitmap.Config.ARGB_8888)
+            val canvas = Canvas(bitmap).apply { clipRect(0, 0, bitmap.width, bitmap.height) }
+            visualizer.draw(canvas, template.elements, thisMinuteMillis)
 
-        partialUpdateWidget(context, appWidgetManager, appWidgetIds) {
-            setImageViewBitmap(R.id.iv, bitmap)
-            setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context, ACTION_CLICK_WIDGET_ROOT))
+            partialUpdateWidget(context, appWidgetManager, intArrayOf(appWidgetId)) {
+                setImageViewBitmap(R.id.iv, bitmap)
+                setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context, ACTION_CLICK_WIDGET_ROOT))
+            }
         }
     }
 
