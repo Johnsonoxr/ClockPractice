@@ -1,6 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <item
+        android:id="@+id/menu_back"
+        android:icon="@drawable/bottom_nav_back"
+        android:title="back"
+        app:showAsAction="always" />
+
     <item
         android:id="@+id/menu_bookmark"
         android:icon="@drawable/bottom_bookmark"

@@ -35,6 +35,7 @@ import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentEditorBinding
 import com.johnson.sketchclock.illustration_canvas.IllustrationCanvasActivity
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
+import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.*
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.Companion.showFontSelectorDialog
 import com.johnson.sketchclock.template_editor.SimpleIllustrationSelectorFragment.Companion.showIllustrationSelectorDialog
 import dagger.hilt.android.AndroidEntryPoint
@@ -101,9 +102,9 @@ class EditorFragment : Fragment() {
             showAddTemplateButtons(!vb.fabAddTime24h.isShown)
         }
 
-        setupAddTemplateFab(vb.fabAddTime24h, EType.Hour1, EType.Hour2, EType.Colon, EType.Minute1, EType.Minute2)
-        setupAddTemplateFab(vb.fabAddTime12h, EType.Hour12Hr1, EType.Hour12Hr2, EType.Colon, EType.Minute1, EType.Minute2, EType.AmPm)
-        setupAddTemplateFab(vb.fabAddDate, EType.Month1, EType.Month2, EType.Slash, EType.Day1, EType.Day2)
+        setupAddTemplateFab(Type.HOUR_24H, vb.fabAddTime24h, EType.Hour1, EType.Hour2, EType.Colon, EType.Minute1, EType.Minute2)
+        setupAddTemplateFab(Type.HOUR_12H, vb.fabAddTime12h, EType.Hour12Hr1, EType.Hour12Hr2, EType.Colon, EType.Minute1, EType.Minute2, EType.AmPm)
+        setupAddTemplateFab(Type.DATE, vb.fabAddDate, EType.Month1, EType.Month2, EType.Slash, EType.Day1, EType.Day2)
 
         vb.fabAddIllustration.setOnClickListener {
             showIllustrationSelectorDialog { illustration ->
@@ -116,7 +117,7 @@ class EditorFragment : Fragment() {
 
         vb.fabOptionFont.setOnClickListener {
             val charElements = viewModel.selectedElements.value.filter { it.eType.isCharacter() }
-            showFontSelectorDialog { font ->
+            showFontSelectorDialog(Type.NONE) { font ->
                 viewModel.onEvent(EditorEvent.ChangeRes(charElements, font))
             }
         }
@@ -226,9 +227,9 @@ class EditorFragment : Fragment() {
         }
     }
 
-    private fun setupAddTemplateFab(addTemplateBtn: View, vararg eTypes: EType) {
+    private fun setupAddTemplateFab(type: Type, addTemplateBtn: View, vararg eTypes: EType) {
         addTemplateBtn.setOnClickListener {
-            showFontSelectorDialog { font ->
+            showFontSelectorDialog(type) { font ->
                 showAddTemplateButtons(false)
                 val elements = createFontElements(font, *eTypes)
                 viewModel.onEvent(EditorEvent.AddElements(elements))

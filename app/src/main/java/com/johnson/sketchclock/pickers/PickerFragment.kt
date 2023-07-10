@@ -29,7 +29,6 @@ import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.common.tintBackgroundAttr
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
-import java.lang.ref.WeakReference
 
 abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fragment(), OnFabClickListener {
 
@@ -85,17 +84,14 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
 
         viewModel.adapterColumnCount.collectLatestWhenStarted(this) { columnCount ->
             vb.rv.layoutManager = createLayoutManager(columnCount)
-            setupMenuItemVisibility(columnCount)
+            updateMenuItem(columnCount = columnCount)
         }
 
         //  since the FAB is shared with other fragments, we'd like to handle it in resume state
         viewModel.controlMode.collectLatestWhenResumed(this) { controlMode ->
             Log.d(TAG, "controlMode=$controlMode")
             backPressedCallback.isEnabled = controlMode != ControlMode.NORMAL
-            when (controlMode) {
-                ControlMode.DELETE, ControlMode.BOOKMARK -> activity?.removeMenuProvider(menuProvider)
-                else -> activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
-            }
+            updateMenuItem(controlMode = controlMode)
             (activity as? ControllableFabHolder)?.changeFabControlMode(controlMode)
             adapter.notifyDataSetChanged()
         }
@@ -107,6 +103,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 .show()
         }
 
+        activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
         activity?.onBackPressedDispatcher?.addCallback(backPressedCallback.apply { isEnabled = true })
     }
 
@@ -162,12 +159,13 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     private val menuProvider = object : MenuProvider {
         override fun onCreateMenu(menu: Menu, menuInflater: MenuInflater) {
             menuInflater.inflate(R.menu.menu_picker_bottombar, menu)
-            _menu = WeakReference(menu)
-            setupMenuItemVisibility(viewModel.adapterColumnCount.value)
+            this@PickerFragment.menu = menu
+            updateMenuItem()
         }
 
         override fun onMenuItemSelected(menuItem: MenuItem): Boolean {
             when (menuItem.itemId) {
+                R.id.menu_back -> viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
                 R.id.menu_delete -> viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.DELETE))
                 R.id.menu_bookmark -> viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.BOOKMARK))
                 R.id.menu_grid -> viewModel.onEvent(PickerEvent.ChangeAdapterColumns(1))
@@ -177,14 +175,19 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
         }
     }
 
-    private fun setupMenuItemVisibility(columnCount: Int) {
-        menu?.findItem(R.id.menu_grid)?.isVisible = isAdapterColumnChangeable && columnCount > 1
-        menu?.findItem(R.id.menu_rows)?.isVisible = isAdapterColumnChangeable && columnCount == 1
+    private fun updateMenuItem(
+        columnCount: Int = viewModel.adapterColumnCount.value,
+        controlMode: ControlMode = viewModel.controlMode.value
+    ) {
+        val isNormal = controlMode == ControlMode.NORMAL
+        menu?.findItem(R.id.menu_grid)?.isVisible = isNormal && isAdapterColumnChangeable && columnCount > 1
+        menu?.findItem(R.id.menu_rows)?.isVisible = isNormal && isAdapterColumnChangeable && columnCount == 1
+        menu?.findItem(R.id.menu_back)?.isVisible = !isNormal
+        menu?.findItem(R.id.menu_delete)?.isVisible = isNormal
+        menu?.findItem(R.id.menu_bookmark)?.isVisible = isNormal
     }
 
-    private var _menu: WeakReference<Menu>? = null
-    private val menu: Menu?
-        get() = _menu?.get()
+    private var menu: Menu? = null
 
     private val backPressedCallback = object : OnBackPressedCallback(true) {
         override fun handleOnBackPressed() {
@@ -236,7 +239,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
         inner class ViewHolder(val vb: ViewBinding) : RecyclerView.ViewHolder(vb.rootView), View.OnClickListener {
 
             private val item: T
-                get() = items[adapterPosition]
+                get() = items[bindingAdapterPosition]
 
             init {
                 vb.rootView.setOnClickListener(this)
@@ -259,24 +262,33 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 vb.bind(item)
             }
 
+            private fun updateSelection() {
+                val selected = if (item in viewModel.selectedItems.value) {
+                    viewModel.selectedItems.value - item
+                } else {
+                    viewModel.selectedItems.value + item
+                }
+                viewModel.onEvent(PickerEvent.Select(selected))
+            }
+
             override fun onClick(v: View) {
                 when (v) {
                     vb.rootView -> {
                         when (viewModel.controlMode.value) {
-                            ControlMode.DELETE, ControlMode.BOOKMARK -> {
-                                if (ControlMode.DELETE == viewModel.controlMode.value && !item.editable()) {
+                            ControlMode.DELETE -> {
+                                if (!item.editable()) {
                                     Toast.makeText(context, "Cannot delete this item", Toast.LENGTH_SHORT).show()
                                     return
+                                } else if (item.isBookmark()) {
+                                    Toast.makeText(context, "Cannot delete bookmarked item", Toast.LENGTH_SHORT).show()
+                                    return
                                 }
-                                val selected = if (item in viewModel.selectedItems.value) {
-                                    viewModel.selectedItems.value - item
-                                } else {
-                                    viewModel.selectedItems.value + item
-                                }
-                                viewModel.onEvent(PickerEvent.Select(selected))
+                                updateSelection()
                             }
 
-                            else -> {
+                            ControlMode.BOOKMARK -> updateSelection()
+
+                            ControlMode.NORMAL -> {
                                 if (item.editable()) {
                                     startActivity(createEditItemIntent(item))
                                 } else {

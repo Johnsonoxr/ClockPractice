@@ -31,8 +31,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="bottom"
-        app:menu="@menu/menu_picker_bottombar"
-        app:navigationIconTint="?attr/colorControlNormal" />
+        app:menu="@menu/menu_picker_bottombar" />
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_add"

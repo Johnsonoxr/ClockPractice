@@ -21,23 +21,42 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.GlideHelper
+import com.johnson.sketchclock.common.Utils.amPmCh
+import com.johnson.sketchclock.common.Utils.day1Ch
+import com.johnson.sketchclock.common.Utils.day2Ch
+import com.johnson.sketchclock.common.Utils.hour12Hr1Ch
+import com.johnson.sketchclock.common.Utils.hour12Hr2Ch
+import com.johnson.sketchclock.common.Utils.hour1Ch
+import com.johnson.sketchclock.common.Utils.hour2Ch
+import com.johnson.sketchclock.common.Utils.minute1Ch
+import com.johnson.sketchclock.common.Utils.minute2Ch
+import com.johnson.sketchclock.common.Utils.month1Ch
+import com.johnson.sketchclock.common.Utils.month2Ch
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
-import com.johnson.sketchclock.databinding.ItemFontBinding
+import com.johnson.sketchclock.databinding.ItemFontSimpleBinding
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import java.util.Calendar
 import javax.inject.Inject
 
 @AndroidEntryPoint
 class SimpleFontSelectorFragment : DialogFragment() {
 
+    enum class Type {
+        NONE,
+        HOUR_24H,
+        HOUR_12H,
+        DATE
+    }
+
     companion object {
         const val TAG = "SimpleFontSelectorFragment"
         private const val KEY_FONT = "font"
 
-        fun Fragment.showFontSelectorDialog(onFontSelected: (Font) -> Unit) {
-            val dialog = SimpleFontSelectorFragment()
+        fun Fragment.showFontSelectorDialog(type: Type, onFontSelected: (Font) -> Unit) {
+            val dialog = SimpleFontSelectorFragment().apply { arguments = bundleOf("type" to type) }
             dialog.show(childFragmentManager, TAG)
             dialog.setFragmentResultListener(TAG) { _, bundle ->
                 val font = bundle.getSerializable(KEY_FONT) as Font
@@ -51,9 +70,11 @@ class SimpleFontSelectorFragment : DialogFragment() {
     lateinit var fontRepository: FontRepository
 
     private lateinit var vb: FragmentPickerBinding
-    private val adapter: FontAdapter = FontAdapter()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
+
+        val type = arguments?.getSerializable("type") as? Type ?: Type.NONE
+        val adapter = FontAdapter(type)
 
         vb = FragmentPickerBinding.inflate(layoutInflater, null, false)
         vb.rv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
@@ -71,16 +92,12 @@ class SimpleFontSelectorFragment : DialogFragment() {
             .create()
     }
 
-    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        super.onViewCreated(view, savedInstanceState)
-        Log.e("SimpleFontSelectorFragment", "onViewCreated")
-    }
-
     override fun getView(): View {
         return vb.root
     }
 
-    private inner class FontAdapter : RecyclerView.Adapter<FontAdapter.ViewHolder>() {
+    private inner class FontAdapter(private val type: Type) : RecyclerView.Adapter<FontAdapter.ViewHolder>() {
+
         var fonts: List<Font> = emptyList()
             @SuppressLint("NotifyDataSetChanged")
             set(value) {
@@ -89,7 +106,7 @@ class SimpleFontSelectorFragment : DialogFragment() {
             }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            return ViewHolder(ItemFontBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            return ViewHolder(ItemFontSimpleBinding.inflate(LayoutInflater.from(parent.context), parent, false))
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
@@ -100,7 +117,9 @@ class SimpleFontSelectorFragment : DialogFragment() {
             return fonts.size
         }
 
-        inner class ViewHolder(val vb: ItemFontBinding) : RecyclerView.ViewHolder(vb.root), View.OnClickListener {
+        inner class ViewHolder(val vb: ItemFontSimpleBinding) : RecyclerView.ViewHolder(vb.root), View.OnClickListener {
+
+            private val font: Font get() = fonts[bindingAdapterPosition]
 
             init {
                 vb.root.setOnClickListener(this)
@@ -108,16 +127,34 @@ class SimpleFontSelectorFragment : DialogFragment() {
 
             fun bind(font: Font) {
                 vb.tvName.text = font.title
-                fontRepository.getFontFile(font, Character.ZERO).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview0, it) }
-                fontRepository.getFontFile(font, Character.ONE).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview1, it) }
-                fontRepository.getFontFile(font, Character.TWO).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview2, it) }
-                fontRepository.getFontFile(font, Character.THREE).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview3, it) }
-                fontRepository.getFontFile(font, Character.FOUR).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview4, it) }
+
+                val calendar = Calendar.getInstance()
+                val characters = when (type) {
+                    Type.NONE -> listOf(
+                        Character.ZERO, Character.ONE, Character.TWO, Character.THREE, Character.FOUR, Character.FIVE
+                    )
+
+                    Type.HOUR_24H -> listOf(
+                        calendar.hour1Ch(), calendar.hour2Ch(), Character.COLON, calendar.minute1Ch(), calendar.minute2Ch(), null
+                    )
+
+                    Type.HOUR_12H -> listOf(
+                        calendar.hour12Hr1Ch(), calendar.hour12Hr2Ch(), Character.COLON, calendar.minute1Ch(), calendar.minute2Ch(), calendar.amPmCh()
+                    )
+
+                    Type.DATE -> listOf(
+                        calendar.month1Ch(), calendar.month2Ch(), Character.SLASH, calendar.day1Ch(), calendar.day2Ch(), null
+                    )
+                }
+
+                characters.zip(listOf(vb.ivPreview0, vb.ivPreview1, vb.ivPreview2, vb.ivPreview3, vb.ivPreview4, vb.ivPreview5)).forEach { (ch, iv) ->
+                    ch?.let { GlideHelper.load(iv, fontRepository.getFontFile(font, it)) } ?: iv.setImageDrawable(null)
+                }
             }
 
             override fun onClick(v: View) {
-                Log.d(TAG, "onClick: position=$adapterPosition, font=${fonts[adapterPosition]}")
-                setFragmentResult(TAG, bundleOf(KEY_FONT to fonts[adapterPosition]))
+                Log.d(TAG, "onClick: position=$bindingAdapterPosition, font=$font")
+                setFragmentResult(TAG, bundleOf(KEY_FONT to font))
             }
         }
     }

@@ -11,6 +11,17 @@ import android.graphics.Paint
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.util.LruCache
+import com.johnson.sketchclock.common.Utils.amPmCh
+import com.johnson.sketchclock.common.Utils.day1Ch
+import com.johnson.sketchclock.common.Utils.day2Ch
+import com.johnson.sketchclock.common.Utils.hour12Hr1Ch
+import com.johnson.sketchclock.common.Utils.hour12Hr2Ch
+import com.johnson.sketchclock.common.Utils.hour1Ch
+import com.johnson.sketchclock.common.Utils.hour2Ch
+import com.johnson.sketchclock.common.Utils.minute1Ch
+import com.johnson.sketchclock.common.Utils.minute2Ch
+import com.johnson.sketchclock.common.Utils.month1Ch
+import com.johnson.sketchclock.common.Utils.month2Ch
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import java.util.Calendar
@@ -59,24 +70,19 @@ class TemplateVisualizer @Inject constructor(
         val calendar = Calendar.getInstance()
         timeMillis?.let { calendar.timeInMillis = it }
 
-        val month = calendar.get(Calendar.MONTH) + 1
-        val day = calendar.get(Calendar.DAY_OF_MONTH)
-        val hour = calendar.get(Calendar.HOUR_OF_DAY)
-        val minute = calendar.get(Calendar.MINUTE)
-
         val char: Character? = when (element.eType) {
-            EType.Hour1 -> numberToCharacter(hour / 10)
-            EType.Hour2 -> numberToCharacter(hour % 10)
-            EType.Hour12Hr1 -> numberToCharacter(((hour + 11) % 12 + 1) / 10)
-            EType.Hour12Hr2 -> numberToCharacter(((hour + 11) % 12 + 1) % 10)
-            EType.Minute1 -> numberToCharacter(minute / 10)
-            EType.Minute2 -> numberToCharacter(minute % 10)
-            EType.Month1 -> numberToCharacter(month / 10)
-            EType.Month2 -> numberToCharacter(month % 10)
-            EType.Day1 -> numberToCharacter(day / 10)
-            EType.Day2 -> numberToCharacter(day % 10)
+            EType.Hour1 -> calendar.hour1Ch()
+            EType.Hour2 -> calendar.hour2Ch()
+            EType.Hour12Hr1 -> calendar.hour12Hr1Ch()
+            EType.Hour12Hr2 -> calendar.hour12Hr2Ch()
+            EType.Minute1 -> calendar.minute1Ch()
+            EType.Minute2 -> calendar.minute2Ch()
+            EType.Month1 -> calendar.month1Ch()
+            EType.Month2 -> calendar.month2Ch()
+            EType.Day1 -> calendar.day1Ch()
+            EType.Day2 -> calendar.day2Ch()
             EType.Slash -> Character.SLASH
-            EType.AmPm -> if (hour < 12) Character.AM else Character.PM
+            EType.AmPm -> calendar.amPmCh()
             EType.Colon -> Character.COLON
             EType.Illustration -> null
         }
@@ -87,21 +93,6 @@ class TemplateVisualizer @Inject constructor(
         } else {
             val font = fontRepository.getFontByRes(elementResName)
             font?.let { resourceHolder.getFontBitmap(it, char) }
-        }
-    }
-
-    private fun numberToCharacter(number: Int): Character {
-        return when (number) {
-            1 -> Character.ONE
-            2 -> Character.TWO
-            3 -> Character.THREE
-            4 -> Character.FOUR
-            5 -> Character.FIVE
-            6 -> Character.SIX
-            7 -> Character.SEVEN
-            8 -> Character.EIGHT
-            9 -> Character.NINE
-            else -> Character.ZERO
         }
     }
 

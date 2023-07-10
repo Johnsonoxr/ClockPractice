@@ -15,6 +15,7 @@ import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
@@ -55,7 +56,7 @@ class SimpleIllustrationSelectorFragment : DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
 
         vb = FragmentPickerBinding.inflate(layoutInflater, null, false)
-        vb.rv.layoutManager = LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false)
+        vb.rv.layoutManager = GridLayoutManager(context, 2, LinearLayoutManager.VERTICAL, false)
         vb.rv.adapter = adapter
 
         lifecycleScope.launch {
