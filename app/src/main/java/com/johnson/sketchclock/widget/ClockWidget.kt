@@ -22,6 +22,7 @@ import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
 import com.johnson.sketchclock.common.Utils.description
+import com.johnson.sketchclock.repository.pref.PreferenceRepository
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.runBlocking
@@ -95,6 +96,9 @@ class ClockWidget : AppWidgetProvider() {
 
     @Inject
     lateinit var widgetStateHolder: MutableMap<String, String>
+
+    @Inject
+    lateinit var preferenceRepository: PreferenceRepository
 
     private fun postNextMinuteUpdate(context: Context) {
         val currentTimeMillis = System.currentTimeMillis()
