@@ -1,15 +1,14 @@
 package com.johnson.sketchclock.repository.pref
 
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 
 interface PreferenceRepository {
-    fun getBooleanFlow(key: String, defaultValue: Boolean): StateFlow<Boolean>
-    fun getBooleanFlow(key: String): StateFlow<Boolean?>
-    fun getIntFlow(key: String, defaultValue: Int): StateFlow<Int>
-    fun getIntFlow(key: String): StateFlow<Int?>
-    fun getLongFlow(key: String, defaultValue: Long): StateFlow<Long>
-    fun getLongFlow(key: String): StateFlow<Long?>
-    fun getStringFlow(key: String, defaultValue: String): StateFlow<String>
-    fun getStringFlow(key: String): StateFlow<String?>
-    fun <T> put(key: String, value: T)
+    fun getBooleanFlow(key: String): Flow<Boolean?>
+    fun getIntFlow(key: String): Flow<Int?>
+    fun getLongFlow(key: String): Flow<Long?>
+    fun getStringFlow(key: String): Flow<String?>
+    fun putBoolean(key: String, value: Boolean?)
+    fun putInt(key: String, value: Int?)
+    fun putLong(key: String, value: Long?)
+    fun putString(key: String, value: String?)
 }

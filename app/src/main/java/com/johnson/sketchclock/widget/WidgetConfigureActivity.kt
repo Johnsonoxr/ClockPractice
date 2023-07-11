@@ -24,8 +24,7 @@ import com.johnson.sketchclock.repository.pref.PreferenceRepository
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -125,14 +124,13 @@ class WidgetConfigureActivity : AppCompatActivity() {
 
             override fun onClick(v: View) {
                 val templateId = template.id
-                Log.i(TAG, "onClick: template=${templateId}")
-                GlobalScope.launch {
-                    preferenceRepository.put(ClockWidget.templateKey(appWidgetId), templateId)
-                    preferenceRepository.getIntFlow(ClockWidget.templateKey(appWidgetId)).value.also { Log.i(TAG, "onClick: templateId=$it") }
-                    delay(100)
-                    preferenceRepository.getIntFlow(ClockWidget.templateKey(appWidgetId)).value.also { Log.i(TAG, "onClick: templateId=$it") }
-                    ClockWidget.forceUpdateWidget(this@WidgetConfigureActivity)
+                val widgetKey = ClockWidget.templateKey(appWidgetId)
+                Log.i(TAG, "onClick: template=${templateId}, widgetKey=${widgetKey}")
 
+                preferenceRepository.putInt(widgetKey, templateId)
+
+                preferenceRepository.getIntFlow(widgetKey).filterNotNull().collectLatestWhenStarted(this@WidgetConfigureActivity) {
+                    ClockWidget.forceUpdateWidget(this@WidgetConfigureActivity)
                     val resultValue = Intent().putExtra(AppWidgetManager.EXTRA_APPWIDGET_ID, appWidgetId)
                     setResult(RESULT_OK, resultValue)
                     finish()

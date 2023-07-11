@@ -12,6 +12,11 @@ import android.os.Bundle
 import androidx.annotation.DrawableRes
 import androidx.core.content.ContextCompat
 import androidx.vectordrawable.graphics.drawable.VectorDrawableCompat
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.util.Calendar
 
 object Utils {
@@ -44,6 +49,25 @@ object Utils {
         return ContextCompat.getDrawable(context, drawableResId)
             ?: VectorDrawableCompat.create(resources, drawableResId, context.theme)
             ?: resources.getDrawable(drawableResId, context.theme)
+    }
+
+    fun <T> Flow<T>.latestOrNull(): T? {
+        return latestOrElse(null)
+    }
+
+    fun <T> Flow<T>.latestOrElse(value: T): T? {
+        var result: T? = value
+        runBlocking {
+            var job: Job? = null
+            job = launch {
+                collectLatest {
+                    result = it
+                    job?.cancel()
+                }
+            }
+            job.join()
+        }
+        return result
     }
 
     fun Bundle.description(): String {

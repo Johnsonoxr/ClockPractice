@@ -22,6 +22,7 @@ import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
 import com.johnson.sketchclock.common.Utils.description
+import com.johnson.sketchclock.common.Utils.latestOrNull
 import com.johnson.sketchclock.repository.pref.PreferenceRepository
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.AndroidEntryPoint
@@ -36,15 +37,16 @@ class ClockWidget : AppWidgetProvider() {
 
         private const val TAG = "ClockWidget"
         private const val MILLIS_IN_MINUTE = 60000L
-        const val PREF_LAST_UPDATE_TIME = "last_update_time"
 
         private const val ACTION_UPDATE_CLOCK = "com.johnson.sketchclock.action.UPDATE_CLOCK"   //  by AlarmManager
         private const val ACTION_FORCE_UPDATE_CLOCK = "com.johnson.sketchclock.action.FORCE_UPDATE_CLOCK"   //  when app suspend
         private const val ACTION_CLICK_WIDGET_ROOT = "com.johnson.sketchclock.action.CLICK_WIDGET_ROOT" //  when click widget root
+        private const val EXTRA_APPWIDGET_ID = "click_appwidget_id"
 
         private const val STATE_KEY_IS_ANIMATING = "is_animating"
 
         fun templateKey(appWidgetId: Int) = "templateId_of_widget_$appWidgetId"
+        fun lastUpdateKey(appWidgetId: Int) = "lastUpdate_of_widget_$appWidgetId"
 
         fun setupAlarmManager(context: Context) {
 
@@ -77,10 +79,11 @@ class ClockWidget : AppWidgetProvider() {
             context.sendBroadcast(intent)
         }
 
-        private fun createUpdateClockPendingIntent(context: Context, action: String): PendingIntent {
+        private fun createUpdateClockPendingIntent(context: Context, action: String, moreOption: ((Intent) -> Unit)? = null): PendingIntent {
             val intent = Intent(context, ClockWidget::class.java).apply {
                 this.action = action
             }
+            moreOption?.invoke(intent)
             return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_MUTABLE)
         }
     }
@@ -119,21 +122,25 @@ class ClockWidget : AppWidgetProvider() {
 
         val thisMinuteMillis = System.currentTimeMillis() / MILLIS_IN_MINUTE * MILLIS_IN_MINUTE
 
-        if (forceUpdate) {
-            Log.v(TAG, "updateWidget: forced update")
-        } else if (preferenceRepository.getLongFlow(PREF_LAST_UPDATE_TIME).value == thisMinuteMillis) {
-            Log.v(TAG, "updateWidget: already updated")
-            return
-        }
-
-        preferenceRepository.put(PREF_LAST_UPDATE_TIME, thisMinuteMillis)
-
         appWidgetIds.forEach { appWidgetId ->
 
-            val template: Template? = runBlocking {
-                preferenceRepository.getIntFlow(templateKey(appWidgetId), -1).value.also { Log.v(TAG, "updateWidget: templateId = $it") }
-                    .takeIf { it >= 0 }?.let { templateRepository.getTemplateById(it) }
+            val updateTimeKey = lastUpdateKey(appWidgetId)
+            val templateKey = templateKey(appWidgetId)
+
+            if (forceUpdate) {
+                Log.v(TAG, "updateWidget: forced update")
+            } else {
+                val lastUpdateTime = preferenceRepository.getLongFlow(updateTimeKey).latestOrNull()
+                if (lastUpdateTime != null && lastUpdateTime >= thisMinuteMillis) {
+                    Log.v(TAG, "updateWidget: already updated. lastUpdateTime = $lastUpdateTime, thisMinuteMillis = $thisMinuteMillis")
+                    return@forEach
+                }
             }
+
+            preferenceRepository.putLong(updateTimeKey, thisMinuteMillis)
+
+            val templateId = preferenceRepository.getIntFlow(templateKey).latestOrNull()
+            val template: Template? = templateId?.let { runBlocking { templateRepository.getTemplateById(it) } }
 
             if (template == null) {
                 Log.w(TAG, "updateWidget: template not found for widget $appWidgetId")
@@ -146,33 +153,40 @@ class ClockWidget : AppWidgetProvider() {
 
             partialUpdateWidget(context, appWidgetManager, intArrayOf(appWidgetId)) {
                 setImageViewBitmap(R.id.iv, bitmap)
-                setOnClickPendingIntent(R.id.iv, createUpdateClockPendingIntent(context, ACTION_CLICK_WIDGET_ROOT))
+                val intent = Intent(context, ClockWidget::class.java).apply {
+                    this.action = ACTION_CLICK_WIDGET_ROOT
+                    putExtra(EXTRA_APPWIDGET_ID, appWidgetId)
+                }
+                val pendingIntent = PendingIntent.getBroadcast(context, appWidgetId, intent, PendingIntent.FLAG_IMMUTABLE)
+                setOnClickPendingIntent(R.id.iv, pendingIntent)
             }
         }
     }
 
-    private fun performClickAnimation(context: Context) {
+    private fun performClickAnimation(context: Context, appWidgetId: Int) {
         if (STATE_KEY_IS_ANIMATING in widgetStateHolder) {
             Log.v(TAG, "performClickAnimation: already animating")
             return
         }
+        val appWidgetIds = intArrayOf(appWidgetId)
+
         widgetStateHolder[STATE_KEY_IS_ANIMATING] = "true"
 
         ValueAnimator.ofFloat(.5f, 0f).apply {
             doOnStart {
-                partialUpdateWidget(context) {
+                partialUpdateWidget(context, appWidgetIds = appWidgetIds) {
                     setViewVisibility(R.id.overlay, View.VISIBLE)
                     setTextViewText(R.id.tv, "${Calendar.getInstance().get(Calendar.SECOND)}")
                 }
             }
             addUpdateListener {
                 val value = it.animatedValue as Float
-                partialUpdateWidget(context) {
+                partialUpdateWidget(context, appWidgetIds = appWidgetIds) {
                     setFloat(R.id.overlay, "setAlpha", value)
                 }
             }
             doOnEnd {
-                partialUpdateWidget(context) {
+                partialUpdateWidget(context, appWidgetIds = appWidgetIds) {
                     setViewVisibility(R.id.overlay, View.GONE)
                 }
                 widgetStateHolder.remove(STATE_KEY_IS_ANIMATING)
@@ -238,11 +252,12 @@ class ClockWidget : AppWidgetProvider() {
             }
 
             ACTION_CLICK_WIDGET_ROOT -> {
-                if (STATE_KEY_IS_ANIMATING in widgetStateHolder) {
+                val appWidgetId = intent.getIntExtra(EXTRA_APPWIDGET_ID, AppWidgetManager.INVALID_APPWIDGET_ID)
+                if (STATE_KEY_IS_ANIMATING in widgetStateHolder || appWidgetId == AppWidgetManager.INVALID_APPWIDGET_ID) {
                     Log.v(TAG, "onReceive: skip forced update")
                     return
                 }
-                performClickAnimation(context)
+                performClickAnimation(context, appWidgetId)
                 postNextMinuteUpdate(context)
                 updateWidgetImage(context, forceUpdate = true)
                 setupAlarmManager(context)

@@ -1,23 +1,22 @@
 package com.johnson.sketchclock.repository.pref
 
 import android.content.Context
+import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.plus
 import javax.inject.Inject
 
+@Suppress("UNCHECKED_CAST")
 class PreferenceRepositoryImpl @Inject constructor(
     private val context: Context
 ) : PreferenceRepository {
@@ -26,61 +25,68 @@ class PreferenceRepositoryImpl @Inject constructor(
 
     private val scope = GlobalScope + Dispatchers.IO
 
-    override fun getBooleanFlow(key: String, defaultValue: Boolean): StateFlow<Boolean> {
-        return context.dataStore.data
-            .map { preferences -> preferences[booleanPreferencesKey(key)] ?: defaultValue }
-            .stateIn(scope, SharingStarted.Eagerly, defaultValue)
+    private val flowMap = mutableMapOf<Preferences.Key<*>, Flow<*>>()
+
+    override fun getBooleanFlow(key: String): Flow<Boolean?> {
+        val prefKey = booleanPreferencesKey(key)
+        return flowMap.getOrPut(prefKey) {
+            context.dataStore.data.map { it[prefKey] }
+        } as Flow<Boolean?>
     }
 
-    override fun getBooleanFlow(key: String): StateFlow<Boolean?> {
-        return context.dataStore.data
-            .map { preferences -> preferences[booleanPreferencesKey(key)] }
-            .stateIn(scope, SharingStarted.Eagerly, null)
+    override fun getIntFlow(key: String): Flow<Int?> {
+        val prefKey = intPreferencesKey(key)
+        return flowMap.getOrPut(prefKey) {
+            context.dataStore.data.map { it[prefKey] }
+        } as Flow<Int?>
     }
 
-    override fun getIntFlow(key: String, defaultValue: Int): StateFlow<Int> {
-        return context.dataStore.data
-            .map { preferences -> preferences[intPreferencesKey(key)] ?: defaultValue }
-            .stateIn(scope, SharingStarted.Eagerly, defaultValue)
+    override fun getLongFlow(key: String): Flow<Long?> {
+        val prefKey = longPreferencesKey(key)
+        return flowMap.getOrPut(prefKey) {
+            context.dataStore.data.map { it[prefKey] }
+        } as Flow<Long?>
     }
 
-    override fun getIntFlow(key: String): StateFlow<Int?> {
-        return context.dataStore.data
-            .map { preferences -> preferences[intPreferencesKey(key)] }
-            .stateIn(scope, SharingStarted.Eagerly, null)
+    override fun getStringFlow(key: String): Flow<String?> {
+        val prefKey = stringPreferencesKey(key)
+        return flowMap.getOrPut(prefKey) {
+            context.dataStore.data.map { it[prefKey] }
+        } as Flow<String?>
     }
 
-    override fun getLongFlow(key: String, defaultValue: Long): StateFlow<Long> {
-        return context.dataStore.data
-            .map { preferences -> preferences[longPreferencesKey(key)] ?: defaultValue }
-            .stateIn(scope, SharingStarted.Eagerly, defaultValue)
-    }
-
-    override fun getLongFlow(key: String): StateFlow<Long?> {
-        return context.dataStore.data
-            .map { preferences -> preferences[longPreferencesKey(key)] }
-            .stateIn(scope, SharingStarted.Eagerly, null)
-    }
-
-    override fun getStringFlow(key: String, defaultValue: String): StateFlow<String> {
-        return context.dataStore.data
-            .map { preferences -> preferences[stringPreferencesKey(key)] ?: defaultValue }
-            .stateIn(scope, SharingStarted.Eagerly, defaultValue)
-    }
-
-    override fun getStringFlow(key: String): StateFlow<String?> {
-        return context.dataStore.data
-            .map { preferences -> preferences[stringPreferencesKey(key)] }
-            .stateIn(scope, SharingStarted.Eagerly, null)
-    }
-
-    override fun <T> put(key: String, value: T) {
+    override fun putBoolean(key: String, value: Boolean?) {
+        val prefKey = booleanPreferencesKey(key)
         scope.launch {
-            when (value) {
-                is Boolean -> context.dataStore.edit { preferences -> preferences[booleanPreferencesKey(key)] = value }
-                is Int -> context.dataStore.edit { preferences -> preferences[intPreferencesKey(key)] = value }
-                is Long -> context.dataStore.edit { preferences -> preferences[longPreferencesKey(key)] = value }
-                is String -> context.dataStore.edit { preferences -> preferences[stringPreferencesKey(key)] = value }
+            context.dataStore.edit {
+                value?.let { v -> it[prefKey] = v } ?: it.remove(prefKey)
+            }
+        }
+    }
+
+    override fun putInt(key: String, value: Int?) {
+        val prefKey = intPreferencesKey(key)
+        scope.launch {
+            context.dataStore.edit {
+                value?.let { v -> it[prefKey] = v } ?: it.remove(prefKey)
+            }
+        }
+    }
+
+    override fun putLong(key: String, value: Long?) {
+        val prefKey = longPreferencesKey(key)
+        scope.launch {
+            context.dataStore.edit {
+                value?.let { v -> it[prefKey] = v } ?: it.remove(prefKey)
+            }
+        }
+    }
+
+    override fun putString(key: String, value: String?) {
+        val prefKey = stringPreferencesKey(key)
+        scope.launch {
+            context.dataStore.edit {
+                value?.let { v -> it[prefKey] = v } ?: it.remove(prefKey)
             }
         }
     }
