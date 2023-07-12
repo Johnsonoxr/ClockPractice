@@ -7,4 +7,11 @@
     <string name="sort_by_date_reverse">Date Descending</string>
     <string name="sort_by_name">Name</string>
     <string name="sort_by_name_reverse">Name Descending</string>
+
+    <!--  Filtering  -->
+    <string name="filter_by">Filter By</string>
+    <string name="filter_by_all">All</string>
+    <string name="filter_by_default">Default</string>
+    <string name="filter_by_custom">Custom</string>
+    <string name="filter_by_bookmarked">Favorite</string>
 </resources>

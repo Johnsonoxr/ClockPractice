@@ -46,7 +46,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     abstract fun T.title(): String
     abstract fun T.createTime(): Long
     abstract fun T.clone(title: String? = null, bookmark: Boolean? = null): T
-    abstract fun T.isBookmark(): Boolean
+    abstract fun T.isBookmarked(): Boolean
     abstract fun createEmptyItem(): T
 
     //  adapter
@@ -63,6 +63,8 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     //  menu
     open val isAdapterColumnChangeable: Boolean = true
 
+    private var allItems: List<T> = emptyList()
+
     @SuppressLint("NotifyDataSetChanged")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
 
@@ -77,7 +79,10 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
         val adapter = ItemAdapter()
         vb.rv.adapter = adapter
 
-        viewModel.repository.getFlow().collectLatestWhenStarted(this) { items -> adapter.items = sortItems(viewModel.sortType.value, items) }
+        viewModel.repository.getFlow().collectLatestWhenStarted(this) { items ->
+            allItems = items
+            adapter.items = sortAndFilterItems(items = items)
+        }
 
         viewModel.selectedItems.collectLatestWhenStarted(this) { adapter.selectedItems = it }
 
@@ -103,25 +108,41 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
         }
 
         viewModel.sortType.collectLatestWhenResumed(this) { sortType ->
-            adapter.items = sortItems(sortType, adapter.items)
+            adapter.items = sortAndFilterItems(sortType = sortType)
+        }
+
+        viewModel.filterType.collectLatestWhenResumed(this) { filterType ->
+            adapter.items = sortAndFilterItems(filterType = filterType)
         }
 
         activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
         activity?.onBackPressedDispatcher?.addCallback(backPressedCallback.apply { isEnabled = true })
     }
 
-    private fun sortItems(sortType: SortType, items: List<T>): List<T> {
+    private fun sortAndFilterItems(
+        items: List<T> = allItems,
+        sortType: SortType = viewModel.sortType.value,
+        filterType: FilterType = viewModel.filterType.value
+    ): List<T> {
+        val filtering: ((T) -> Boolean) = when (filterType) {
+            FilterType.ALL -> { _ -> true }
+            FilterType.DEFAULT -> { item -> !item.editable() }
+            FilterType.CUSTOM -> { item -> item.editable() }
+            FilterType.BOOKMARKED -> { item -> item.isBookmarked() }
+        }
+        val filteredItems = items.filter(filtering)
+
         return when (sortType) {
-            SortType.NAME -> items.sortedBy { it.title() }
-            SortType.NAME_REVERSE -> items.sortedByDescending { it.title() }
-            SortType.DATE -> items.sortedBy {
+            SortType.NAME -> filteredItems.sortedBy { it.title() }
+            SortType.NAME_REVERSE -> filteredItems.sortedByDescending { it.title() }
+            SortType.DATE -> filteredItems.sortedBy {
                 return@sortedBy when {
                     it.editable() -> it.createTime() + (10L * 365L * 24L * 60L * 60L * 1000L)
                     else -> it.createTime()
                 }
             }
 
-            SortType.DATE_REVERSE -> items.sortedByDescending {
+            SortType.DATE_REVERSE -> filteredItems.sortedByDescending {
                 return@sortedByDescending when {
                     it.editable() -> it.createTime() + (10L * 365L * 24L * 60L * 60L * 1000L)
                     else -> it.createTime()
@@ -162,7 +183,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                     viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
                     return
                 }
-                viewModel.onEvent(PickerEvent.Update(items.map { it.clone(bookmark = !it.isBookmark()) }))
+                viewModel.onEvent(PickerEvent.Update(items.map { it.clone(bookmark = !it.isBookmarked()) }))
                 viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
             }
 
@@ -194,6 +215,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 R.id.menu_grid -> viewModel.onEvent(PickerEvent.ChangeAdapterColumns(1))
                 R.id.menu_rows -> viewModel.onEvent(PickerEvent.ChangeAdapterColumns(2))
                 R.id.menu_sort -> showSortDialog { viewModel.onEvent(PickerEvent.ChangeSortType(it)) }
+                R.id.menu_filter -> showFilterDialog { viewModel.onEvent(PickerEvent.ChangeFilterType(it)) }
             }
             return true
         }
@@ -204,8 +226,8 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
         controlMode: ControlMode = viewModel.controlMode.value
     ) {
         val isNormal = controlMode == ControlMode.NORMAL
-        menu?.findItem(R.id.menu_grid)?.isVisible = isNormal && isAdapterColumnChangeable && columnCount > 1
-        menu?.findItem(R.id.menu_rows)?.isVisible = isNormal && isAdapterColumnChangeable && columnCount == 1
+        menu?.findItem(R.id.menu_grid)?.isVisible = isAdapterColumnChangeable && columnCount > 1
+        menu?.findItem(R.id.menu_rows)?.isVisible = isAdapterColumnChangeable && columnCount == 1
         menu?.findItem(R.id.menu_back)?.isVisible = !isNormal
         menu?.findItem(R.id.menu_delete)?.isVisible = isNormal
         menu?.findItem(R.id.menu_bookmark)?.isVisible = isNormal
@@ -231,6 +253,18 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
             .setTitle(R.string.sort_by)
             .setSingleChoiceItems(singleChoices, sortTypes.indexOf(viewModel.sortType.value)) { dialog, which ->
                 onSelected(sortTypes[which])
+                dialog.dismiss()
+            }
+            .show()
+    }
+
+    private fun showFilterDialog(onSelected: (FilterType) -> Unit) {
+        val filterTypes = FilterType.values()
+        val singleChoices = filterTypes.map { getString(it.stringRes) }.toTypedArray()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.filter_by)
+            .setSingleChoiceItems(singleChoices, filterTypes.indexOf(viewModel.filterType.value)) { dialog, which ->
+                onSelected(filterTypes[which])
                 dialog.dismiss()
             }
             .show()
@@ -286,7 +320,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 vb.title.isClickable = viewModel.controlMode.value == ControlMode.NORMAL
                 val isVisuallySelected = when (viewModel.controlMode.value) {
                     ControlMode.DELETE -> item in viewModel.selectedItems.value
-                    ControlMode.BOOKMARK -> item.isBookmark() xor (item in viewModel.selectedItems.value)
+                    ControlMode.BOOKMARK -> item.isBookmarked() xor (item in viewModel.selectedItems.value)
                     ControlMode.NORMAL -> false
                 }
                 val tintBackgroundAttr = when {
@@ -315,7 +349,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                                 if (!item.editable()) {
                                     Toast.makeText(context, "Cannot delete this item", Toast.LENGTH_SHORT).show()
                                     return
-                                } else if (item.isBookmark()) {
+                                } else if (item.isBookmarked()) {
                                     Toast.makeText(context, "Cannot delete bookmarked item", Toast.LENGTH_SHORT).show()
                                     return
                                 }

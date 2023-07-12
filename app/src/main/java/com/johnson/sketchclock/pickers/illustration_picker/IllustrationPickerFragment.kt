@@ -64,5 +64,5 @@ class IllustrationPickerFragment : PickerFragment<Illustration, ItemIllustration
 
     override fun Illustration.createTime(): Long = this.createTime
 
-    override fun Illustration.isBookmark(): Boolean = this.bookmarked
+    override fun Illustration.isBookmarked(): Boolean = this.bookmarked
 }

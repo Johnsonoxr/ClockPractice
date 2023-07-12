@@ -16,6 +16,7 @@ abstract class PickerViewModel<Item> : ViewModel() {
 
     private val columnCountKey get() = "$TAG-columnCount"
     private val sortTypeKey get() = "$TAG-sortType"
+    private val filterTypeKey get() = "$TAG-filterType"
 
     @Suppress("PropertyName")
     protected abstract val TAG: String
@@ -45,6 +46,13 @@ abstract class PickerViewModel<Item> : ViewModel() {
             .getStringFlow(sortTypeKey)
             .map { it?.let { SortType.valueOf(it) } ?: SortType.DATE }
             .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), SortType.DATE)
+    }
+
+    val filterType: StateFlow<FilterType> by lazy {
+        preferenceRepository
+            .getStringFlow(filterTypeKey)
+            .map { it?.let { FilterType.valueOf(it) } ?: FilterType.ALL }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), FilterType.ALL)
     }
 
     abstract val repository: RepositoryAdapter<Item>
@@ -92,6 +100,10 @@ abstract class PickerViewModel<Item> : ViewModel() {
 
                 is PickerEvent.ChangeSortType -> {
                     preferenceRepository.putString(sortTypeKey, event.sortType.name)
+                }
+
+                is PickerEvent.ChangeFilterType -> {
+                    preferenceRepository.putString(filterTypeKey, event.filterType.name)
                 }
             }
         }

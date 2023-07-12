@@ -77,5 +77,5 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
 
     override fun Font.createTime(): Long = this.createTime
 
-    override fun Font.isBookmark(): Boolean = this.bookmarked
+    override fun Font.isBookmarked(): Boolean = this.bookmarked
 }

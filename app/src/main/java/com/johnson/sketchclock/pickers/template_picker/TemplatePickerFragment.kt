@@ -96,5 +96,5 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
     //  There might be default template in the future
     override fun Template.editable(): Boolean = true
 
-    override fun Template.isBookmark(): Boolean = bookmarked
+    override fun Template.isBookmarked(): Boolean = bookmarked
 }
