@@ -7,5 +7,6 @@ sealed class PickerEvent<T> {
     data class Select<T>(val items: List<T>) : PickerEvent<T>()
     data class ChangeControlMode<T>(val controlMode: ControlMode) : PickerEvent<T>()
     data class ChangeAdapterColumns<T>(val adapterColumnCount: Int) : PickerEvent<T>()
+    data class ChangeSortType<T>(val sortType: SortType) : PickerEvent<T>()
     data class UndoDelete<T>(val nothing: Nothing? = null) : PickerEvent<T>()
 }

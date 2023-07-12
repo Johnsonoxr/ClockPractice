@@ -15,7 +15,6 @@ import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
 import com.johnson.sketchclock.databinding.ItemTemplateBinding
 import com.johnson.sketchclock.pickers.PickerFragment
-import com.johnson.sketchclock.pickers.RepositoryAdapter
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import com.johnson.sketchclock.template_editor.EditorActivity
 import dagger.hilt.android.AndroidEntryPoint
@@ -37,8 +36,6 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
     private val previewCache = LruCache<Int, Bitmap>(30)
 
     override val viewModel: TemplatePickerViewModel by activityViewModels()
-
-    override val repositoryAdapter: RepositoryAdapter<Template> by lazy { TemplateRepositoryAdapter(templateRepository) }
 
     override fun createEmptyItem(): Template = Template(name = "new template")
 
@@ -93,6 +90,8 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
     }
 
     override fun Template.title(): String = name
+
+    override fun Template.createTime(): Long = this.createTime
 
     //  There might be default template in the future
     override fun Template.editable(): Boolean = true

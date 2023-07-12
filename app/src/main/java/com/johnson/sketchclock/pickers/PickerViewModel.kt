@@ -14,6 +14,9 @@ import kotlinx.coroutines.launch
 
 abstract class PickerViewModel<Item> : ViewModel() {
 
+    private val columnCountKey get() = "$TAG-columnCount"
+    private val sortTypeKey get() = "$TAG-sortType"
+
     @Suppress("PropertyName")
     protected abstract val TAG: String
 
@@ -32,9 +35,16 @@ abstract class PickerViewModel<Item> : ViewModel() {
 
     val adapterColumnCount: StateFlow<Int> by lazy {
         preferenceRepository
-            .getIntFlow("$TAG-adapterColumnCount")
+            .getIntFlow(columnCountKey)
             .map { it ?: defaultColumnCount }
-            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), 1)
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), defaultColumnCount)
+    }
+
+    val sortType: StateFlow<SortType> by lazy {
+        preferenceRepository
+            .getStringFlow(sortTypeKey)
+            .map { it?.let { SortType.valueOf(it) } ?: SortType.DATE }
+            .stateIn(viewModelScope, SharingStarted.WhileSubscribed(), SortType.DATE)
     }
 
     abstract val repository: RepositoryAdapter<Item>
@@ -77,7 +87,11 @@ abstract class PickerViewModel<Item> : ViewModel() {
                 }
 
                 is PickerEvent.ChangeAdapterColumns -> {
-                    preferenceRepository.putInt("$TAG-adapterColumnCount", event.adapterColumnCount)
+                    preferenceRepository.putInt(columnCountKey, event.adapterColumnCount)
+                }
+
+                is PickerEvent.ChangeSortType -> {
+                    preferenceRepository.putString(sortTypeKey, event.sortType.name)
                 }
             }
         }

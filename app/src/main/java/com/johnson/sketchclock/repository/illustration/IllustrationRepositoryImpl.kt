@@ -105,8 +105,9 @@ class IllustrationRepositoryImpl @Inject constructor(
         val indices = dir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.nameWithoutExtension.toIntOrNull() } ?: emptyList()
 
         return indices.map { id ->
+            val idDir = File(dir, "$id")
             val description = try {
-                gson.fromJson(File(dir, "$id/$DESCRIPTION_FILE").readText(), Map::class.java)
+                gson.fromJson(File(idDir, DESCRIPTION_FILE).readText(), Map::class.java)
             } catch (e: Exception) {
                 null
             }
@@ -120,7 +121,8 @@ class IllustrationRepositoryImpl @Inject constructor(
                 resName = "${dir.name}/$id",
                 lastModified = (description?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
                 editable = dir == userRootDir,
-                bookmarked = (description?.get(KEY_BOOKMARKED) as? Boolean) ?: false
+                bookmarked = (description?.get(KEY_BOOKMARKED) as? Boolean) ?: false,
+                createTime = idDir.lastModified()
             )
         }.sortedBy { it.id }
     }

@@ -14,4 +14,6 @@ data class Template(
     var name: String,
     var elements: MutableList<Element> = mutableListOf(),
     val bookmarked: Boolean = false,
+    val createTime: Long = System.currentTimeMillis(),
+    val lastModified: Long = createTime,
 ) : Serializable

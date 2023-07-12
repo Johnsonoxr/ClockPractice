@@ -35,7 +35,7 @@
             app:tint="?attr/colorPrimary"
             tools:visibility="visible" />
 
-        <com.johnson.sketchclock.pickers.illustration_picker.RatioImageView
+        <com.johnson.sketchclock.pickers.RatioImageView
             android:id="@+id/ivPreview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"

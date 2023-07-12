@@ -91,7 +91,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                     val template = Template(
                         id = templateId,
                         name = templateName ?: "",
-                        elements = elements.toMutableList()
+                        elements = elements.toMutableList(),
+                        lastModified = System.currentTimeMillis()
                     )
                     savedElements = elements.map { it.deepClone() }
                     templateRepository.upsertTemplate(template)

@@ -31,4 +31,17 @@
         android:icon="@drawable/bottom_rows"
         android:title="rows"
         app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_filter"
+        android:icon="@drawable/bottom_filter"
+        android:title="filter"
+        app:showAsAction="always" />
+
+    <item
+        android:id="@+id/menu_sort"
+        android:icon="@drawable/bottom_sort"
+        android:title="sort"
+        app:showAsAction="always" />
+
 </menu>

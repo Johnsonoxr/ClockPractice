@@ -80,7 +80,7 @@ class FontRepositoryImpl @Inject constructor(
                 mapOf(
                     KEY_FONT_NAME to newFont.title,
                     KEY_LAST_MODIFIED to System.currentTimeMillis(),
-                    KEY_BOOKMARKED to newFont.bookmarked
+                    KEY_BOOKMARKED to newFont.bookmarked,
                 )
             )
             descriptionFile.writeText(gsonString)
@@ -105,8 +105,9 @@ class FontRepositoryImpl @Inject constructor(
         val indices = dir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.name.toIntOrNull() } ?: emptyList()
 
         return indices.map { index ->
+            val idDir = File(dir, "$index")
             val descriptions = try {
-                gson.fromJson(File(dir, "$index/$DESCRIPTION_FILE").takeIf { it.exists() }?.readText(), Map::class.java)
+                gson.fromJson(File(idDir, DESCRIPTION_FILE).takeIf { it.exists() }?.readText(), Map::class.java)
             } catch (e: Exception) {
                 null
             }
@@ -121,7 +122,8 @@ class FontRepositoryImpl @Inject constructor(
                 resName = "${dir.name}/$index",
                 lastModified = (descriptions?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
                 editable = dir == userRootDir,
-                bookmarked = descriptions?.get(KEY_BOOKMARKED) as? Boolean ?: false
+                bookmarked = descriptions?.get(KEY_BOOKMARKED) as? Boolean ?: false,
+                createTime = idDir.lastModified(),
             )
         }.sortedBy { it.id }
     }

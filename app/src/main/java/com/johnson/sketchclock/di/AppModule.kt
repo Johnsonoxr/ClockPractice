@@ -41,7 +41,6 @@ class AppModule {
     @Singleton
     fun provideTemplateDatabase(context: Context): TemplateDatabase {
         return Room.databaseBuilder(context, TemplateDatabase::class.java, "templates_database")
-            .addMigrations(TemplateDatabase.MIGRATION_1_2)
             .build()
     }
 

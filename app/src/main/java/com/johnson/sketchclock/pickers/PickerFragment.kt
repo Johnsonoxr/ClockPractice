@@ -21,6 +21,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.collectLatestWhenResumed
@@ -40,15 +41,13 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     //  view model
     abstract val viewModel: VM
 
-    //  repository
-    abstract val repositoryAdapter: RepositoryAdapter<T>
-
     //  item
     abstract fun T.editable(): Boolean
     abstract fun T.title(): String
+    abstract fun T.createTime(): Long
     abstract fun T.clone(title: String? = null, bookmark: Boolean? = null): T
-    abstract fun createEmptyItem(): T
     abstract fun T.isBookmark(): Boolean
+    abstract fun createEmptyItem(): T
 
     //  adapter
     abstract fun areItemsTheSame(oldItem: T, newItem: T): Boolean
@@ -78,7 +77,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
         val adapter = ItemAdapter()
         vb.rv.adapter = adapter
 
-        repositoryAdapter.getFlow().collectLatestWhenStarted(this) { adapter.items = it }
+        viewModel.repository.getFlow().collectLatestWhenStarted(this) { items -> adapter.items = sortItems(viewModel.sortType.value, items) }
 
         viewModel.selectedItems.collectLatestWhenStarted(this) { adapter.selectedItems = it }
 
@@ -103,8 +102,32 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 .show()
         }
 
+        viewModel.sortType.collectLatestWhenResumed(this) { sortType ->
+            adapter.items = sortItems(sortType, adapter.items)
+        }
+
         activity?.addMenuProvider(menuProvider, viewLifecycleOwner, Lifecycle.State.RESUMED)
         activity?.onBackPressedDispatcher?.addCallback(backPressedCallback.apply { isEnabled = true })
+    }
+
+    private fun sortItems(sortType: SortType, items: List<T>): List<T> {
+        return when (sortType) {
+            SortType.NAME -> items.sortedBy { it.title() }
+            SortType.NAME_REVERSE -> items.sortedByDescending { it.title() }
+            SortType.DATE -> items.sortedBy {
+                return@sortedBy when {
+                    it.editable() -> it.createTime() + (10L * 365L * 24L * 60L * 60L * 1000L)
+                    else -> it.createTime()
+                }
+            }
+
+            SortType.DATE_REVERSE -> items.sortedByDescending {
+                return@sortedByDescending when {
+                    it.editable() -> it.createTime() + (10L * 365L * 24L * 60L * 60L * 1000L)
+                    else -> it.createTime()
+                }
+            }
+        }
     }
 
     override fun onPause() {
@@ -170,6 +193,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 R.id.menu_bookmark -> viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.BOOKMARK))
                 R.id.menu_grid -> viewModel.onEvent(PickerEvent.ChangeAdapterColumns(1))
                 R.id.menu_rows -> viewModel.onEvent(PickerEvent.ChangeAdapterColumns(2))
+                R.id.menu_sort -> showSortDialog { viewModel.onEvent(PickerEvent.ChangeSortType(it)) }
             }
             return true
         }
@@ -198,6 +222,18 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                 activity?.onBackPressedDispatcher?.onBackPressed()
             }
         }
+    }
+
+    private fun showSortDialog(onSelected: (SortType) -> Unit) {
+        val sortTypes = SortType.values()
+        val singleChoices = sortTypes.map { getString(it.stringRes) }.toTypedArray()
+        MaterialAlertDialogBuilder(requireContext())
+            .setTitle(R.string.sort_by)
+            .setSingleChoiceItems(singleChoices, sortTypes.indexOf(viewModel.sortType.value)) { dialog, which ->
+                onSelected(sortTypes[which])
+                dialog.dismiss()
+            }
+            .show()
     }
 
     private inner class ItemAdapter : RecyclerView.Adapter<ItemAdapter.ViewHolder>() {

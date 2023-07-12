@@ -11,7 +11,6 @@ import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.databinding.ItemFontBinding
 import com.johnson.sketchclock.font_canvas.CanvasActivity
 import com.johnson.sketchclock.pickers.PickerFragment
-import com.johnson.sketchclock.pickers.RepositoryAdapter
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -25,11 +24,6 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
 
     @Inject
     lateinit var fontRepository: FontRepository
-
-    private val fontRepositoryAdapter: FontRepositoryAdapter by lazy { FontRepositoryAdapter(fontRepository) }
-
-    override val repositoryAdapter: RepositoryAdapter<Font>
-        get() = fontRepositoryAdapter
 
     override fun createEmptyItem(): Font = Font(title = "new font")
 
@@ -61,12 +55,12 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
 
     override fun areContentsTheSame(oldItem: Font, newItem: Font): Boolean {
         return oldItem.resName == newItem.resName
+                && oldItem.title == newItem.title
+                && oldItem.lastModified == newItem.lastModified
     }
 
     override fun areItemsTheSame(oldItem: Font, newItem: Font): Boolean {
         return oldItem.resName == newItem.resName
-                && oldItem.title == newItem.title
-                && oldItem.lastModified == newItem.lastModified
     }
 
     override fun createEditItemIntent(item: Font): Intent {
@@ -80,6 +74,8 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
     override fun Font.editable(): Boolean = this.editable
 
     override fun Font.title(): String = this.title
+
+    override fun Font.createTime(): Long = this.createTime
 
     override fun Font.isBookmark(): Boolean = this.bookmarked
 }

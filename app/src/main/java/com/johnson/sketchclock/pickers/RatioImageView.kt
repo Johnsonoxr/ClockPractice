@@ -1,4 +1,4 @@
-package com.johnson.sketchclock.pickers.illustration_picker
+package com.johnson.sketchclock.pickers
 
 import android.annotation.SuppressLint
 import android.widget.ImageView

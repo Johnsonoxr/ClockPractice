@@ -10,7 +10,6 @@ import com.johnson.sketchclock.common.Illustration
 import com.johnson.sketchclock.databinding.ItemIllustrationBinding
 import com.johnson.sketchclock.illustration_canvas.IllustrationCanvasActivity
 import com.johnson.sketchclock.pickers.PickerFragment
-import com.johnson.sketchclock.pickers.RepositoryAdapter
 import com.johnson.sketchclock.repository.illustration.IllustrationRepository
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
@@ -23,11 +22,6 @@ class IllustrationPickerFragment : PickerFragment<Illustration, ItemIllustration
 
     @Inject
     lateinit var illustrationRepository: IllustrationRepository
-
-    private val illustrationRepositoryAdapter: IllustrationRepositoryAdapter by lazy { IllustrationRepositoryAdapter(illustrationRepository) }
-
-    override val repositoryAdapter: RepositoryAdapter<Illustration>
-        get() = illustrationRepositoryAdapter
 
     override fun createEmptyItem(): Illustration = Illustration(title = "new illustration")
 
@@ -48,12 +42,12 @@ class IllustrationPickerFragment : PickerFragment<Illustration, ItemIllustration
 
     override fun areContentsTheSame(oldItem: Illustration, newItem: Illustration): Boolean {
         return oldItem.resName == newItem.resName
+                && oldItem.title == newItem.title
+                && oldItem.lastModified == newItem.lastModified
     }
 
     override fun areItemsTheSame(oldItem: Illustration, newItem: Illustration): Boolean {
         return oldItem.resName == newItem.resName
-                && oldItem.title == newItem.title
-                && oldItem.lastModified == newItem.lastModified
     }
 
     override fun createEditItemIntent(item: Illustration): Intent {
@@ -67,6 +61,8 @@ class IllustrationPickerFragment : PickerFragment<Illustration, ItemIllustration
     override fun Illustration.editable(): Boolean = this.editable
 
     override fun Illustration.title(): String = this.title
+
+    override fun Illustration.createTime(): Long = this.createTime
 
     override fun Illustration.isBookmark(): Boolean = this.bookmarked
 }

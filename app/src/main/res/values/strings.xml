@@ -1,5 +1,10 @@
 <resources>
     <string name="app_name">SketchClock</string>
-    <!-- TODO: Remove or change this placeholder text -->
-    <string name="hello_blank_fragment">Hello blank fragment</string>
+
+    <!--  Sorting  -->
+    <string name="sort_by">Sort By</string>
+    <string name="sort_by_date">Date</string>
+    <string name="sort_by_date_reverse">Date Descending</string>
+    <string name="sort_by_name">Name</string>
+    <string name="sort_by_name_reverse">Name Descending</string>
 </resources>
