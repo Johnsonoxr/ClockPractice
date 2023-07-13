@@ -25,7 +25,7 @@ import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Font
-import com.johnson.sketchclock.common.Illustration
+import com.johnson.sketchclock.common.Sticker
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.addCancelObserverView
 import com.johnson.sketchclock.common.collectLatestWhenStarted
@@ -33,11 +33,11 @@ import com.johnson.sketchclock.common.removeCancelObserverView
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentEditorBinding
-import com.johnson.sketchclock.illustration_canvas.IllustrationCanvasActivity
-import com.johnson.sketchclock.repository.illustration.IllustrationRepository
+import com.johnson.sketchclock.sticker_canvas.StickerCanvasActivity
+import com.johnson.sketchclock.repository.sticker.StickerRepository
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.*
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.Companion.showFontSelectorDialog
-import com.johnson.sketchclock.template_editor.SimpleIllustrationSelectorFragment.Companion.showIllustrationSelectorDialog
+import com.johnson.sketchclock.template_editor.SimpleStickerSelectorFragment.Companion.showStickerSelectorDialog
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
 import java.lang.ref.WeakReference
@@ -50,7 +50,7 @@ private const val TEMPLATE = "template"
 class EditorFragment : Fragment() {
 
     @Inject
-    lateinit var illustrationRepository: IllustrationRepository
+    lateinit var stickerRepository: StickerRepository
 
     private val viewModel: EditorViewModel by activityViewModels()
 
@@ -110,7 +110,7 @@ class EditorFragment : Fragment() {
             Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
         }
 
-        illustrationRepository.getIllustrations().collectLatestWhenStarted(this) { vb.controlView.render() }
+        stickerRepository.getStickers().collectLatestWhenStarted(this) { vb.controlView.render() }
 
         vb.controlView.viewModelRef = WeakReference(viewModel)
 
@@ -122,10 +122,10 @@ class EditorFragment : Fragment() {
         setupAddTemplateFab(Type.HOUR_12H, vb.fabAddTime12h, EType.Hour12Hr1, EType.Hour12Hr2, EType.Colon, EType.Minute1, EType.Minute2, EType.AmPm)
         setupAddTemplateFab(Type.DATE, vb.fabAddDate, EType.Month1, EType.Month2, EType.Slash, EType.Day1, EType.Day2)
 
-        vb.fabAddIllustration.setOnClickListener {
-            showIllustrationSelectorDialog { illustration ->
+        vb.fabAddSticker.setOnClickListener {
+            showStickerSelectorDialog { sticker ->
                 showAddTemplateButtons(false)
-                val element = createIllustrationElement(illustration)
+                val element = createStickerElement(sticker)
                 viewModel.onEvent(EditorEvent.AddElements(listOf(element)))
                 viewModel.onEvent(EditorEvent.SetSelectedElements(listOf(element)))
             }
@@ -167,10 +167,10 @@ class EditorFragment : Fragment() {
         }
 
         vb.fabOptionEdit.setOnClickListener {
-            val illustration = viewModel.selectedElements.value.firstOrNull()?.resName
-                ?.let { resName -> illustrationRepository.getIllustrationByRes(resName) }
-            if (illustration != null) {
-                startActivity(IllustrationCanvasActivity.createIntent(requireContext(), illustration))
+            val sticker = viewModel.selectedElements.value.firstOrNull()?.resName
+                ?.let { resName -> stickerRepository.getStickerByRes(resName) }
+            if (sticker != null) {
+                startActivity(StickerCanvasActivity.createIntent(requireContext(), sticker))
             }
         }
 
@@ -270,11 +270,11 @@ class EditorFragment : Fragment() {
             vb.fabAdd.addCancelObserverView {
                 showAddTemplateButtons(false)
             }
-            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddIllustration).forEach { it.scaleIn() }
+            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddSticker).forEach { it.scaleIn() }
         } else {
             vb.fabAdd.animate().setInterpolator(OvershootInterpolator()).rotation(0f).setDuration(300).start()
             vb.fabAdd.removeCancelObserverView()
-            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddIllustration).forEach { it.scaleOut() }
+            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddSticker).forEach { it.scaleOut() }
         }
     }
 
@@ -282,8 +282,8 @@ class EditorFragment : Fragment() {
         val elements = viewModel.selectedElements.value
 
         val editable = elements.size == 1
-                && elements.firstOrNull()?.eType == EType.Illustration
-                && elements.firstOrNull()?.resName?.let { illustrationRepository.getIllustrationByRes(it)?.editable } == true
+                && elements.firstOrNull()?.eType == EType.Sticker
+                && elements.firstOrNull()?.resName?.let { stickerRepository.getStickerByRes(it)?.editable } == true
 
         mapOf(
             vb.fabLayerUp to true,
@@ -328,8 +328,8 @@ class EditorFragment : Fragment() {
         }
     }
 
-    private fun createIllustrationElement(illustration: Illustration): Element {
-        return Element(eType = EType.Illustration, resName = illustration.resName, matrixArray = Matrix().let { matrix ->
+    private fun createStickerElement(sticker: Sticker): Element {
+        return Element(eType = EType.Sticker, resName = sticker.resName, matrixArray = Matrix().let { matrix ->
             matrix.preTranslate(.5f * Constants.TEMPLATE_WIDTH, .5f * Constants.TEMPLATE_HEIGHT)
 //            matrix.preScale(0.8f, 0.8f)
             FloatArray(9).apply { matrix.getValues(this) }

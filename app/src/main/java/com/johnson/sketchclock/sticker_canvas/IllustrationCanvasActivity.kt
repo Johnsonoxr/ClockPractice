@@ -1,4 +1,4 @@
-package com.johnson.sketchclock.illustration_canvas
+package com.johnson.sketchclock.sticker_canvas
 
 import android.content.Context
 import android.content.Intent
@@ -9,31 +9,31 @@ import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.Constants
-import com.johnson.sketchclock.common.Illustration
+import com.johnson.sketchclock.common.Sticker
 import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.databinding.ActivityBasicBinding
 import com.johnson.sketchclock.font_canvas.CanvasEvent
 import com.johnson.sketchclock.font_canvas.CanvasFragment
 import com.johnson.sketchclock.font_canvas.CanvasViewModel
-import com.johnson.sketchclock.repository.illustration.IllustrationRepository
+import com.johnson.sketchclock.repository.sticker.StickerRepository
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class IllustrationCanvasActivity : AppCompatActivity() {
+class StickerCanvasActivity : AppCompatActivity() {
 
     companion object {
-        private const val KEY_ILLUSTRATION = "illustration"
+        private const val KEY_ILLUSTRATION = "sticker"
 
-        fun createIntent(context: Context, illustration: Illustration): Intent {
-            return Intent(context, IllustrationCanvasActivity::class.java).apply {
-                putExtra(KEY_ILLUSTRATION, illustration)
+        fun createIntent(context: Context, sticker: Sticker): Intent {
+            return Intent(context, StickerCanvasActivity::class.java).apply {
+                putExtra(KEY_ILLUSTRATION, sticker)
             }
         }
     }
 
     @Inject
-    lateinit var illustrationRepository: IllustrationRepository
+    lateinit var stickerRepository: StickerRepository
 
     private val viewModel: CanvasViewModel by viewModels()
 
@@ -45,25 +45,25 @@ class IllustrationCanvasActivity : AppCompatActivity() {
         setContentView(vb.root)
         setSupportActionBar(vb.toolbar)
 
-        val illustration: Illustration? = intent.getSerializableExtra(KEY_ILLUSTRATION) as? Illustration
-        if (illustration == null) {
+        val sticker: Sticker? = intent.getSerializableExtra(KEY_ILLUSTRATION) as? Sticker
+        if (sticker == null) {
             Toast.makeText(this, "Missing font name", Toast.LENGTH_SHORT).show()
             finish()
             return
-        } else if (!illustration.editable) {
-            Toast.makeText(this, "Illustration is not editable", Toast.LENGTH_SHORT).show()
+        } else if (!sticker.editable) {
+            Toast.makeText(this, "Sticker is not editable", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
-        vb.toolbar.title = illustration.title
+        vb.toolbar.title = sticker.title
 
         if (!viewModel.isInitialized) {
-            val illustrationFile = illustrationRepository.getIllustrationFile(illustration)
-            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, illustrationFile, autoCrop = true))
+            val stickerFile = stickerRepository.getStickerFile(sticker)
+            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, stickerFile, autoCrop = true))
         }
 
-        viewModel.fileSaved.collectLatestWhenStarted(this) { illustrationRepository.upsertIllustrations(listOf(illustration)) }
+        viewModel.fileSaved.collectLatestWhenStarted(this) { stickerRepository.upsertStickers(listOf(sticker)) }
 
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
 

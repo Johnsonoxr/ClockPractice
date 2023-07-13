@@ -56,12 +56,12 @@
         tools:visibility="visible" />
 
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
-        android:id="@+id/fab_add_illustration"
+        android:id="@+id/fab_add_sticker"
         style="?attr/floatingActionButtonSecondaryStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
-        android:text="Illustration"
+        android:text="Sticker"
         android:visibility="gone"
         app:layout_constraintBottom_toTopOf="@+id/fab_add_date"
         app:layout_constraintEnd_toEndOf="parent"

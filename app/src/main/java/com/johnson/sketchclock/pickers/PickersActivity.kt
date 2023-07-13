@@ -11,7 +11,7 @@ import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.ActivityPickersBinding
 import com.johnson.sketchclock.pickers.font_picker.FontPickerFragment
-import com.johnson.sketchclock.pickers.illustration_picker.IllustrationPickerFragment
+import com.johnson.sketchclock.pickers.sticker_picker.StickerPickerFragment
 import com.johnson.sketchclock.pickers.template_picker.TemplatePickerFragment
 import dagger.hilt.android.AndroidEntryPoint
 
@@ -23,7 +23,7 @@ class PickersActivity : AppCompatActivity(), ControllableFabHolder {
     private val pageInfoList = listOf(
         PageInfo("Templates", TemplatePickerFragment::class.java),
         PageInfo("Fonts", FontPickerFragment::class.java),
-        PageInfo("Illustrations", IllustrationPickerFragment::class.java)
+        PageInfo("Stickers", StickerPickerFragment::class.java)
     )
 
     private data class PageInfo(val title: String, val fragmentClass: Class<out Fragment>)

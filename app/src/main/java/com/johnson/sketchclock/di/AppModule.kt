@@ -8,8 +8,8 @@ import androidx.room.Room
 import com.johnson.sketchclock.common.BitmapResourceHolder
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.font.FontRepositoryImpl
-import com.johnson.sketchclock.repository.illustration.IllustrationRepository
-import com.johnson.sketchclock.repository.illustration.IllustrationRepositoryImpl
+import com.johnson.sketchclock.repository.sticker.StickerRepository
+import com.johnson.sketchclock.repository.sticker.StickerRepositoryImpl
 import com.johnson.sketchclock.repository.pref.PreferenceRepository
 import com.johnson.sketchclock.repository.pref.PreferenceRepositoryImpl
 import com.johnson.sketchclock.repository.template.TemplateDatabase
@@ -52,8 +52,8 @@ class AppModule {
 
     @Provides
     @Singleton
-    fun provideIllustrationRepository(context: Context): IllustrationRepository {
-        return IllustrationRepositoryImpl(context)
+    fun provideStickerRepository(context: Context): StickerRepository {
+        return StickerRepositoryImpl(context)
     }
 
     @Provides
@@ -67,9 +67,9 @@ class AppModule {
     fun provideBitmapResourceHolder(
         context: Context,
         fontRepository: FontRepository,
-        illustrationRepository: IllustrationRepository
+        stickerRepository: StickerRepository
     ): BitmapResourceHolder {
-        return BitmapResourceHolder(context, fontRepository, illustrationRepository)
+        return BitmapResourceHolder(context, fontRepository, stickerRepository)
     }
 
     @Provides

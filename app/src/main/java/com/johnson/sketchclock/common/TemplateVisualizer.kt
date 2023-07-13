@@ -23,7 +23,7 @@ import com.johnson.sketchclock.common.Utils.minute2Ch
 import com.johnson.sketchclock.common.Utils.month1Ch
 import com.johnson.sketchclock.common.Utils.month2Ch
 import com.johnson.sketchclock.repository.font.FontRepository
-import com.johnson.sketchclock.repository.illustration.IllustrationRepository
+import com.johnson.sketchclock.repository.sticker.StickerRepository
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -31,7 +31,7 @@ private const val TAG = "TemplateVisualizer"
 
 class TemplateVisualizer @Inject constructor(
     private val fontRepository: FontRepository,
-    private val illustrationRepository: IllustrationRepository,
+    private val stickerRepository: StickerRepository,
     val resourceHolder: BitmapResourceHolder
 ) {
 
@@ -84,12 +84,12 @@ class TemplateVisualizer @Inject constructor(
             EType.Slash -> Character.SLASH
             EType.AmPm -> calendar.amPmCh()
             EType.Colon -> Character.COLON
-            EType.Illustration -> null
+            EType.Sticker -> null
         }
 
         return if (char == null) {
-            val illustration = illustrationRepository.getIllustrationByRes(elementResName)
-            illustration?.let { resourceHolder.getIllustrationBitmap(it) }
+            val sticker = stickerRepository.getStickerByRes(elementResName)
+            sticker?.let { resourceHolder.getStickerBitmap(it) }
         } else {
             val font = fontRepository.getFontByRes(elementResName)
             font?.let { resourceHolder.getFontBitmap(it, char) }

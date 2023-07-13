@@ -1,10 +1,10 @@
-package com.johnson.sketchclock.repository.illustration
+package com.johnson.sketchclock.repository.sticker
 
 import android.content.Context
 import android.util.Log
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import com.johnson.sketchclock.common.Illustration
+import com.johnson.sketchclock.common.Sticker
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,29 +14,29 @@ import java.io.File
 import java.io.FileFilter
 import javax.inject.Inject
 
-class IllustrationRepositoryImpl @Inject constructor(
+class StickerRepositoryImpl @Inject constructor(
     private val context: Context
-) : IllustrationRepository {
+) : StickerRepository {
 
     private val defaultRootDir = File(context.filesDir, DEFAULT_DIR)
     private val userRootDir = File(context.filesDir, USER_DIR)
     private val gson = GsonBuilder().setPrettyPrinting().setNumberToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
-    private val _illustrations: MutableStateFlow<List<Illustration>> = MutableStateFlow(emptyList())
+    private val _stickers: MutableStateFlow<List<Sticker>> = MutableStateFlow(emptyList())
 
     companion object {
 
-        private const val TAG = "IllustrationRepository"
+        private const val TAG = "StickerRepository"
 
-        private const val DEFAULT_DIR = "default_illustrations"
-        private const val USER_DIR = "user_illustrations"
+        private const val DEFAULT_DIR = "default_stickers"
+        private const val USER_DIR = "user_stickers"
 
-        private const val KEY_ILLUSTRATION_NAME = "illustration_name"
+        private const val KEY_ILLUSTRATION_NAME = "sticker_name"
         private const val KEY_LAST_MODIFIED = "last_modified"
         private const val KEY_BOOKMARKED = "bookmarked"
 
         private const val DESCRIPTION_FILE = "description.txt"
-        private const val ILLUSTRATION_FILE = "illustration.png"
+        private const val ILLUSTRATION_FILE = "sticker.png"
     }
 
     init {
@@ -49,59 +49,59 @@ class IllustrationRepositoryImpl @Inject constructor(
                 Log.d(TAG, "Deleted \"${it.name}\"")
             }
 
-            _illustrations.value = loadIllustrationList()
+            _stickers.value = loadStickerList()
         }
     }
 
-    override fun getIllustrations(): StateFlow<List<Illustration>> {
-        return _illustrations
+    override fun getStickers(): StateFlow<List<Sticker>> {
+        return _stickers
     }
 
-    override fun getIllustrationByRes(resName: String): Illustration? {
-        return _illustrations.value.find { it.resName == resName }
+    override fun getStickerByRes(resName: String): Sticker? {
+        return _stickers.value.find { it.resName == resName }
     }
 
-    override suspend fun upsertIllustrations(illustrations: Collection<Illustration>) {
+    override suspend fun upsertStickers(stickers: Collection<Sticker>) {
 
-        illustrations.forEach { illustration ->
+        stickers.forEach { sticker ->
 
-            val id = illustration.id.takeIf { it >= 0 } ?: getNewIllustrationId()
-            val resName = illustration.resName ?: "$USER_DIR/$id"
+            val id = sticker.id.takeIf { it >= 0 } ?: getNewStickerId()
+            val resName = sticker.resName ?: "$USER_DIR/$id"
 
-            val newIllustration = illustration.copy(resName = resName)
+            val newSticker = sticker.copy(resName = resName)
 
-            if (!newIllustration.dir.exists() && newIllustration.deletedDir.exists()) {
-                Log.d(TAG, "upsertIllustration(): Restoring deleted illustration, res=${newIllustration.resName}")
-                newIllustration.deletedDir.renameTo(newIllustration.dir)
+            if (!newSticker.dir.exists() && newSticker.deletedDir.exists()) {
+                Log.d(TAG, "upsertSticker(): Restoring deleted sticker, res=${newSticker.resName}")
+                newSticker.deletedDir.renameTo(newSticker.dir)
             } else {
-                newIllustration.dir.mkdirs()
+                newSticker.dir.mkdirs()
             }
             val gsonString = gson.toJson(
                 mapOf(
-                    KEY_ILLUSTRATION_NAME to newIllustration.title,
+                    KEY_ILLUSTRATION_NAME to newSticker.title,
                     KEY_LAST_MODIFIED to System.currentTimeMillis(),
-                    KEY_BOOKMARKED to newIllustration.bookmarked
+                    KEY_BOOKMARKED to newSticker.bookmarked
                 )
             )
-            File(newIllustration.dir, DESCRIPTION_FILE).writeText(gsonString)
-            Log.d(TAG, "upsertIllustration(): Save illustration: $resName")
+            File(newSticker.dir, DESCRIPTION_FILE).writeText(gsonString)
+            Log.d(TAG, "upsertSticker(): Save sticker: $resName")
         }
 
-        _illustrations.value = loadIllustrationList()
+        _stickers.value = loadStickerList()
     }
 
-    override suspend fun deleteIllustrations(illustrations: Collection<Illustration>) {
-        illustrations.filter { it.isUser }.forEach { illustration ->
-            illustration.dir.renameTo(illustration.deletedDir)
+    override suspend fun deleteStickers(stickers: Collection<Sticker>) {
+        stickers.filter { it.isUser }.forEach { sticker ->
+            sticker.dir.renameTo(sticker.deletedDir)
         }
-        _illustrations.value = loadIllustrationList()
+        _stickers.value = loadStickerList()
     }
 
-    override fun getIllustrationFile(illustration: Illustration): File {
-        return File(illustration.dir, ILLUSTRATION_FILE)
+    override fun getStickerFile(sticker: Sticker): File {
+        return File(sticker.dir, ILLUSTRATION_FILE)
     }
 
-    private fun loadIllustrationList(dir: File): List<Illustration> {
+    private fun loadStickerList(dir: File): List<Sticker> {
         val indices = dir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.nameWithoutExtension.toIntOrNull() } ?: emptyList()
 
         return indices.map { id ->
@@ -116,7 +116,7 @@ class IllustrationRepositoryImpl @Inject constructor(
                 dir == defaultRootDir -> "Default #$id"
                 else -> "Custom #$id"
             }
-            return@map Illustration(
+            return@map Sticker(
                 title = title,
                 resName = "${dir.name}/$id",
                 lastModified = (description?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
@@ -127,27 +127,27 @@ class IllustrationRepositoryImpl @Inject constructor(
         }.sortedBy { it.id }
     }
 
-    private fun getNewIllustrationId(): Int {
+    private fun getNewStickerId(): Int {
         return userRootDir.list()?.mapNotNull { name ->
-            //  including deleted illustration directories
+            //  including deleted sticker directories
             if (name.startsWith(".")) name.substring(1).toIntOrNull() else name.toIntOrNull()
         }?.maxOfOrNull { it }?.plus(1) ?: 0
     }
 
-    private fun loadIllustrationList(): List<Illustration> {
-        return loadIllustrationList(defaultRootDir) + loadIllustrationList(userRootDir)
+    private fun loadStickerList(): List<Sticker> {
+        return loadStickerList(defaultRootDir) + loadStickerList(userRootDir)
     }
 
-    private val Illustration.id: Int
+    private val Sticker.id: Int
         get() = resName?.split("/")?.last()?.toIntOrNull() ?: -1
 
-    private val Illustration.isUser: Boolean
+    private val Sticker.isUser: Boolean
         get() = resName?.split("/")?.firstOrNull() == USER_DIR
 
-    private val Illustration.dir: File
+    private val Sticker.dir: File
         get() = if (isUser) File(userRootDir, "$id") else File(defaultRootDir, "$id")
 
-    private val Illustration.deletedDir: File
+    private val Sticker.deletedDir: File
         get() = if (isUser) File(userRootDir, ".$id") else File(defaultRootDir, ".$id")
 
     private fun copyAssetFilesIntoDirRecursively(assetDir: String, destDir: File) {

@@ -2,7 +2,7 @@ package com.johnson.sketchclock.common
 
 import java.io.Serializable
 
-data class Illustration(
+data class Sticker(
     val title: String,
     val resName: String? = null,
     val lastModified: Long = 0,

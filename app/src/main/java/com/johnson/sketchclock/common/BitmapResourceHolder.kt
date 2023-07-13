@@ -7,7 +7,7 @@ import android.util.Log
 import android.util.LruCache
 import android.util.Size
 import com.johnson.sketchclock.repository.font.FontRepository
-import com.johnson.sketchclock.repository.illustration.IllustrationRepository
+import com.johnson.sketchclock.repository.sticker.StickerRepository
 import javax.inject.Inject
 
 private const val TAG = "BitmapResourceHolder"
@@ -15,7 +15,7 @@ private const val TAG = "BitmapResourceHolder"
 class BitmapResourceHolder @Inject constructor(
     private val context: Context,
     private val fontRepository: FontRepository,
-    private val illustrationRepository: IllustrationRepository
+    private val stickerRepository: StickerRepository
 ) {
 
     private val bitmaps = LruCache<String, Bitmap>(30)
@@ -41,18 +41,18 @@ class BitmapResourceHolder @Inject constructor(
         return null
     }
 
-    fun getIllustrationBitmap(illustration: Illustration): Bitmap? {
-        val key = "${illustration.resName}/${illustration.lastModified}"
+    fun getStickerBitmap(sticker: Sticker): Bitmap? {
+        val key = "${sticker.resName}/${sticker.lastModified}"
 
         bitmaps[key]?.let { return it }
 
-        val illustrationFile = illustrationRepository.getIllustrationFile(illustration)
-        if (illustrationFile.exists()) {
-            BitmapFactory.decodeFile(illustrationFile.absolutePath)?.let {
+        val stickerFile = stickerRepository.getStickerFile(sticker)
+        if (stickerFile.exists()) {
+            BitmapFactory.decodeFile(stickerFile.absolutePath)?.let {
                 bitmaps.put(key, it)
                 return it
             }
-//            GlideHelper.loadBitmap(context, illustrationFile)?.let {
+//            GlideHelper.loadBitmap(context, stickerFile)?.let {
 //                bitmaps.put(key, it)
 //                return it
 //            }
@@ -64,7 +64,7 @@ class BitmapResourceHolder @Inject constructor(
     fun getElementSize(element: Element): Size? {
         val resName = element.resName ?: return null
         return when (element.eType) {
-            EType.Illustration -> illustrationRepository.getIllustrationByRes(resName)?.let { getIllustrationSize(it) }
+            EType.Sticker -> stickerRepository.getStickerByRes(resName)?.let { getStickerSize(it) }
             else -> fontRepository.getFontByRes(resName)?.let { Size(element.eType.width(), element.eType.height()) }
         }
     }
@@ -74,20 +74,20 @@ class BitmapResourceHolder @Inject constructor(
         return Size(character.width(), character.height())
     }
 
-    fun getIllustrationSize(illustration: Illustration): Size? {
-        val key = "${illustration.resName}/${illustration.lastModified}"
+    fun getStickerSize(sticker: Sticker): Size? {
+        val key = "${sticker.resName}/${sticker.lastModified}"
 
         sizes[key]?.let { return it }
         bitmaps[key]?.let { return Size(it.width, it.height) }
 
-        val illustrationFile = illustrationRepository.getIllustrationFile(illustration)
-        if (illustrationFile.exists()) {
+        val stickerFile = stickerRepository.getStickerFile(sticker)
+        if (stickerFile.exists()) {
             val bitmapOption = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             return try {
-                BitmapFactory.decodeFile(illustrationFile.absolutePath, bitmapOption)
+                BitmapFactory.decodeFile(stickerFile.absolutePath, bitmapOption)
                 Size(bitmapOption.outWidth, bitmapOption.outHeight).also { sizes.put(key, it) }
             } catch (e: Exception) {
-                Log.e(TAG, "getIllustrationSize: ", e)
+                Log.e(TAG, "getStickerSize: ", e)
                 null
             }
         }

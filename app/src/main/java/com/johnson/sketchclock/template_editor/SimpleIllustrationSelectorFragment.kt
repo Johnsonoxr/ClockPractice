@@ -20,38 +20,38 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.common.GlideHelper
-import com.johnson.sketchclock.common.Illustration
+import com.johnson.sketchclock.common.Sticker
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
-import com.johnson.sketchclock.databinding.ItemIllustrationBinding
-import com.johnson.sketchclock.repository.illustration.IllustrationRepository
+import com.johnson.sketchclock.databinding.ItemStickerBinding
+import com.johnson.sketchclock.repository.sticker.StickerRepository
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class SimpleIllustrationSelectorFragment : DialogFragment() {
+class SimpleStickerSelectorFragment : DialogFragment() {
 
     companion object {
-        const val TAG = "SimpleIllustrationSelectorFragment"
-        private const val KEY_ILLUSTRATION = "illustration"
+        const val TAG = "SimpleStickerSelectorFragment"
+        private const val KEY_ILLUSTRATION = "sticker"
 
-        fun Fragment.showIllustrationSelectorDialog(onIllustrationSelected: (Illustration) -> Unit) {
-            val dialog = SimpleIllustrationSelectorFragment()
+        fun Fragment.showStickerSelectorDialog(onStickerSelected: (Sticker) -> Unit) {
+            val dialog = SimpleStickerSelectorFragment()
             dialog.show(childFragmentManager, TAG)
             dialog.setFragmentResultListener(TAG) { _, bundle ->
-                val illustration = bundle.getSerializable(KEY_ILLUSTRATION) as Illustration
-                onIllustrationSelected(illustration)
+                val sticker = bundle.getSerializable(KEY_ILLUSTRATION) as Sticker
+                onStickerSelected(sticker)
                 dialog.dismiss()
             }
         }
     }
 
     @Inject
-    lateinit var illustrationRepository: IllustrationRepository
+    lateinit var stickerRepository: StickerRepository
 
     private lateinit var vb: FragmentPickerBinding
-    private val adapter: IllustrationAdapter = IllustrationAdapter()
+    private val adapter: StickerAdapter = StickerAdapter()
 
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
 
@@ -61,12 +61,12 @@ class SimpleIllustrationSelectorFragment : DialogFragment() {
 
         lifecycleScope.launch {
             lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-                illustrationRepository.getIllustrations().collectLatest { adapter.illustrations = it }
+                stickerRepository.getStickers().collectLatest { adapter.stickers = it }
             }
         }
 
         return MaterialAlertDialogBuilder(requireContext())
-            .setTitle("Select Illustration")
+            .setTitle("Select Sticker")
             .setView(vb.root)
             .create()
     }
@@ -75,8 +75,8 @@ class SimpleIllustrationSelectorFragment : DialogFragment() {
         return vb.root
     }
 
-    private inner class IllustrationAdapter : RecyclerView.Adapter<IllustrationAdapter.ViewHolder>() {
-        var illustrations: List<Illustration> = emptyList()
+    private inner class StickerAdapter : RecyclerView.Adapter<StickerAdapter.ViewHolder>() {
+        var stickers: List<Sticker> = emptyList()
             @SuppressLint("NotifyDataSetChanged")
             set(value) {
                 field = value
@@ -84,31 +84,31 @@ class SimpleIllustrationSelectorFragment : DialogFragment() {
             }
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
-            return ViewHolder(ItemIllustrationBinding.inflate(LayoutInflater.from(parent.context), parent, false))
+            return ViewHolder(ItemStickerBinding.inflate(LayoutInflater.from(parent.context), parent, false))
         }
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            holder.bind(illustrations[position])
+            holder.bind(stickers[position])
         }
 
         override fun getItemCount(): Int {
-            return illustrations.size
+            return stickers.size
         }
 
-        inner class ViewHolder(val vb: ItemIllustrationBinding) : RecyclerView.ViewHolder(vb.root), View.OnClickListener {
+        inner class ViewHolder(val vb: ItemStickerBinding) : RecyclerView.ViewHolder(vb.root), View.OnClickListener {
 
             init {
                 vb.root.setOnClickListener(this)
             }
 
-            fun bind(illustration: Illustration) {
-                vb.tvName.text = illustration.title
-                illustrationRepository.getIllustrationFile(illustration).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview, it) }
+            fun bind(sticker: Sticker) {
+                vb.tvName.text = sticker.title
+                stickerRepository.getStickerFile(sticker).takeIf { it.exists() }?.let { GlideHelper.load(vb.ivPreview, it) }
             }
 
             override fun onClick(v: View) {
-                Log.d(TAG, "onClick: position=$adapterPosition, illustration=${illustrations[adapterPosition]}")
-                setFragmentResult(TAG, bundleOf(KEY_ILLUSTRATION to illustrations[adapterPosition]))
+                Log.d(TAG, "onClick: position=$adapterPosition, sticker=${stickers[adapterPosition]}")
+                setFragmentResult(TAG, bundleOf(KEY_ILLUSTRATION to stickers[adapterPosition]))
             }
         }
     }
