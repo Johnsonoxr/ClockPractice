@@ -34,13 +34,13 @@ class SimpleStickerSelectorFragment : DialogFragment() {
 
     companion object {
         const val TAG = "SimpleStickerSelectorFragment"
-        private const val KEY_ILLUSTRATION = "sticker"
+        private const val KEY_STICKER = "sticker"
 
         fun Fragment.showStickerSelectorDialog(onStickerSelected: (Sticker) -> Unit) {
             val dialog = SimpleStickerSelectorFragment()
             dialog.show(childFragmentManager, TAG)
             dialog.setFragmentResultListener(TAG) { _, bundle ->
-                val sticker = bundle.getSerializable(KEY_ILLUSTRATION) as Sticker
+                val sticker = bundle.getSerializable(KEY_STICKER) as Sticker
                 onStickerSelected(sticker)
                 dialog.dismiss()
             }
@@ -108,7 +108,7 @@ class SimpleStickerSelectorFragment : DialogFragment() {
 
             override fun onClick(v: View) {
                 Log.d(TAG, "onClick: position=$adapterPosition, sticker=${stickers[adapterPosition]}")
-                setFragmentResult(TAG, bundleOf(KEY_ILLUSTRATION to stickers[adapterPosition]))
+                setFragmentResult(TAG, bundleOf(KEY_STICKER to stickers[adapterPosition]))
             }
         }
     }

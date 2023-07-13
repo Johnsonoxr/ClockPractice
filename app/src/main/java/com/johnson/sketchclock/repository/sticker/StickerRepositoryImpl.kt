@@ -31,12 +31,13 @@ class StickerRepositoryImpl @Inject constructor(
         private const val DEFAULT_DIR = "default_stickers"
         private const val USER_DIR = "user_stickers"
 
-        private const val KEY_ILLUSTRATION_NAME = "sticker_name"
+        private const val KEY_NAME = "sticker_name"
         private const val KEY_LAST_MODIFIED = "last_modified"
+        private const val KEY_CREATE_TIME = "create_time"
         private const val KEY_BOOKMARKED = "bookmarked"
 
         private const val DESCRIPTION_FILE = "description.txt"
-        private const val ILLUSTRATION_FILE = "sticker.png"
+        private const val STICKER_FILE = "sticker.png"
     }
 
     init {
@@ -78,8 +79,9 @@ class StickerRepositoryImpl @Inject constructor(
             }
             val gsonString = gson.toJson(
                 mapOf(
-                    KEY_ILLUSTRATION_NAME to newSticker.title,
+                    KEY_NAME to newSticker.title,
                     KEY_LAST_MODIFIED to System.currentTimeMillis(),
+                    KEY_CREATE_TIME to newSticker.createTime,
                     KEY_BOOKMARKED to newSticker.bookmarked
                 )
             )
@@ -98,7 +100,7 @@ class StickerRepositoryImpl @Inject constructor(
     }
 
     override fun getStickerFile(sticker: Sticker): File {
-        return File(sticker.dir, ILLUSTRATION_FILE)
+        return File(sticker.dir, STICKER_FILE)
     }
 
     private fun loadStickerList(dir: File): List<Sticker> {
@@ -112,7 +114,7 @@ class StickerRepositoryImpl @Inject constructor(
                 null
             }
             val title = when {
-                description?.containsKey(KEY_ILLUSTRATION_NAME) == true -> description[KEY_ILLUSTRATION_NAME] as? String ?: "Untitled"
+                description?.containsKey(KEY_NAME) == true -> description[KEY_NAME] as? String ?: "Untitled"
                 dir == defaultRootDir -> "Default #$id"
                 else -> "Custom #$id"
             }
@@ -122,7 +124,7 @@ class StickerRepositoryImpl @Inject constructor(
                 lastModified = (description?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
                 editable = dir == userRootDir,
                 bookmarked = (description?.get(KEY_BOOKMARKED) as? Boolean) ?: false,
-                createTime = idDir.lastModified()
+                createTime = (description?.get(KEY_CREATE_TIME) as? Double)?.toLong() ?: 0L
             )
         }.sortedBy { it.id }
     }

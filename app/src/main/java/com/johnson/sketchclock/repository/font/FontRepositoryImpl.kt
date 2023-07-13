@@ -34,6 +34,7 @@ class FontRepositoryImpl @Inject constructor(
         private const val DESCRIPTION_FILE = "description.txt"
         private const val KEY_FONT_NAME = "font_name"
         private const val KEY_LAST_MODIFIED = "last_modified"
+        private const val KEY_CREATE_TIME = "create_time"
         private const val KEY_BOOKMARKED = "bookmarked"
     }
 
@@ -80,6 +81,7 @@ class FontRepositoryImpl @Inject constructor(
                 mapOf(
                     KEY_FONT_NAME to newFont.title,
                     KEY_LAST_MODIFIED to System.currentTimeMillis(),
+                    KEY_CREATE_TIME to newFont.createTime,
                     KEY_BOOKMARKED to newFont.bookmarked,
                 )
             )
@@ -123,7 +125,7 @@ class FontRepositoryImpl @Inject constructor(
                 lastModified = (descriptions?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
                 editable = dir == userRootDir,
                 bookmarked = descriptions?.get(KEY_BOOKMARKED) as? Boolean ?: false,
-                createTime = idDir.lastModified(),
+                createTime = (descriptions?.get(KEY_CREATE_TIME) as? Double)?.toLong() ?: 0L,
             )
         }.sortedBy { it.id }
     }

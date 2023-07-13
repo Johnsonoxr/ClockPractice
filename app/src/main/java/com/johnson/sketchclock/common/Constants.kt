@@ -12,6 +12,6 @@ object Constants {
     const val COLON_HEIGHT = 360
     const val SEPARATOR_WIDTH = 240
     const val SEPARATOR_HEIGHT = 360
-    const val ILLUSTRATION_WIDTH = 1200
-    const val ILLUSTRATION_HEIGHT = 1200
+    const val STICKER_WIDTH = 1200
+    const val STICKER_HEIGHT = 1200
 }

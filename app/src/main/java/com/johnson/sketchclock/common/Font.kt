@@ -8,5 +8,5 @@ data class Font(
     val lastModified: Long = 0,
     val editable: Boolean = true,
     val bookmarked: Boolean = false,
-    val createTime: Long = 0
+    val createTime: Long = System.currentTimeMillis(),
 ) : Serializable

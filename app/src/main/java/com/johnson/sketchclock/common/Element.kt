@@ -79,7 +79,7 @@ enum class EType {
         Colon -> Constants.COLON_WIDTH
         AmPm -> Constants.AMPM_WIDTH
         Slash -> Constants.SEPARATOR_WIDTH
-        Sticker -> Constants.ILLUSTRATION_WIDTH
+        Sticker -> Constants.STICKER_WIDTH
     }
 
     fun height() = when (this) {
@@ -87,7 +87,7 @@ enum class EType {
         Colon -> Constants.COLON_HEIGHT
         AmPm -> Constants.AMPM_HEIGHT
         Slash -> Constants.SEPARATOR_HEIGHT
-        Sticker -> Constants.ILLUSTRATION_HEIGHT
+        Sticker -> Constants.STICKER_HEIGHT
     }
 
     fun isCharacter() = this != Sticker

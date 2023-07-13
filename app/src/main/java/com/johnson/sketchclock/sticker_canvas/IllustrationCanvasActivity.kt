@@ -23,11 +23,11 @@ import javax.inject.Inject
 class StickerCanvasActivity : AppCompatActivity() {
 
     companion object {
-        private const val KEY_ILLUSTRATION = "sticker"
+        private const val KEY_STICKER = "sticker"
 
         fun createIntent(context: Context, sticker: Sticker): Intent {
             return Intent(context, StickerCanvasActivity::class.java).apply {
-                putExtra(KEY_ILLUSTRATION, sticker)
+                putExtra(KEY_STICKER, sticker)
             }
         }
     }
@@ -45,7 +45,7 @@ class StickerCanvasActivity : AppCompatActivity() {
         setContentView(vb.root)
         setSupportActionBar(vb.toolbar)
 
-        val sticker: Sticker? = intent.getSerializableExtra(KEY_ILLUSTRATION) as? Sticker
+        val sticker: Sticker? = intent.getSerializableExtra(KEY_STICKER) as? Sticker
         if (sticker == null) {
             Toast.makeText(this, "Missing font name", Toast.LENGTH_SHORT).show()
             finish()
@@ -60,7 +60,7 @@ class StickerCanvasActivity : AppCompatActivity() {
 
         if (!viewModel.isInitialized) {
             val stickerFile = stickerRepository.getStickerFile(sticker)
-            viewModel.onEvent(CanvasEvent.Init(Constants.ILLUSTRATION_WIDTH, Constants.ILLUSTRATION_HEIGHT, stickerFile, autoCrop = true))
+            viewModel.onEvent(CanvasEvent.Init(Constants.STICKER_WIDTH, Constants.STICKER_HEIGHT, stickerFile, autoCrop = true))
         }
 
         viewModel.fileSaved.collectLatestWhenStarted(this) { stickerRepository.upsertStickers(listOf(sticker)) }

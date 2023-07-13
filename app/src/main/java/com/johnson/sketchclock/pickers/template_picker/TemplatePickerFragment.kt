@@ -33,7 +33,7 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
     @Inject
     lateinit var templateVisualizer: TemplateVisualizer
 
-    private val previewCache = LruCache<Int, Bitmap>(30)
+    private val previewCache = LruCache<String, Bitmap>(30)
 
     override val viewModel: TemplatePickerViewModel by activityViewModels()
 
@@ -43,22 +43,30 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
         return ItemTemplateBinding.inflate(layoutInflater, parent, false)
     }
 
+    private val Template.hash: String
+        get() = "$id-$lastModified"
+
     override fun ItemTemplateBinding.bind(item: Template) {
         ivBookmark.visibility = if (item.bookmarked) View.VISIBLE else View.GONE
-        val previewBitmap = previewCache[item.id]
+        val previewBitmap = previewCache[item.hash]
         if (previewBitmap != null) {
             ivPreview.setImageBitmap(previewBitmap)
         } else {
             ivPreview.setImageBitmap(null)
             ivPreview.tag = item
             viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
-                Log.d(TAG, "generating preview for id=${item.id}")
+
+                previewCache.snapshot().keys.firstOrNull { it.startsWith("${item.id}-") }?.let {
+                    Log.d(TAG, "Removing redundant bitmap with key=$it")
+                    previewCache.remove(it)
+                }
+
                 val bitmap = Bitmap.createBitmap(Constants.TEMPLATE_WIDTH / 2, Constants.TEMPLATE_HEIGHT / 4, Bitmap.Config.ARGB_8888)
                 val canvas = Canvas(bitmap)
                 canvas.clipRect(0, 0, bitmap.width, bitmap.height)
                 canvas.translate(-(Constants.TEMPLATE_WIDTH - bitmap.width) / 2f, -(Constants.TEMPLATE_HEIGHT - bitmap.height) / 2f)
                 templateVisualizer.draw(canvas, item.elements)
-                previewCache.put(item.id, bitmap)
+                previewCache.put(item.hash, bitmap)
                 viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
                     if (ivPreview.tag == item) {
                         ivPreview.setImageBitmap(bitmap)
@@ -73,8 +81,11 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
     override val ItemTemplateBinding.rootView: View get() = root
 
     override fun areContentsTheSame(oldItem: Template, newItem: Template): Boolean {
-        //  Should I be comparing the contents of the templates here?
-        return oldItem == newItem
+        return oldItem.id == newItem.id
+                && oldItem.name == newItem.name
+                && oldItem.bookmarked == newItem.bookmarked
+                && oldItem.createTime == newItem.createTime
+                && oldItem.lastModified == newItem.lastModified
     }
 
     override fun areItemsTheSame(oldItem: Template, newItem: Template): Boolean {
