@@ -39,6 +39,7 @@ import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.*
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.Companion.showFontSelectorDialog
 import com.johnson.sketchclock.template_editor.SimpleIllustrationSelectorFragment.Companion.showIllustrationSelectorDialog
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.combine
 import java.lang.ref.WeakReference
 import javax.inject.Inject
 
@@ -73,7 +74,22 @@ class EditorFragment : Fragment() {
             }
         }
 
-        viewModel.elements.collectLatestWhenStarted(this) { vb.controlView.render() }
+        viewModel.elements.collectLatestWhenStarted(this) {
+            vb.controlView.render()
+            if (it.isNotEmpty())
+                vb.fabSelectAll.scaleIn()
+            else
+                vb.fabSelectAll.scaleOut()
+        }
+
+        viewModel.elements.combine(viewModel.selectedElements) { es, ses -> es.size == ses.size }.collectLatestWhenStarted(this) { isAllSelected ->
+            vb.fabSelectAll.setImageResource(
+                if (isAllSelected)
+                    R.drawable.fab_deselect
+                else
+                    R.drawable.fab_select_all
+            )
+        }
 
         viewModel.selectedElements.collectLatestWhenStarted(this) { selectedElements ->
             vb.controlView.selectedElements = selectedElements
@@ -115,6 +131,14 @@ class EditorFragment : Fragment() {
             }
         }
 
+        vb.fabSelectAll.setOnClickListener {
+            if (viewModel.selectedElements.value.size == viewModel.elements.value.size) {
+                viewModel.onEvent(EditorEvent.SetSelectedElements(emptyList()))
+            } else {
+                viewModel.onEvent(EditorEvent.SetSelectedElements(viewModel.elements.value))
+            }
+        }
+
         vb.fabOptionFont.setOnClickListener {
             val charElements = viewModel.selectedElements.value.filter { it.eType.isCharacter() }
             showFontSelectorDialog(Type.NONE) { font ->
@@ -133,10 +157,12 @@ class EditorFragment : Fragment() {
         vb.fabOptionColor.setOnClickListener {
             showTintControlPanel(true)
             showOptionButtons(false)
+            vb.fabSelectAll.scaleOut()
 
             vb.colorPicker.addCancelObserverView {
                 showTintControlPanel(false)
                 showOptionButtons(true)
+                vb.fabSelectAll.scaleIn()
             }
         }
 

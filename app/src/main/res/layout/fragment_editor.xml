@@ -118,12 +118,22 @@
     </com.google.android.material.button.MaterialButtonToggleGroup>
 
     <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_select_all"
+        style="?attr/floatingActionButtonSmallPrimaryStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_margin="16dp"
+        android:src="@drawable/fab_select_all"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
         android:id="@+id/fab_layer_up"
         style="?attr/floatingActionButtonSmallPrimaryStyle"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:layout_marginTop="64dp"
+        android:layout_marginTop="120dp"
         android:src="@drawable/editor_sort"
         android:visibility="gone"
         app:layout_constraintStart_toStartOf="parent"
