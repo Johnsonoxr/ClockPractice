@@ -105,7 +105,7 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
     override fun Template.createTime(): Long = this.createTime
 
     //  There might be default template in the future
-    override fun Template.editable(): Boolean = true
+    override fun Template.isEditable(): Boolean = true
 
     override fun Template.isBookmarked(): Boolean = bookmarked
 }

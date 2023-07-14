@@ -5,6 +5,7 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.DecelerateInterpolator
 import android.view.animation.OvershootInterpolator
+import android.widget.ImageView
 import com.johnson.sketchclock.R
 import java.lang.ref.WeakReference
 
@@ -80,8 +81,8 @@ fun View.removeCancelObserverView() {
     }
 }
 
-fun View.tintBackground(color: Int) {
-    background?.setTint(color)
+fun ImageView.tint(attr: Int) {
+    setColorFilter(getAttrColor(attr))
 }
 
 fun View.tintBackgroundAttr(attr: Int) {

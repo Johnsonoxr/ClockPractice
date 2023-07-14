@@ -71,7 +71,7 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
         return this.copy(title = title ?: this.title, bookmarked = bookmarked ?: this.bookmarked)
     }
 
-    override fun Font.editable(): Boolean = this.editable
+    override fun Font.isEditable(): Boolean = this.editable
 
     override fun Font.title(): String = this.title
 

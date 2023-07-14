@@ -10,6 +10,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
+import android.widget.ImageView
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
@@ -22,13 +23,16 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import com.google.android.material.R.*
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.collectLatestWhenResumed
 import com.johnson.sketchclock.common.collectLatestWhenStarted
+import com.johnson.sketchclock.common.getAttrColor
 import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
+import com.johnson.sketchclock.common.tint
 import com.johnson.sketchclock.common.tintBackgroundAttr
 import com.johnson.sketchclock.databinding.FragmentPickerBinding
 
@@ -43,7 +47,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     abstract val viewModel: VM
 
     //  item
-    abstract fun T.editable(): Boolean
+    abstract fun T.isEditable(): Boolean
     abstract fun T.title(): String
     abstract fun T.createTime(): Long
     abstract fun T.clone(title: String? = null, bookmarked: Boolean? = null): T
@@ -127,8 +131,8 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     ): List<T> {
         val filtering: ((T) -> Boolean) = when (filterType) {
             FilterType.ALL -> { _ -> true }
-            FilterType.DEFAULT -> { item -> !item.editable() }
-            FilterType.CUSTOM -> { item -> item.editable() }
+            FilterType.DEFAULT -> { item -> !item.isEditable() }
+            FilterType.CUSTOM -> { item -> item.isEditable() }
             FilterType.BOOKMARKED -> { item -> item.isBookmarked() }
         }
         val filteredItems = items.filter(filtering)
@@ -138,14 +142,14 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
             SortType.NAME_REVERSE -> filteredItems.sortedByDescending { it.title() }
             SortType.DATE -> filteredItems.sortedBy {
                 return@sortedBy when {
-                    it.editable() -> it.createTime() + (10L * 365L * 24L * 60L * 60L * 1000L)
+                    it.isEditable() -> it.createTime() + (10L * 365L * 24L * 60L * 60L * 1000L)
                     else -> it.createTime()
                 }
             }
 
             SortType.DATE_REVERSE -> filteredItems.sortedByDescending {
                 return@sortedByDescending when {
-                    it.editable() -> it.createTime() + (10L * 365L * 24L * 60L * 60L * 1000L)
+                    it.isEditable() -> it.createTime() + (10L * 365L * 24L * 60L * 60L * 1000L)
                     else -> it.createTime()
                 }
             }
@@ -319,18 +323,22 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
             }
 
             fun bind(item: T) {
-                vb.title.isClickable = viewModel.controlMode.value == ControlMode.NORMAL
-                val isVisuallySelected = when (viewModel.controlMode.value) {
-                    ControlMode.DELETE -> item in viewModel.selectedItems.value
-                    ControlMode.BOOKMARK -> item.isBookmarked() xor (item in viewModel.selectedItems.value)
-                    ControlMode.NORMAL -> false
+                val controlMode = viewModel.controlMode.value
+                vb.title.isClickable = controlMode == ControlMode.NORMAL
+
+                val visuallySelectDelete = controlMode == ControlMode.DELETE && item in viewModel.selectedItems.value
+                val visuallySelectBookmark = controlMode == ControlMode.BOOKMARK && item.isBookmarked() xor (item in viewModel.selectedItems.value)
+
+                val (bg, fg, txt) = when {
+                    visuallySelectDelete -> Triple(attr.colorErrorContainer, attr.colorError, attr.colorOnErrorContainer)
+                    visuallySelectBookmark -> Triple(attr.colorPrimary, attr.colorPrimaryContainer, attr.colorPrimaryContainer)
+                    else -> Triple(attr.colorPrimaryContainer, attr.colorPrimary, attr.colorOnPrimaryContainer)
                 }
-                val tintBackgroundAttr = when {
-                    isVisuallySelected -> com.google.android.material.R.attr.colorErrorContainer
-                    else -> com.google.android.material.R.attr.colorPrimaryContainer
-                }
-                vb.rootView.tintBackgroundAttr(tintBackgroundAttr)
+
+                vb.rootView.tintBackgroundAttr(bg)
                 vb.title.text = item.title()
+                vb.title.setTextColor(requireContext().getAttrColor(txt))
+                vb.rootView.findViewById<ImageView>(R.id.ivBookmark)?.tint(fg)
                 vb.bind(item)
             }
 
@@ -346,11 +354,15 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
             private fun showPopupMenu(v: View): Boolean {
                 val popup = PopupMenu(requireContext(), v)
                 popup.menuInflater.inflate(R.menu.menu_picker_pop, popup.menu)
+                if (!item.isEditable()) {
+                    popup.menu.removeItem(R.id.menu_rename)
+                    popup.menu.removeItem(R.id.menu_delete)
+                }
 
                 popup.setOnMenuItemClickListener { menuItem: MenuItem ->
                     when (menuItem.itemId) {
                         R.id.menu_delete -> {
-                            if (!item.editable()) {
+                            if (!item.isEditable()) {
                                 Toast.makeText(context, "Cannot delete this item", Toast.LENGTH_SHORT).show()
                             } else if (item.isBookmarked()) {
                                 Toast.makeText(context, "Cannot delete bookmarked item", Toast.LENGTH_SHORT).show()
@@ -364,7 +376,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                         }
 
                         R.id.menu_rename -> {
-                            if (item.editable()) {
+                            if (item.isEditable()) {
                                 showEditTextDialog("Rename", item.title()) { newName ->
                                     viewModel.onEvent(PickerEvent.Update(listOf(item.clone(title = newName))))
                                 }
@@ -390,7 +402,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                     vb.rootView -> {
                         when (viewModel.controlMode.value) {
                             ControlMode.DELETE -> {
-                                if (!item.editable()) {
+                                if (!item.isEditable()) {
                                     Toast.makeText(context, "Cannot delete this item", Toast.LENGTH_SHORT).show()
                                     return
                                 } else if (item.isBookmarked()) {
@@ -403,7 +415,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                             ControlMode.BOOKMARK -> updateSelection()
 
                             ControlMode.NORMAL -> {
-                                if (item.editable()) {
+                                if (item.isEditable()) {
                                     startActivity(createEditItemIntent(item))
                                 } else {
                                     Toast.makeText(context, "Cannot edit this item", Toast.LENGTH_SHORT).show()
@@ -413,7 +425,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                     }
 
                     vb.title -> {
-                        if (!item.editable()) {
+                        if (!item.isEditable()) {
                             Toast.makeText(context, "Cannot edit this item", Toast.LENGTH_SHORT).show()
                             return
                         }

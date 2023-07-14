@@ -58,7 +58,7 @@ class StickerPickerFragment : PickerFragment<Sticker, ItemStickerBinding, Sticke
         return this.copy(title = title ?: this.title, bookmarked = bookmarked ?: this.bookmarked)
     }
 
-    override fun Sticker.editable(): Boolean = this.editable
+    override fun Sticker.isEditable(): Boolean = this.editable
 
     override fun Sticker.title(): String = this.title
 
