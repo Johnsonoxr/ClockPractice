@@ -10,6 +10,8 @@ import android.graphics.Matrix
 import android.graphics.Paint
 import android.graphics.Path
 import android.graphics.PointF
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.graphics.RectF
 import android.util.AttributeSet
 import android.util.Log
@@ -19,6 +21,7 @@ import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.ControlView
 import com.johnson.sketchclock.common.Element
+import com.johnson.sketchclock.common.getAttrColor
 import java.lang.ref.WeakReference
 import kotlin.math.atan2
 import kotlin.math.hypot
@@ -48,16 +51,19 @@ class EditorView @JvmOverloads constructor(
 
     private var ctlState: Int = CTL_STATE_NONE
 
-    private val deleteBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_delete) }
-    private val scaleBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_scale) }
-    private val rotateBitmap: Bitmap? by lazy { BitmapFactory.decodeResource(resources, R.drawable.editor_rotate) }
+    private val deleteBitmap: Bitmap? by lazy { loadTintBitmap(R.drawable.editor_delete) }
+    private val scaleBitmap: Bitmap? by lazy { loadTintBitmap(R.drawable.editor_scale) }
+    private val rotateBitmap: Bitmap? by lazy { loadTintBitmap(R.drawable.editor_rotate) }
 
     private val tolerance: Float by lazy { deleteBitmap?.width?.times(.5f) ?: 0f }
+    private val colorPrimary by lazy { getAttrColor(com.google.android.material.R.attr.colorPrimary) }
 
-    private val groupRectPaint = Paint().apply {
-        strokeWidth = 1.dp()
-        color = Color.RED
-        style = Paint.Style.STROKE
+    private val groupRectPaint by lazy {
+        Paint().apply {
+            strokeWidth = 1.dp()
+            color = colorPrimary
+            style = Paint.Style.STROKE
+        }
     }
 
     private val groupShadowPaint = Paint().apply {
@@ -67,11 +73,13 @@ class EditorView @JvmOverloads constructor(
         alpha = 50
     }
 
-    private val elementRectPaint = Paint().apply {
-        strokeWidth = 1.dp()
-        color = Color.RED
-        style = Paint.Style.STROKE
-        pathEffect = DashPathEffect(floatArrayOf(5.dp(), 5.dp()), 0f)
+    private val elementRectPaint by lazy {
+        Paint().apply {
+            strokeWidth = 1.dp()
+            color = colorPrimary
+            style = Paint.Style.STROKE
+            pathEffect = DashPathEffect(floatArrayOf(5.dp(), 5.dp()), 0f)
+        }
     }
 
     private val elementShadowPaint = Paint().apply {
@@ -368,6 +376,32 @@ class EditorView @JvmOverloads constructor(
 
     private fun distance(p1: FloatArray, p2: FloatArray): Float {
         return hypot(p1[0] - p2[0], p1[1] - p2[1])
+    }
+
+    private fun loadTintBitmap(resId: Int): Bitmap {
+        val bitmap = BitmapFactory.decodeResource(resources, resId)
+        val result = Bitmap.createBitmap(bitmap.width, bitmap.height, Bitmap.Config.ARGB_8888)
+        val canvas = Canvas(result)
+        val paint = Paint(Paint.ANTI_ALIAS_FLAG)
+
+        val fgColor = getAttrColor(com.google.android.material.R.attr.colorControlActivated)
+        val bgColor = getAttrColor(com.google.android.material.R.attr.colorPrimaryContainer)
+        val radius = bitmap.width / 2f - 2.dp()
+
+        canvas.drawCircle(bitmap.width / 2f, bitmap.height / 2f, radius, groupShadowPaint)
+
+        paint.color = bgColor
+        paint.style = Paint.Style.FILL
+        canvas.drawCircle(bitmap.width / 2f, bitmap.height / 2f, radius, paint)
+
+        paint.color = fgColor
+        paint.style = Paint.Style.STROKE
+        paint.strokeWidth = 1.dp()
+        canvas.drawCircle(bitmap.width / 2f, bitmap.height / 2f, radius, paint)
+
+        paint.colorFilter = PorterDuffColorFilter(fgColor, PorterDuff.Mode.SRC_IN)
+        canvas.drawBitmap(bitmap, 0f, 0f, paint)
+        return result
     }
 
     private fun Int.dp(): Float {

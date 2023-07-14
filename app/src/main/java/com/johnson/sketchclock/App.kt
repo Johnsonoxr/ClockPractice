@@ -7,6 +7,7 @@ import android.os.Handler
 import android.os.Looper
 import android.util.Log
 import androidx.core.os.postDelayed
+import com.google.android.material.color.DynamicColors
 import com.johnson.sketchclock.widget.ClockWidget
 import dagger.hilt.android.HiltAndroidApp
 
@@ -17,6 +18,9 @@ class App : Application() {
 
     override fun onCreate() {
         super.onCreate()
+
+        DynamicColors.applyToActivitiesIfAvailable(this)
+
         registerActivityLifecycleCallbacks(object : ActivityLifecycleCallbacks {
             override fun onActivityCreated(activity: Activity, savedInstanceState: Bundle?) {
             }
