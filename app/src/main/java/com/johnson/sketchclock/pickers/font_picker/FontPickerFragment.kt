@@ -67,8 +67,8 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
         return CanvasActivity.createIntent(requireContext(), item)
     }
 
-    override fun Font.clone(title: String?, bookmark: Boolean?): Font {
-        return this.copy(title = title ?: this.title, bookmarked = bookmark ?: this.bookmarked)
+    override fun Font.clone(title: String?, bookmarked: Boolean?): Font {
+        return this.copy(title = title ?: this.title, bookmarked = bookmarked ?: this.bookmarked)
     }
 
     override fun Font.editable(): Boolean = this.editable

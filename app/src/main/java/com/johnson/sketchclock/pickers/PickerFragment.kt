@@ -13,6 +13,7 @@ import android.view.ViewGroup
 import android.widget.TextView
 import android.widget.Toast
 import androidx.activity.OnBackPressedCallback
+import androidx.appcompat.widget.PopupMenu
 import androidx.core.view.MenuProvider
 import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
@@ -45,7 +46,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
     abstract fun T.editable(): Boolean
     abstract fun T.title(): String
     abstract fun T.createTime(): Long
-    abstract fun T.clone(title: String? = null, bookmark: Boolean? = null): T
+    abstract fun T.clone(title: String? = null, bookmarked: Boolean? = null): T
     abstract fun T.isBookmarked(): Boolean
     abstract fun createEmptyItem(): T
 
@@ -183,7 +184,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                     viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
                     return
                 }
-                viewModel.onEvent(PickerEvent.Update(items.map { it.clone(bookmark = !it.isBookmarked()) }))
+                viewModel.onEvent(PickerEvent.Update(items.map { it.clone(bookmarked = !it.isBookmarked()) }))
                 viewModel.onEvent(PickerEvent.ChangeControlMode(ControlMode.NORMAL))
             }
 
@@ -314,6 +315,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
             init {
                 vb.rootView.setOnClickListener(this)
                 vb.title.setOnClickListener(this)
+                vb.rootView.setOnLongClickListener { showPopupMenu(vb.rootView) }
             }
 
             fun bind(item: T) {
@@ -339,6 +341,48 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                     viewModel.selectedItems.value + item
                 }
                 viewModel.onEvent(PickerEvent.Select(selected))
+            }
+
+            private fun showPopupMenu(v: View): Boolean {
+                val popup = PopupMenu(requireContext(), v)
+                popup.menuInflater.inflate(R.menu.menu_picker_pop, popup.menu)
+
+                popup.setOnMenuItemClickListener { menuItem: MenuItem ->
+                    when (menuItem.itemId) {
+                        R.id.menu_delete -> {
+                            if (!item.editable()) {
+                                Toast.makeText(context, "Cannot delete this item", Toast.LENGTH_SHORT).show()
+                            } else if (item.isBookmarked()) {
+                                Toast.makeText(context, "Cannot delete bookmarked item", Toast.LENGTH_SHORT).show()
+                            } else {
+                                viewModel.onEvent(PickerEvent.Delete(listOf(item)))
+                            }
+                        }
+
+                        R.id.menu_bookmark -> {
+                            viewModel.onEvent(PickerEvent.Update(listOf(item.clone(bookmarked = !item.isBookmarked()))))
+                        }
+
+                        R.id.menu_rename -> {
+                            if (item.editable()) {
+                                showEditTextDialog("Rename", item.title()) { newName ->
+                                    viewModel.onEvent(PickerEvent.Update(listOf(item.clone(title = newName))))
+                                }
+                            } else {
+                                Toast.makeText(context, "Cannot edit this item", Toast.LENGTH_SHORT).show()
+                            }
+                        }
+
+                        R.id.menu_copy -> {
+                            Toast.makeText(context, "Not implement yet", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                    true
+                }
+
+                popup.setForceShowIcon(true)
+                popup.show()
+                return true
             }
 
             override fun onClick(v: View) {

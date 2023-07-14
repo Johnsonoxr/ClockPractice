@@ -54,8 +54,8 @@ class StickerPickerFragment : PickerFragment<Sticker, ItemStickerBinding, Sticke
         return StickerCanvasActivity.createIntent(requireContext(), item)
     }
 
-    override fun Sticker.clone(title: String?, bookmark: Boolean?): Sticker {
-        return this.copy(title = title ?: this.title, bookmarked = bookmark ?: this.bookmarked)
+    override fun Sticker.clone(title: String?, bookmarked: Boolean?): Sticker {
+        return this.copy(title = title ?: this.title, bookmarked = bookmarked ?: this.bookmarked)
     }
 
     override fun Sticker.editable(): Boolean = this.editable

@@ -96,8 +96,8 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
         return EditorActivity.createIntent(requireContext(), item)
     }
 
-    override fun Template.clone(title: String?, bookmark: Boolean?): Template {
-        return copy(name = title ?: this.name, bookmarked = bookmark ?: this.bookmarked)
+    override fun Template.clone(title: String?, bookmarked: Boolean?): Template {
+        return copy(name = title ?: this.name, bookmarked = bookmarked ?: this.bookmarked)
     }
 
     override fun Template.title(): String = name
