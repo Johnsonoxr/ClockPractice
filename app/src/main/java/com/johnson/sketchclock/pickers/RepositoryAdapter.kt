@@ -7,5 +7,5 @@ interface RepositoryAdapter<T> {
     suspend fun addItems(items: List<T>)
     suspend fun deleteItems(items: List<T>)
     suspend fun updateItems(items: List<T>)
-    suspend fun copyAsNewItem(item: T): T? {return null}
+    suspend fun copyAsNewItem(item: T): T?
 }

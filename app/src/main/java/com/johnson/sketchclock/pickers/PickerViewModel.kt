@@ -105,6 +105,10 @@ abstract class PickerViewModel<Item> : ViewModel() {
                 is PickerEvent.ChangeFilterType -> {
                     preferenceRepository.putString(filterTypeKey, event.filterType.name)
                 }
+
+                is PickerEvent.Copy -> {
+                    repository.copyAsNewItem(event.item)
+                }
             }
         }
     }

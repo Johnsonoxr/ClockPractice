@@ -62,34 +62,40 @@ class StickerRepositoryImpl @Inject constructor(
         return _stickers.value.find { it.resName == resName }
     }
 
-    override suspend fun upsertStickers(stickers: Collection<Sticker>) {
-
-        stickers.forEach { sticker ->
-
-            val id = sticker.id.takeIf { it >= 0 } ?: getNewStickerId()
-            val resName = sticker.resName ?: "$USER_DIR/$id"
-
-            val newSticker = sticker.copy(resName = resName)
-
-            if (!newSticker.dir.exists() && newSticker.deletedDir.exists()) {
-                Log.d(TAG, "upsertSticker(): Restoring deleted sticker, res=${newSticker.resName}")
-                newSticker.deletedDir.renameTo(newSticker.dir)
-            } else {
-                newSticker.dir.mkdirs()
-            }
-            val gsonString = gson.toJson(
-                mapOf(
-                    KEY_NAME to newSticker.title,
-                    KEY_LAST_MODIFIED to System.currentTimeMillis(),
-                    KEY_CREATE_TIME to newSticker.createTime,
-                    KEY_BOOKMARKED to newSticker.bookmarked
-                )
-            )
-            File(newSticker.dir, DESCRIPTION_FILE).writeText(gsonString)
-            Log.d(TAG, "upsertSticker(): Save sticker: $resName")
-        }
-
+    override suspend fun upsertSticker(sticker: Sticker): String {
+        val resName = upsertStickerWithoutLoadList(sticker)
         _stickers.value = loadStickerList()
+        return resName
+    }
+
+    override suspend fun upsertStickers(stickers: Collection<Sticker>) {
+        stickers.forEach { sticker -> upsertStickerWithoutLoadList(sticker) }
+        _stickers.value = loadStickerList()
+    }
+
+    private fun upsertStickerWithoutLoadList(sticker: Sticker): String {
+        val id = sticker.id.takeIf { it >= 0 } ?: getNewStickerId()
+        val resName = sticker.resName ?: "$USER_DIR/$id"
+
+        val newSticker = sticker.copy(resName = resName)
+
+        if (!newSticker.dir.exists() && newSticker.deletedDir.exists()) {
+            Log.d(TAG, "upsertSticker(): Restoring deleted sticker, res=${newSticker.resName}")
+            newSticker.deletedDir.renameTo(newSticker.dir)
+        } else {
+            newSticker.dir.mkdirs()
+        }
+        val gsonString = gson.toJson(
+            mapOf(
+                KEY_NAME to newSticker.title,
+                KEY_LAST_MODIFIED to System.currentTimeMillis(),
+                KEY_CREATE_TIME to newSticker.createTime,
+                KEY_BOOKMARKED to newSticker.bookmarked
+            )
+        )
+        File(newSticker.dir, DESCRIPTION_FILE).writeText(gsonString)
+        Log.d(TAG, "upsertSticker(): Save sticker: $resName")
+        return resName
     }
 
     override suspend fun deleteStickers(stickers: Collection<Sticker>) {

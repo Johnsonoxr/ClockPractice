@@ -22,4 +22,18 @@ class StickerRepositoryAdapter(private val stickerRepository: StickerRepository)
     override suspend fun addItems(items: List<Sticker>) {
         stickerRepository.upsertStickers(items)
     }
+
+    override suspend fun copyAsNewItem(item: Sticker): Sticker? {
+        val emptySticker = Sticker(title = item.title)
+        val newResName = stickerRepository.upsertSticker(emptySticker)
+        val newSticker = stickerRepository.getStickerByRes(newResName) ?: return null
+
+        val srcFile = stickerRepository.getStickerFile(item)
+        if (srcFile.exists()) {
+            val destFile = stickerRepository.getStickerFile(newSticker)
+            srcFile.copyTo(destFile)
+        }
+
+        return newSticker
+    }
 }

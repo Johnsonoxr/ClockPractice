@@ -18,7 +18,6 @@ import androidx.core.view.MenuProvider
 import androidx.core.view.postDelayed
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.LinearLayoutManager
@@ -28,7 +27,6 @@ import com.google.android.material.snackbar.Snackbar
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.collectLatestWhenResumed
 import com.johnson.sketchclock.common.collectLatestWhenStarted
-import com.johnson.sketchclock.common.launchWhenStarted
 import com.johnson.sketchclock.common.showDialog
 import com.johnson.sketchclock.common.showEditTextDialog
 import com.johnson.sketchclock.common.tintBackgroundAttr
@@ -376,14 +374,7 @@ abstract class PickerFragment<T, ViewBinding, out VM : PickerViewModel<T>> : Fra
                         }
 
                         R.id.menu_copy -> {
-                            launchWhenStarted {
-                                val newItem = viewModel.repository.copyAsNewItem(item)
-                                if (newItem != null) {
-                                    Toast.makeText(context, "Copied", Toast.LENGTH_SHORT).show()
-                                } else {
-                                    Toast.makeText(context, "Cannot copy this item", Toast.LENGTH_SHORT).show()
-                                }
-                            }
+                            viewModel.onEvent(PickerEvent.Copy(item.clone(title = "${item.title()} Copy")))
                         }
                     }
                     true

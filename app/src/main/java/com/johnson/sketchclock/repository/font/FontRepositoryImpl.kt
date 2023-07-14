@@ -61,6 +61,17 @@ class FontRepositoryImpl @Inject constructor(
     }
 
     override suspend fun upsertFont(font: Font): String {
+        val resName = upsertFontWithoutLoadList(font)
+        _fonts.value = loadFontList()
+        return resName
+    }
+
+    override suspend fun upsertFonts(fonts: Collection<Font>) {
+        fonts.forEach { font -> upsertFontWithoutLoadList(font) }
+        _fonts.value = loadFontList()
+    }
+
+    private fun upsertFontWithoutLoadList(font: Font): String {
         val id = font.id.takeIf { it >= 0 } ?: getNewFontId()
         val resName = font.resName ?: "$USER_DIR/$id"
 
@@ -84,40 +95,7 @@ class FontRepositoryImpl @Inject constructor(
         )
         descriptionFile.writeText(gsonString)
         Log.d(TAG, "upsertFont(): Saved font: $resName")
-        _fonts.value = loadFontList()
         return resName
-    }
-
-    override suspend fun upsertFonts(fonts: Collection<Font>) {
-
-        fonts.forEach { font ->
-
-            val id = font.id.takeIf { it >= 0 } ?: getNewFontId()
-            val resName = font.resName ?: "$USER_DIR/$id"
-
-            val newFont = font.copy(resName = resName)
-
-            if (!newFont.dir.exists() && newFont.deletedDir.exists()) {
-                Log.d(TAG, "upsertFont(): Restoring deleted font: $resName")
-                newFont.deletedDir.renameTo(newFont.dir)
-            } else {
-                newFont.dir.mkdirs()
-            }
-
-            val descriptionFile = File(newFont.dir, DESCRIPTION_FILE)
-            val gsonString = gson.toJson(
-                mapOf(
-                    KEY_FONT_NAME to newFont.title,
-                    KEY_LAST_MODIFIED to System.currentTimeMillis(),
-                    KEY_CREATE_TIME to newFont.createTime,
-                    KEY_BOOKMARKED to newFont.bookmarked,
-                )
-            )
-            descriptionFile.writeText(gsonString)
-            Log.d(TAG, "upsertFont(): Saved font: $resName")
-        }
-
-        _fonts.value = loadFontList()
     }
 
     override suspend fun deleteFonts(fonts: Collection<Font>) {

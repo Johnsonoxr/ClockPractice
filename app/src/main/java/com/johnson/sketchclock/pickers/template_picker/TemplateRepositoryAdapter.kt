@@ -21,4 +21,10 @@ class TemplateRepositoryAdapter(private val templateRepository: TemplateReposito
     override suspend fun addItems(items: List<Template>) {
         items.forEach { templateRepository.upsertTemplate(it) }
     }
+
+    override suspend fun copyAsNewItem(item: Template): Template? {
+        val emptyTemplate = Template(name = item.name, elements = item.elements)
+        val newTemplateId = templateRepository.upsertTemplate(emptyTemplate)
+        return newTemplateId.let { templateRepository.getTemplateById(it.toInt()) }
+    }
 }
