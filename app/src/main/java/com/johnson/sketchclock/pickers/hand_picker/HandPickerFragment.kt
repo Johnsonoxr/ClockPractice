@@ -6,7 +6,6 @@ import android.view.ViewGroup
 import android.widget.TextView
 import androidx.fragment.app.activityViewModels
 import com.johnson.sketchclock.canvas.HandCanvasActivity
-import com.johnson.sketchclock.canvas.StickerCanvasActivity
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Hand
 import com.johnson.sketchclock.common.HandType
