@@ -21,10 +21,12 @@ import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.R
+import com.johnson.sketchclock.canvas.StickerCanvasActivity
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Font
+import com.johnson.sketchclock.common.Hand
 import com.johnson.sketchclock.common.Sticker
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.addCancelObserverView
@@ -33,10 +35,10 @@ import com.johnson.sketchclock.common.removeCancelObserverView
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentEditorBinding
-import com.johnson.sketchclock.canvas.StickerCanvasActivity
 import com.johnson.sketchclock.repository.sticker.StickerRepository
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.*
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.Companion.showFontSelectorDialog
+import com.johnson.sketchclock.template_editor.SimpleHandSelectorFragment.Companion.showHandSelectorDialog
 import com.johnson.sketchclock.template_editor.SimpleStickerSelectorFragment.Companion.showStickerSelectorDialog
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.flow.combine
@@ -121,6 +123,15 @@ class EditorFragment : Fragment() {
         setupAddTemplateFab(Type.HOUR_24H, vb.fabAddTime24h, EType.Hour1, EType.Hour2, EType.Colon, EType.Minute1, EType.Minute2)
         setupAddTemplateFab(Type.HOUR_12H, vb.fabAddTime12h, EType.Hour12Hr1, EType.Hour12Hr2, EType.Colon, EType.Minute1, EType.Minute2, EType.AmPm)
         setupAddTemplateFab(Type.DATE, vb.fabAddDate, EType.Month1, EType.Month2, EType.Slash, EType.Day1, EType.Day2)
+
+        vb.fabAddHands.setOnClickListener {
+            showHandSelectorDialog { hand ->
+                showAddTemplateButtons(false)
+                val elements = createHandElements(hand)
+                viewModel.onEvent(EditorEvent.AddElements(elements))
+                viewModel.onEvent(EditorEvent.SetSelectedElements(elements))
+            }
+        }
 
         vb.fabAddSticker.setOnClickListener {
             showStickerSelectorDialog { sticker ->
@@ -270,11 +281,13 @@ class EditorFragment : Fragment() {
             vb.fabAdd.addCancelObserverView {
                 showAddTemplateButtons(false)
             }
-            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddSticker).forEach { it.scaleIn() }
+            vb.fabSelectAll.scaleOut()
+            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddHands, vb.fabAddSticker).forEach { it.scaleIn() }
         } else {
             vb.fabAdd.animate().setInterpolator(OvershootInterpolator()).rotation(0f).setDuration(300).start()
             vb.fabAdd.removeCancelObserverView()
-            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddSticker).forEach { it.scaleOut() }
+            vb.fabSelectAll.scaleIn()
+            listOf(vb.fabAddTime12h, vb.fabAddTime24h, vb.fabAddDate, vb.fabAddHands, vb.fabAddSticker).forEach { it.scaleOut() }
         }
     }
 
@@ -334,6 +347,15 @@ class EditorFragment : Fragment() {
 //            matrix.preScale(0.8f, 0.8f)
             FloatArray(9).apply { matrix.getValues(this) }
         })
+    }
+
+    private fun createHandElements(hand: Hand): List<Element> {
+        return listOf(EType.HourHand, EType.MinuteHand).map { eType ->
+            Element(eType = eType, resName = hand.resName, matrixArray = Matrix().let { matrix ->
+                matrix.preTranslate(.5f * Constants.TEMPLATE_WIDTH, .5f * Constants.TEMPLATE_HEIGHT)
+                FloatArray(9).apply { matrix.getValues(this) }
+            })
+        }
     }
 
     private val menuProvider = object : MenuProvider {

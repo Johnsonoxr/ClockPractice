@@ -11,7 +11,7 @@ import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Hand
 import com.johnson.sketchclock.common.HandType
 import com.johnson.sketchclock.common.Utils.hourDegree
-import com.johnson.sketchclock.common.Utils.minuteDegress
+import com.johnson.sketchclock.common.Utils.minuteDegree
 import com.johnson.sketchclock.databinding.ItemHandBinding
 import com.johnson.sketchclock.pickers.PickerFragment
 import com.johnson.sketchclock.repository.hand.HandRepository
@@ -44,7 +44,7 @@ class HandPickerFragment : PickerFragment<Hand, ItemHandBinding, HandPickerViewM
         GlideHelper.load(ivPreview1, handRepository.getHandFile(item, HandType.MINUTE))
         val calendar = Calendar.getInstance()
         ivPreview0.rotation = calendar.hourDegree()
-        ivPreview1.rotation = calendar.minuteDegress()
+        ivPreview1.rotation = calendar.minuteDegree()
     }
 
     override val ItemHandBinding.rootView: View
@@ -62,7 +62,6 @@ class HandPickerFragment : PickerFragment<Hand, ItemHandBinding, HandPickerViewM
 
     override fun createEditItemIntent(item: Hand): Intent {
         return HandCanvasActivity.createIntent(requireContext(), item)
-        return Intent(context, StickerCanvasActivity::class.java)
     }
 
     override fun Hand.clone(title: String?, bookmarked: Boolean?): Hand {

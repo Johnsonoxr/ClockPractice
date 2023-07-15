@@ -18,8 +18,10 @@ import com.johnson.sketchclock.common.Utils.hour12Hr1Ch
 import com.johnson.sketchclock.common.Utils.hour12Hr2Ch
 import com.johnson.sketchclock.common.Utils.hour1Ch
 import com.johnson.sketchclock.common.Utils.hour2Ch
+import com.johnson.sketchclock.common.Utils.hourDegree
 import com.johnson.sketchclock.common.Utils.minute1Ch
 import com.johnson.sketchclock.common.Utils.minute2Ch
+import com.johnson.sketchclock.common.Utils.minuteDegree
 import com.johnson.sketchclock.common.Utils.month1Ch
 import com.johnson.sketchclock.common.Utils.month2Ch
 import com.johnson.sketchclock.repository.font.FontRepository
@@ -44,10 +46,12 @@ class TemplateVisualizer @Inject constructor(
     private val softColorFilterCache = LruCache<Int, ColorMatrixColorFilter>(10)
 
     fun draw(canvas: Canvas, elements: List<Element>, timeMillis: Long? = null) {
+        val calendar = Calendar.getInstance()
+        timeMillis?.let { calendar.timeInMillis = it }
         synchronized(this) {
             elements.forEach { element ->
 
-                loadBitmap(element, timeMillis)?.let { bmp ->
+                loadBitmap(element, calendar)?.let { bmp ->
                     val hardTint = element.hardTintColor
                     val softTint = element.softTintColor
 
@@ -60,28 +64,33 @@ class TemplateVisualizer @Inject constructor(
                         else -> null
                     }
 
+                    if (element.eType == EType.HourHand) {
+                        matrix.preRotate(calendar.hourDegree(), bmp.width / 2f, bmp.height / 2f)
+                    } else if (element.eType == EType.MinuteHand) {
+                        matrix.preRotate(calendar.minuteDegree(), bmp.width / 2f, bmp.height / 2f)
+                    }
+
                     canvas.drawBitmap(bmp, matrix, bitmapPaint)
                 }
             }
         }
     }
 
-    private fun loadBitmap(element: Element, timeMillis: Long? = null): Bitmap? {
+    private fun loadBitmap(element: Element, calendar: Calendar): Bitmap? {
         val elementResName = element.resName ?: return null
-
-        val calendar = Calendar.getInstance()
-        timeMillis?.let { calendar.timeInMillis = it }
 
         return when {
             element.eType.isSticker() -> {
                 val sticker = stickerRepository.getStickerByRes(elementResName)
                 sticker?.let { resourceHolder.getStickerBitmap(it) }
             }
+
             element.eType.isHand() -> {
                 val hand = handRepository.getHandByRes(elementResName)
                 val handType = if (element.eType == EType.HourHand) HandType.HOUR else HandType.MINUTE
                 hand?.let { resourceHolder.getHandBitmap(it, handType) }
             }
+
             element.eType.isCharacter() -> {
                 val char: Character = when (element.eType) {
                     EType.Hour1 -> calendar.hour1Ch()
@@ -102,6 +111,7 @@ class TemplateVisualizer @Inject constructor(
                 val font = fontRepository.getFontByRes(elementResName)
                 font?.let { resourceHolder.getFontBitmap(it, char) }
             }
+
             else -> null
         }
     }

@@ -123,7 +123,7 @@ object Utils {
         return millisInHalfDay / (12 * 60 * 60 * 1000).toFloat() * 360f
     }
 
-    fun Calendar.minuteDegress(): Float {
+    fun Calendar.minuteDegree(): Float {
         val millisInHour = this.timeInMillis % (60 * 60 * 1000)
         return millisInHour / (60 * 60 * 1000).toFloat() * 360f
     }
