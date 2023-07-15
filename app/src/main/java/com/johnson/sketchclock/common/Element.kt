@@ -72,6 +72,8 @@ enum class EType {
     Colon,
     AmPm,
     Slash,
+    HourHand,
+    MinuteHand,
     Sticker;
 
     fun width() = when (this) {
@@ -80,6 +82,7 @@ enum class EType {
         AmPm -> Constants.AMPM_WIDTH
         Slash -> Constants.SEPARATOR_WIDTH
         Sticker -> Constants.STICKER_WIDTH
+        HourHand, MinuteHand -> Constants.HAND_WIDTH
     }
 
     fun height() = when (this) {
@@ -88,7 +91,12 @@ enum class EType {
         AmPm -> Constants.AMPM_HEIGHT
         Slash -> Constants.SEPARATOR_HEIGHT
         Sticker -> Constants.STICKER_HEIGHT
+        HourHand, MinuteHand -> Constants.HAND_HEIGHT
     }
 
-    fun isCharacter() = this != Sticker
+    fun isCharacter() = !isHand() && !isSticker()
+
+    fun isSticker() = this == Sticker
+
+    fun isHand() = this == HourHand || this == MinuteHand
 }

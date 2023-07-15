@@ -13,41 +13,47 @@
         android:layout_height="match_parent"
         android:padding="8dp">
 
+        <TextView
+            android:id="@+id/tvName"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="TextView"
+            android:textSize="20sp"
+            android:textStyle="bold"
+            app:layout_constraintBottom_toTopOf="@+id/ivPreview0"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent" />
+
         <ImageView
             android:id="@+id/ivBookmark"
-            tools:visibility="visible"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:src="@drawable/bottom_bookmark"
             android:visibility="gone"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintTop_toTopOf="parent"
-            app:tint="?attr/colorPrimary" />
-
-        <TextView
-            android:id="@+id/tvName"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:lines="1"
-            android:ellipsize="end"
-            android:text="TextView"
-            android:textSize="20sp"
-            android:textStyle="bold"
-            app:layout_constraintBottom_toTopOf="@+id/ivPreview"
-            app:layout_constraintStart_toStartOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:tint="?attr/colorPrimary"
+            tools:visibility="visible" />
 
         <com.johnson.sketchclock.pickers.RatioImageView
-            android:id="@+id/ivPreview"
+            android:id="@+id/ivPreview0"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:background="@drawable/item_template_iv_roundcorner"
-            android:clipToOutline="true"
-            android:backgroundTint="@android:color/transparent"
             android:scaleType="fitCenter"
+            app:aspectRatio="1.0"
             app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintTop_toBottomOf="@+id/tvName" />
+            app:layout_constraintTop_toBottomOf="@id/tvName" />
+
+        <com.johnson.sketchclock.pickers.RatioImageView
+            android:id="@+id/ivPreview1"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:scaleType="fitCenter"
+            app:aspectRatio="1.0"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintTop_toBottomOf="@id/tvName" />
 
     </androidx.constraintlayout.widget.ConstraintLayout>
 
 </com.google.android.material.card.MaterialCardView>
+

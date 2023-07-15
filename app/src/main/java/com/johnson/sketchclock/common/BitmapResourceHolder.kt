@@ -1,20 +1,20 @@
 package com.johnson.sketchclock.common
 
-import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.util.Log
 import android.util.LruCache
 import android.util.Size
 import com.johnson.sketchclock.repository.font.FontRepository
+import com.johnson.sketchclock.repository.hand.HandRepository
 import com.johnson.sketchclock.repository.sticker.StickerRepository
 import javax.inject.Inject
 
 private const val TAG = "BitmapResourceHolder"
 
 class BitmapResourceHolder @Inject constructor(
-    private val context: Context,
     private val fontRepository: FontRepository,
+    private val handRepository: HandRepository,
     private val stickerRepository: StickerRepository
 ) {
 
@@ -32,10 +32,22 @@ class BitmapResourceHolder @Inject constructor(
                 bitmaps.put(key, it)
                 return it
             }
-//            GlideHelper.loadBitmap(context, characterFile)?.let {
-//                bitmaps.put(key, it)
-//                return it
-//            }
+        }
+
+        return null
+    }
+
+    fun getHandBitmap(hand: Hand, handType: HandType): Bitmap? {
+        val key = "${hand.resName}/$handType/${hand.lastModified}"
+
+        bitmaps[key]?.let { return it }
+
+        val handFile = handRepository.getHandFile(hand, handType)
+        if (handFile.exists()) {
+            BitmapFactory.decodeFile(handFile.absolutePath)?.let {
+                bitmaps.put(key, it)
+                return it
+            }
         }
 
         return null
@@ -52,10 +64,6 @@ class BitmapResourceHolder @Inject constructor(
                 bitmaps.put(key, it)
                 return it
             }
-//            GlideHelper.loadBitmap(context, stickerFile)?.let {
-//                bitmaps.put(key, it)
-//                return it
-//            }
         }
 
         return null
@@ -63,18 +71,14 @@ class BitmapResourceHolder @Inject constructor(
 
     fun getElementSize(element: Element): Size? {
         val resName = element.resName ?: return null
-        return when (element.eType) {
-            EType.Sticker -> stickerRepository.getStickerByRes(resName)?.let { getStickerSize(it) }
+        return when {
+            element.eType.isSticker() -> stickerRepository.getStickerByRes(resName)?.let { getStickerSize(it) }
+            element.eType.isHand() -> handRepository.getHandByRes(resName)?.let { Size(element.eType.width(), element.eType.height()) }
             else -> fontRepository.getFontByRes(resName)?.let { Size(element.eType.width(), element.eType.height()) }
         }
     }
 
-    //  Might return null if the bitmap is not yet loaded in future SPEC, therefore we return nullable.
-    fun getFontSize(font: Font, character: Character): Size? {
-        return Size(character.width(), character.height())
-    }
-
-    fun getStickerSize(sticker: Sticker): Size? {
+    private fun getStickerSize(sticker: Sticker): Size? {
         val key = "${sticker.resName}/${sticker.lastModified}"
 
         sizes[key]?.let { return it }

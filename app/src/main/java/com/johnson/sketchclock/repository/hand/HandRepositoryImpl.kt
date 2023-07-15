@@ -1,11 +1,11 @@
-package com.johnson.sketchclock.repository.font
+package com.johnson.sketchclock.repository.hand
 
 import android.content.Context
 import android.util.Log
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
-import com.johnson.sketchclock.common.Character
-import com.johnson.sketchclock.common.Font
+import com.johnson.sketchclock.common.Hand
+import com.johnson.sketchclock.common.HandType
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,21 +15,21 @@ import java.io.File
 import java.io.FileFilter
 import javax.inject.Inject
 
-class FontRepositoryImpl @Inject constructor(
+class HandRepositoryImpl @Inject constructor(
     private val context: Context
-) : FontRepository {
+) : HandRepository {
 
     private val defaultRootDir = File(context.filesDir, DEFAULT_DIR)
     private val userRootDir = File(context.filesDir, USER_DIR)
     private val gson = GsonBuilder().setPrettyPrinting().setNumberToNumberStrategy(ToNumberPolicy.LONG_OR_DOUBLE).create()
 
-    private val _fonts: MutableStateFlow<List<Font>> = MutableStateFlow(emptyList())
+    private val _hands: MutableStateFlow<List<Hand>> = MutableStateFlow(emptyList())
 
     companion object {
-        private const val TAG = "FontRepositoryImpl"
+        private const val TAG = "HandRepositoryImpl"
 
-        private const val USER_DIR = "user_fonts"
-        private const val DEFAULT_DIR = "default_fonts"
+        private const val USER_DIR = "user_hands"
+        private const val DEFAULT_DIR = "default_hands"
 
         private const val DESCRIPTION_FILE = "description.txt"
         private const val KEY_NAME = "name"
@@ -48,68 +48,68 @@ class FontRepositoryImpl @Inject constructor(
                 Log.d(TAG, "Deleted \"${it.name}\"")
             }
 
-            _fonts.value = loadFontList()
+            _hands.value = loadHandList()
         }
     }
 
-    override fun getFonts(): StateFlow<List<Font>> {
-        return _fonts
+    override fun getHands(): StateFlow<List<Hand>> {
+        return _hands
     }
 
-    override fun getFontByRes(resName: String): Font? {
-        return _fonts.value.find { it.resName == resName }
+    override fun getHandByRes(resName: String): Hand? {
+        return _hands.value.find { it.resName == resName }
     }
 
-    override suspend fun upsertFont(font: Font): String {
-        val resName = upsertFontWithoutLoadList(font)
-        _fonts.value = loadFontList()
+    override suspend fun upsertHand(hand: Hand): String {
+        val resName = upsertHandWithoutLoadList(hand)
+        _hands.value = loadHandList()
         return resName
     }
 
-    override suspend fun upsertFonts(fonts: Collection<Font>) {
-        fonts.forEach { font -> upsertFontWithoutLoadList(font) }
-        _fonts.value = loadFontList()
+    override suspend fun upsertHands(hands: Collection<Hand>) {
+        hands.forEach { hand -> upsertHandWithoutLoadList(hand) }
+        _hands.value = loadHandList()
     }
 
-    private fun upsertFontWithoutLoadList(font: Font): String {
-        val id = font.id.takeIf { it >= 0 } ?: getNewFontId()
-        val resName = font.resName ?: "$USER_DIR/$id"
+    private fun upsertHandWithoutLoadList(hand: Hand): String {
+        val id = hand.id.takeIf { it >= 0 } ?: getNewHandId()
+        val resName = hand.resName ?: "$USER_DIR/$id"
 
-        val newFont = font.copy(resName = resName)
+        val newHand = hand.copy(resName = resName)
 
-        if (!newFont.dir.exists() && newFont.deletedDir.exists()) {
-            Log.d(TAG, "upsertFont(): Restoring deleted font: $resName")
-            newFont.deletedDir.renameTo(newFont.dir)
+        if (!newHand.dir.exists() && newHand.deletedDir.exists()) {
+            Log.d(TAG, "upsertHand(): Restoring deleted hand: $resName")
+            newHand.deletedDir.renameTo(newHand.dir)
         } else {
-            newFont.dir.mkdirs()
+            newHand.dir.mkdirs()
         }
 
-        val descriptionFile = File(newFont.dir, DESCRIPTION_FILE)
+        val descriptionFile = File(newHand.dir, DESCRIPTION_FILE)
         val gsonString = gson.toJson(
             mapOf(
-                KEY_NAME to newFont.title,
+                KEY_NAME to newHand.title,
                 KEY_LAST_MODIFIED to System.currentTimeMillis(),
-                KEY_CREATE_TIME to newFont.createTime,
-                KEY_BOOKMARKED to newFont.bookmarked,
+                KEY_CREATE_TIME to newHand.createTime,
+                KEY_BOOKMARKED to newHand.bookmarked,
             )
         )
         descriptionFile.writeText(gsonString)
-        Log.d(TAG, "upsertFont(): Saved font: $resName")
+        Log.d(TAG, "upsertHand(): Saved hand: $resName")
         return resName
     }
 
-    override suspend fun deleteFonts(fonts: Collection<Font>) {
-        fonts.filter { it.isUser }.forEach { font ->
-            font.dir.renameTo(font.deletedDir)
+    override suspend fun deleteHands(hands: Collection<Hand>) {
+        hands.filter { it.isUser }.forEach { hand ->
+            hand.dir.renameTo(hand.deletedDir)
         }
-        _fonts.value = loadFontList()
+        _hands.value = loadHandList()
     }
 
-    override fun getFontFile(font: Font, character: Character): File {
-        return File(font.dir, "${character.name}.png")
+    override fun getHandFile(hand: Hand, type: HandType): File {
+        return File(hand.dir, "${type.name}.png")
     }
 
-    private fun loadFontList(dir: File): List<Font> {
+    private fun loadHandList(dir: File): List<Hand> {
         val indices = dir.listFiles(FileFilter { it.isDirectory })?.mapNotNull { it.name.toIntOrNull() } ?: emptyList()
 
         return indices.map { index ->
@@ -121,11 +121,11 @@ class FontRepositoryImpl @Inject constructor(
             }
             val title = when {
                 descriptions?.containsKey(KEY_NAME) == true -> descriptions[KEY_NAME] as? String ?: "Untitled"
-                dir == userRootDir -> "User Font $index"
-                else -> "Default Font $index"
+                dir == userRootDir -> "User Hand $index"
+                else -> "Default Hand $index"
             }
 
-            return@map Font(
+            return@map Hand(
                 title = title,
                 resName = "${dir.name}/$index",
                 lastModified = (descriptions?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
@@ -136,27 +136,27 @@ class FontRepositoryImpl @Inject constructor(
         }.sortedBy { it.id }
     }
 
-    private fun getNewFontId(): Int {
+    private fun getNewHandId(): Int {
         return userRootDir.list()?.mapNotNull { name ->
-            //  including deleted font directories
+            //  including deleted hand directories
             if (name.startsWith(".")) name.substring(1).toIntOrNull() else name.toIntOrNull()
         }?.maxOfOrNull { it }?.plus(1) ?: 0
     }
 
-    private fun loadFontList(): List<Font> {
-        return loadFontList(defaultRootDir) + loadFontList(userRootDir)
+    private fun loadHandList(): List<Hand> {
+        return loadHandList(defaultRootDir) + loadHandList(userRootDir)
     }
 
-    private val Font.id: Int
+    private val Hand.id: Int
         get() = resName?.split("/")?.last()?.toIntOrNull() ?: -1
 
-    private val Font.isUser: Boolean
+    private val Hand.isUser: Boolean
         get() = resName?.split("/")?.firstOrNull() == USER_DIR
 
-    private val Font.dir: File
+    private val Hand.dir: File
         get() = if (isUser) File(userRootDir, "$id") else File(defaultRootDir, "$id")
 
-    private val Font.deletedDir: File
+    private val Hand.deletedDir: File
         get() = if (isUser) File(userRootDir, ".$id") else File(defaultRootDir, ".$id")
 
     private fun copyAssetFilesIntoDirRecursively(assetDir: String, destDir: File) {

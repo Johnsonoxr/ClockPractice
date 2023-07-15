@@ -33,7 +33,7 @@ import com.johnson.sketchclock.common.removeCancelObserverView
 import com.johnson.sketchclock.common.scaleIn
 import com.johnson.sketchclock.common.scaleOut
 import com.johnson.sketchclock.databinding.FragmentEditorBinding
-import com.johnson.sketchclock.sticker_canvas.StickerCanvasActivity
+import com.johnson.sketchclock.canvas.StickerCanvasActivity
 import com.johnson.sketchclock.repository.sticker.StickerRepository
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.*
 import com.johnson.sketchclock.template_editor.SimpleFontSelectorFragment.Companion.showFontSelectorDialog

@@ -1,4 +1,4 @@
-package com.johnson.sketchclock.sticker_canvas
+package com.johnson.sketchclock.canvas
 
 import android.content.Context
 import android.content.Intent
@@ -12,9 +12,6 @@ import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.Sticker
 import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.databinding.ActivityBasicBinding
-import com.johnson.sketchclock.font_canvas.CanvasEvent
-import com.johnson.sketchclock.font_canvas.CanvasFragment
-import com.johnson.sketchclock.font_canvas.CanvasViewModel
 import com.johnson.sketchclock.repository.sticker.StickerRepository
 import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject

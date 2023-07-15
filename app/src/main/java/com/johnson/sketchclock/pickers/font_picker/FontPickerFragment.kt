@@ -9,7 +9,7 @@ import com.johnson.sketchclock.common.Character
 import com.johnson.sketchclock.common.Font
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.databinding.ItemFontBinding
-import com.johnson.sketchclock.font_canvas.CanvasActivity
+import com.johnson.sketchclock.canvas.FontCanvasActivity
 import com.johnson.sketchclock.pickers.PickerFragment
 import com.johnson.sketchclock.repository.font.FontRepository
 import dagger.hilt.android.AndroidEntryPoint
@@ -64,7 +64,7 @@ class FontPickerFragment : PickerFragment<Font, ItemFontBinding, FontPickerViewM
     }
 
     override fun createEditItemIntent(item: Font): Intent {
-        return CanvasActivity.createIntent(requireContext(), item)
+        return FontCanvasActivity.createIntent(requireContext(), item)
     }
 
     override fun Font.clone(title: String?, bookmarked: Boolean?): Font {

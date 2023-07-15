@@ -23,6 +23,7 @@ import com.johnson.sketchclock.common.Utils.minute2Ch
 import com.johnson.sketchclock.common.Utils.month1Ch
 import com.johnson.sketchclock.common.Utils.month2Ch
 import com.johnson.sketchclock.repository.font.FontRepository
+import com.johnson.sketchclock.repository.hand.HandRepository
 import com.johnson.sketchclock.repository.sticker.StickerRepository
 import java.util.Calendar
 import javax.inject.Inject
@@ -31,6 +32,7 @@ private const val TAG = "TemplateVisualizer"
 
 class TemplateVisualizer @Inject constructor(
     private val fontRepository: FontRepository,
+    private val handRepository: HandRepository,
     private val stickerRepository: StickerRepository,
     val resourceHolder: BitmapResourceHolder
 ) {
@@ -70,29 +72,37 @@ class TemplateVisualizer @Inject constructor(
         val calendar = Calendar.getInstance()
         timeMillis?.let { calendar.timeInMillis = it }
 
-        val char: Character? = when (element.eType) {
-            EType.Hour1 -> calendar.hour1Ch()
-            EType.Hour2 -> calendar.hour2Ch()
-            EType.Hour12Hr1 -> calendar.hour12Hr1Ch()
-            EType.Hour12Hr2 -> calendar.hour12Hr2Ch()
-            EType.Minute1 -> calendar.minute1Ch()
-            EType.Minute2 -> calendar.minute2Ch()
-            EType.Month1 -> calendar.month1Ch()
-            EType.Month2 -> calendar.month2Ch()
-            EType.Day1 -> calendar.day1Ch()
-            EType.Day2 -> calendar.day2Ch()
-            EType.Slash -> Character.SLASH
-            EType.AmPm -> calendar.amPmCh()
-            EType.Colon -> Character.COLON
-            EType.Sticker -> null
-        }
-
-        return if (char == null) {
-            val sticker = stickerRepository.getStickerByRes(elementResName)
-            sticker?.let { resourceHolder.getStickerBitmap(it) }
-        } else {
-            val font = fontRepository.getFontByRes(elementResName)
-            font?.let { resourceHolder.getFontBitmap(it, char) }
+        return when {
+            element.eType.isSticker() -> {
+                val sticker = stickerRepository.getStickerByRes(elementResName)
+                sticker?.let { resourceHolder.getStickerBitmap(it) }
+            }
+            element.eType.isHand() -> {
+                val hand = handRepository.getHandByRes(elementResName)
+                val handType = if (element.eType == EType.HourHand) HandType.HOUR else HandType.MINUTE
+                hand?.let { resourceHolder.getHandBitmap(it, handType) }
+            }
+            element.eType.isCharacter() -> {
+                val char: Character = when (element.eType) {
+                    EType.Hour1 -> calendar.hour1Ch()
+                    EType.Hour2 -> calendar.hour2Ch()
+                    EType.Hour12Hr1 -> calendar.hour12Hr1Ch()
+                    EType.Hour12Hr2 -> calendar.hour12Hr2Ch()
+                    EType.Minute1 -> calendar.minute1Ch()
+                    EType.Minute2 -> calendar.minute2Ch()
+                    EType.Month1 -> calendar.month1Ch()
+                    EType.Month2 -> calendar.month2Ch()
+                    EType.Day1 -> calendar.day1Ch()
+                    EType.Day2 -> calendar.day2Ch()
+                    EType.Slash -> Character.SLASH
+                    EType.AmPm -> calendar.amPmCh()
+                    EType.Colon -> Character.COLON
+                    else -> return null
+                }
+                val font = fontRepository.getFontByRes(elementResName)
+                font?.let { resourceHolder.getFontBitmap(it, char) }
+            }
+            else -> null
         }
     }
 

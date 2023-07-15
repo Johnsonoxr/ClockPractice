@@ -1,4 +1,4 @@
-package com.johnson.sketchclock.font_canvas
+package com.johnson.sketchclock.canvas
 
 import android.content.Context
 import android.content.Intent
@@ -13,13 +13,14 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.recyclerview.widget.RecyclerView
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.johnson.sketchclock.R
-import com.johnson.sketchclock.common.Character
-import com.johnson.sketchclock.common.Font
+import com.johnson.sketchclock.common.Constants
+import com.johnson.sketchclock.common.Hand
+import com.johnson.sketchclock.common.HandType
 import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.getAttrColor
 import com.johnson.sketchclock.databinding.ActivityCanvasBinding
-import com.johnson.sketchclock.databinding.ItemCharacterBinding
-import com.johnson.sketchclock.repository.font.FontRepository
+import com.johnson.sketchclock.databinding.ItemHandtypeBinding
+import com.johnson.sketchclock.repository.hand.HandRepository
 import com.mig35.carousellayoutmanager.CarouselLayoutManager
 import com.mig35.carousellayoutmanager.CarouselZoomPostLayoutListener
 import com.mig35.carousellayoutmanager.CenterScrollListener
@@ -27,28 +28,28 @@ import dagger.hilt.android.AndroidEntryPoint
 import javax.inject.Inject
 
 @AndroidEntryPoint
-class CanvasActivity : AppCompatActivity() {
+class HandCanvasActivity : AppCompatActivity() {
 
     companion object {
-        const val KEY_FONT = "fontName"
+        const val KEY_HAND = "handName"
 
-        fun createIntent(context: Context, font: Font): Intent {
-            return Intent(context, CanvasActivity::class.java).apply {
-                putExtra(KEY_FONT, font)
+        fun createIntent(context: Context, hand: Hand): Intent {
+            return Intent(context, HandCanvasActivity::class.java).apply {
+                putExtra(KEY_HAND, hand)
             }
         }
     }
 
     @Inject
-    lateinit var fontRepository: FontRepository
+    lateinit var handRepository: HandRepository
 
     private val viewModel: CanvasViewModel by viewModels()
 
     private val vb: ActivityCanvasBinding by lazy { ActivityCanvasBinding.inflate(layoutInflater) }
 
-    private val characters = Character.values()
-    private var centerCh: Character = Character.ZERO
-    private var currentCh: Character = centerCh
+    private val handTypes = HandType.values()
+    private var centerCh: HandType = HandType.HOUR
+    private var currentCh: HandType = centerCh
     private var saveDialog: AlertDialog? = null
 
     private val itemTvColorSelected by lazy { getAttrColor(com.google.android.material.R.attr.colorOnPrimary) }
@@ -61,24 +62,24 @@ class CanvasActivity : AppCompatActivity() {
         setContentView(vb.root)
         setSupportActionBar(vb.toolbar)
 
-        val font: Font? = intent.getSerializableExtra(KEY_FONT) as? Font
-        if (font == null) {
-            Toast.makeText(this, "Missing font name", Toast.LENGTH_SHORT).show()
+        val hand: Hand? = intent.getSerializableExtra(KEY_HAND) as? Hand
+        if (hand == null) {
+            Toast.makeText(this, "Missing hand name", Toast.LENGTH_SHORT).show()
             finish()
             return
-        } else if (!font.editable) {
-            Toast.makeText(this, "Font is not editable", Toast.LENGTH_SHORT).show()
+        } else if (!hand.editable) {
+            Toast.makeText(this, "Hand is not editable", Toast.LENGTH_SHORT).show()
             finish()
             return
         }
 
         vb.rvItems.layoutManager = CarouselLayoutManager(CarouselLayoutManager.HORIZONTAL, false).apply {
-            this.maxVisibleItems = 8
+            this.maxVisibleItems = 2
             setPostLayoutListener(
                 CarouselZoomPostLayoutListener(.1f)
             )
             addOnItemSelectionListener {
-                val prevCenterPosition = characters.indexOf(centerCh)
+                val prevCenterPosition = handTypes.indexOf(centerCh)
                 if (prevCenterPosition != centerItemPosition) {
                     holderAt(prevCenterPosition)?.let { holder ->
                         holder.vb.root.setBackgroundResource(itemBgResNormal)
@@ -89,7 +90,7 @@ class CanvasActivity : AppCompatActivity() {
                         holder.vb.tv.setTextColor(itemTvColorSelected)
                     }
                 }
-                centerCh = characters[it]
+                centerCh = handTypes[it]
             }
         }
         vb.rvItems.addOnScrollListener(CenterScrollListener())
@@ -98,7 +99,13 @@ class CanvasActivity : AppCompatActivity() {
                 if (newState == RecyclerView.SCROLL_STATE_IDLE) {
                     if (currentCh != centerCh) {
                         showSaveDialogIfNeed {
-                            viewModel.onEvent(CanvasEvent.Init(centerCh.width(), centerCh.height(), fontRepository.getFontFile(font, centerCh)))
+                            viewModel.onEvent(
+                                CanvasEvent.Init(
+                                    Constants.HAND_WIDTH,
+                                    Constants.HAND_HEIGHT,
+                                    handRepository.getHandFile(hand, centerCh)
+                                )
+                            )
                             currentCh = centerCh
                         }
                     }
@@ -106,14 +113,20 @@ class CanvasActivity : AppCompatActivity() {
             }
         })
         vb.rvItems.adapter = ItemAdapter()
-        vb.rvItems.scrollToPosition(characters.indexOf(centerCh))
+        vb.rvItems.scrollToPosition(handTypes.indexOf(centerCh))
 
         if (!viewModel.isInitialized) {
-            viewModel.onEvent(CanvasEvent.Init(centerCh.width(), centerCh.height(), fontRepository.getFontFile(font, centerCh)))
+            viewModel.onEvent(
+                CanvasEvent.Init(
+                    Constants.HAND_WIDTH,
+                    Constants.HAND_HEIGHT,
+                    handRepository.getHandFile(hand, centerCh)
+                )
+            )
         }
 
         viewModel.fileSaved.collectLatestWhenStarted(this) {
-            fontRepository.upsertFonts(listOf(font))
+            handRepository.upsertHands(listOf(hand))
         }
 
         onBackPressedDispatcher.addCallback(this, onBackPressedCallback)
@@ -138,7 +151,7 @@ class CanvasActivity : AppCompatActivity() {
                 block()
             }
             .setNegativeButton("No") { _, _ -> block() }
-            .setOnCancelListener { vb.rvItems.smoothScrollToPosition(characters.indexOf(currentCh)) }
+            .setOnCancelListener { vb.rvItems.smoothScrollToPosition(handTypes.indexOf(currentCh)) }
             .show()
     }
 
@@ -152,35 +165,36 @@ class CanvasActivity : AppCompatActivity() {
 
     private inner class ItemAdapter : RecyclerView.Adapter<ItemAdapter.ItemViewHolder>() {
 
-        var listener: ((Character) -> Unit)? = null
+        var listener: ((HandType) -> Unit)? = null
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ItemViewHolder {
-            return ItemViewHolder(ItemCharacterBinding.inflate(layoutInflater, parent, false))
+            return ItemViewHolder(ItemHandtypeBinding.inflate(layoutInflater, parent, false))
         }
 
         override fun onBindViewHolder(holder: ItemViewHolder, position: Int) {
-            val ch = characters[position]
+            val ch = handTypes[position]
             val (bgRes, tvColor) = when (ch) {
                 centerCh -> itemBgResSelected to itemTvColorSelected
                 else -> itemBgResNormal to itemTvColorNormal
             }
             holder.vb.root.setBackgroundResource(bgRes)
             holder.vb.tv.setTextColor(tvColor)
-            holder.vb.tv.text = ch.representation
+            holder.vb.tv.setText(handTypes[position].strRes)
         }
 
         override fun getItemCount(): Int {
-            return characters.size
+            return handTypes.size
         }
 
-        inner class ItemViewHolder(val vb: ItemCharacterBinding) : RecyclerView.ViewHolder(vb.root), View.OnClickListener {
+        inner class ItemViewHolder(val vb: ItemHandtypeBinding) : RecyclerView.ViewHolder(vb.root), View.OnClickListener {
+
             init {
                 vb.root.setOnClickListener(this)
             }
 
             override fun onClick(v: View?) {
-                this@CanvasActivity.vb.rvItems.smoothScrollToPosition(adapterPosition)
-                listener?.invoke(characters[adapterPosition])
+                this@HandCanvasActivity.vb.rvItems.smoothScrollToPosition(bindingAdapterPosition)
+                listener?.invoke(handTypes[bindingAdapterPosition])
             }
         }
     }

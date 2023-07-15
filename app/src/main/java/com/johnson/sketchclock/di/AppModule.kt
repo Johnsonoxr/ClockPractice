@@ -8,10 +8,12 @@ import androidx.room.Room
 import com.johnson.sketchclock.common.BitmapResourceHolder
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.font.FontRepositoryImpl
-import com.johnson.sketchclock.repository.sticker.StickerRepository
-import com.johnson.sketchclock.repository.sticker.StickerRepositoryImpl
+import com.johnson.sketchclock.repository.hand.HandRepository
+import com.johnson.sketchclock.repository.hand.HandRepositoryImpl
 import com.johnson.sketchclock.repository.pref.PreferenceRepository
 import com.johnson.sketchclock.repository.pref.PreferenceRepositoryImpl
+import com.johnson.sketchclock.repository.sticker.StickerRepository
+import com.johnson.sketchclock.repository.sticker.StickerRepositoryImpl
 import com.johnson.sketchclock.repository.template.TemplateDatabase
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import com.johnson.sketchclock.repository.template.TemplateRepositoryImpl
@@ -58,6 +60,12 @@ class AppModule {
 
     @Provides
     @Singleton
+    fun provideHandRepository(context: Context): HandRepository {
+        return HandRepositoryImpl(context)
+    }
+
+    @Provides
+    @Singleton
     fun provideClockUpdateHandler(): Handler {
         return Handler(Looper.getMainLooper())
     }
@@ -65,11 +73,11 @@ class AppModule {
     @Provides
     @Singleton
     fun provideBitmapResourceHolder(
-        context: Context,
         fontRepository: FontRepository,
+        handRepository: HandRepository,
         stickerRepository: StickerRepository
     ): BitmapResourceHolder {
-        return BitmapResourceHolder(context, fontRepository, stickerRepository)
+        return BitmapResourceHolder(fontRepository, handRepository, stickerRepository)
     }
 
     @Provides

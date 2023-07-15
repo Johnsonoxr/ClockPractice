@@ -8,7 +8,7 @@ import androidx.fragment.app.activityViewModels
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Sticker
 import com.johnson.sketchclock.databinding.ItemStickerBinding
-import com.johnson.sketchclock.sticker_canvas.StickerCanvasActivity
+import com.johnson.sketchclock.canvas.StickerCanvasActivity
 import com.johnson.sketchclock.pickers.PickerFragment
 import com.johnson.sketchclock.repository.sticker.StickerRepository
 import dagger.hilt.android.AndroidEntryPoint

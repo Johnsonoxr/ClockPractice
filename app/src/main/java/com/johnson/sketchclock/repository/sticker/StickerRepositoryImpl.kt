@@ -31,7 +31,7 @@ class StickerRepositoryImpl @Inject constructor(
         private const val DEFAULT_DIR = "default_stickers"
         private const val USER_DIR = "user_stickers"
 
-        private const val KEY_NAME = "sticker_name"
+        private const val KEY_NAME = "name"
         private const val KEY_LAST_MODIFIED = "last_modified"
         private const val KEY_CREATE_TIME = "create_time"
         private const val KEY_BOOKMARKED = "bookmarked"

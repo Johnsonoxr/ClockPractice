@@ -1,4 +1,4 @@
-package com.johnson.sketchclock.font_canvas
+package com.johnson.sketchclock.canvas
 
 import android.graphics.Path
 import android.net.Uri

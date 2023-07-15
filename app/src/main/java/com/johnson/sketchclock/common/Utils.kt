@@ -117,4 +117,14 @@ object Utils {
     fun Calendar.amPmCh(): Character {
         return if (get(Calendar.AM_PM) == 0) Character.AM else Character.PM
     }
+
+    fun Calendar.hourDegree(): Float {
+        val millisInHalfDay = this.timeInMillis % (12 * 60 * 60 * 1000)
+        return millisInHalfDay / (12 * 60 * 60 * 1000).toFloat() * 360f
+    }
+
+    fun Calendar.minuteDegress(): Float {
+        val millisInHour = this.timeInMillis % (60 * 60 * 1000)
+        return millisInHour / (60 * 60 * 1000).toFloat() * 360f
+    }
 }

@@ -1,4 +1,4 @@
-package com.johnson.sketchclock.font_canvas
+package com.johnson.sketchclock.canvas
 
 import android.content.Context
 import android.graphics.Bitmap

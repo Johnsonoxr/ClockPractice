@@ -1,4 +1,4 @@
-package com.johnson.sketchclock.font_canvas
+package com.johnson.sketchclock.canvas
 
 import android.annotation.SuppressLint
 import android.content.res.ColorStateList
