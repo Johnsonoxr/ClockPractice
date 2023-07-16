@@ -153,7 +153,14 @@ class EditorFragment : Fragment() {
         vb.fabOptionFont.setOnClickListener {
             val charElements = viewModel.selectedElements.value.filter { it.eType.isCharacter() }
             showFontSelectorDialog(Type.NONE) { font ->
-                viewModel.onEvent(EditorEvent.ChangeRes(charElements, font))
+                font.resName?.let { viewModel.onEvent(EditorEvent.ChangeRes(charElements, it)) }
+            }
+        }
+
+        vb.fabOptionClock.setOnClickListener {
+            val handElements = viewModel.selectedElements.value.filter { it.eType.isHand() }
+            showHandSelectorDialog { hand ->
+                hand.resName?.let { viewModel.onEvent(EditorEvent.ChangeRes(handElements, it)) }
             }
         }
 
@@ -294,7 +301,7 @@ class EditorFragment : Fragment() {
     private fun showOptionButtons(show: Boolean) {
         val elements = viewModel.selectedElements.value
 
-        val editable = elements.size == 1
+        val isAnEditableSticker = elements.size == 1
                 && elements.firstOrNull()?.eType == EType.Sticker
                 && elements.firstOrNull()?.resName?.let { stickerRepository.getStickerByRes(it)?.editable } == true
 
@@ -302,8 +309,9 @@ class EditorFragment : Fragment() {
             vb.fabLayerUp to true,
             vb.fabLayerDown to true,
             vb.fabOptionColor to true,
-            vb.fabOptionEdit to editable,
-            vb.fabOptionFont to (elements.all { it.eType.isCharacter() }),   //  only characters can be changed font
+            vb.fabOptionEdit to isAnEditableSticker,
+            vb.fabOptionFont to (elements.all { it.eType.isCharacter() }),
+            vb.fabOptionClock to (elements.all { it.eType.isHand() }),
         ).forEach { (fab, validOption) ->
             if (show && validOption) {
                 if (!fab.isVisible) fab.scaleIn()

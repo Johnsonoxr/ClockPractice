@@ -100,8 +100,8 @@ class EditorViewModel @Inject constructor() : ViewModel() {
                 }
 
                 is EditorEvent.ChangeRes -> {
-                    event.elements.filter { it in _elements.value }.forEach { it.resName = event.font.resName }
-                    _contentUpdated.emit("font")
+                    event.elements.filter { it in _elements.value }.forEach { it.resName = event.resName }
+                    _contentUpdated.emit("res")
                 }
 
                 is EditorEvent.AddElements -> {

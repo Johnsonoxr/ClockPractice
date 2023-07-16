@@ -197,4 +197,15 @@
         app:layout_constraintTop_toBottomOf="@+id/fab_option_edit"
         tools:visibility="visible" />
 
+    <com.google.android.material.floatingactionbutton.FloatingActionButton
+        android:id="@+id/fab_option_clock"
+        style="?attr/floatingActionButtonSmallPrimaryStyle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:src="@drawable/editor_fab_clock"
+        android:visibility="gone"
+        app:layout_constraintStart_toStartOf="@+id/fab_option_edit"
+        app:layout_constraintTop_toBottomOf="@+id/fab_option_font"
+        tools:visibility="visible" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>
