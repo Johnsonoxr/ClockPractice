@@ -2,12 +2,17 @@ package com.johnson.sketchclock.common
 
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Rect
 import android.util.Log
 import android.util.LruCache
 import android.util.Size
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.hand.HandRepository
 import com.johnson.sketchclock.repository.sticker.StickerRepository
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import java.io.File
 import javax.inject.Inject
 
 private const val TAG = "BitmapResourceHolder"
@@ -21,51 +26,31 @@ class BitmapResourceHolder @Inject constructor(
     private val bitmaps = LruCache<String, Bitmap>(30)
     private val sizes = LruCache<String, Size>(1000)
 
-    fun getFontBitmap(font: Font, character: Character): Bitmap? {
-        val key = "${font.resName}/$character/${font.lastModified}"
+    private val drawableRect = mutableMapOf<String, Rect?>()
 
-        bitmaps[key]?.let { return it }
+    private val evalRectScope = CoroutineScope(Dispatchers.Default)
 
-        val characterFile = fontRepository.getFontFile(font, character)
-        if (characterFile.exists()) {
-            BitmapFactory.decodeFile(characterFile.absolutePath)?.let {
-                bitmaps.put(key, it)
-                return it
-            }
-        }
+    private val File.key get() = "${absolutePath}/${lastModified()}"
 
-        return null
+    fun getDrawableRect(file: File): Rect? {
+        return drawableRect[file.key]
     }
 
-    fun getHandBitmap(hand: Hand, handType: HandType): Bitmap? {
-        val key = "${hand.resName}/$handType/${hand.lastModified}"
+    fun loadBitmap(file: File): Bitmap? {
+        val bitmap = bitmaps[file.key]
+        if (bitmap != null) {
+            return bitmap
+        }
 
-        bitmaps[key]?.let { return it }
-
-        val handFile = handRepository.getHandFile(hand, handType)
-        if (handFile.exists()) {
-            BitmapFactory.decodeFile(handFile.absolutePath)?.let {
-                bitmaps.put(key, it)
+        if (file.exists()) {
+            BitmapFactory.decodeFile(file.absolutePath)?.let {
+                bitmaps.put(file.key, it)
+                evalRectScope.launch(Dispatchers.Default) {
+                    drawableRect[file.key] = BitmapUtils.evalCropRegion(it)
+                }
                 return it
             }
         }
-
-        return null
-    }
-
-    fun getStickerBitmap(sticker: Sticker): Bitmap? {
-        val key = "${sticker.resName}/${sticker.lastModified}"
-
-        bitmaps[key]?.let { return it }
-
-        val stickerFile = stickerRepository.getStickerFile(sticker)
-        if (stickerFile.exists()) {
-            BitmapFactory.decodeFile(stickerFile.absolutePath)?.let {
-                bitmaps.put(key, it)
-                return it
-            }
-        }
-
         return null
     }
 

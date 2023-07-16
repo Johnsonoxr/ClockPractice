@@ -1,6 +1,5 @@
 package com.johnson.sketchclock.common
 
-import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.ColorFilter
@@ -27,6 +26,7 @@ import com.johnson.sketchclock.common.Utils.month2Ch
 import com.johnson.sketchclock.repository.font.FontRepository
 import com.johnson.sketchclock.repository.hand.HandRepository
 import com.johnson.sketchclock.repository.sticker.StickerRepository
+import java.io.File
 import java.util.Calendar
 import javax.inject.Inject
 
@@ -51,44 +51,58 @@ class TemplateVisualizer @Inject constructor(
         synchronized(this) {
             elements.forEach { element ->
 
-                loadBitmap(element, calendar)?.let { bmp ->
-                    val hardTint = element.hardTintColor
-                    val softTint = element.softTintColor
+                val bitmapFile = getElementBitmapFile(element, calendar) ?: return@forEach
+                val bitmap = resourceHolder.loadBitmap(bitmapFile) ?: return@forEach
 
-                    matrix.set(element.matrix())
-                    matrix.preTranslate(-bmp.width / 2f, -bmp.height / 2f)
+                val hardTint = element.hardTintColor
+                val softTint = element.softTintColor
 
-                    bitmapPaint.colorFilter = when {
-                        hardTint != null -> getHardColorFilter(hardTint)
-                        softTint != null -> getSoftColorFilter(softTint)
-                        else -> null
-                    }
+                matrix.set(element.matrix())
+                matrix.preTranslate(-bitmap.width / 2f, -bitmap.height / 2f)
 
-                    if (element.eType == EType.HourHand) {
-                        matrix.preRotate(calendar.hourDegree(), bmp.width / 2f, bmp.height / 2f)
-                    } else if (element.eType == EType.MinuteHand) {
-                        matrix.preRotate(calendar.minuteDegree(), bmp.width / 2f, bmp.height / 2f)
-                    }
+                bitmapPaint.colorFilter = when {
+                    hardTint != null -> getHardColorFilter(hardTint)
+                    softTint != null -> getSoftColorFilter(softTint)
+                    else -> null
+                }
 
-                    canvas.drawBitmap(bmp, matrix, bitmapPaint)
+                if (element.eType == EType.HourHand) {
+                    matrix.preRotate(calendar.hourDegree(), bitmap.width / 2f, bitmap.height / 2f)
+                } else if (element.eType == EType.MinuteHand) {
+                    matrix.preRotate(calendar.minuteDegree(), bitmap.width / 2f, bitmap.height / 2f)
+                }
+
+                //  The rect of bitmap which is not transparent and worth drawing
+                val drawableRect = resourceHolder.getDrawableRect(bitmapFile)
+
+                if (drawableRect != null) {
+                    //  clip to drawable rect if it exists
+                    canvas.save()
+                    canvas.concat(matrix)
+                    canvas.clipRect(drawableRect)
+                    canvas.drawBitmap(bitmap, 0f, 0f, bitmapPaint)
+                    canvas.restore()
+                } else {
+                    //  it would be faster to draw by matrix if there's no need to clip
+                    canvas.drawBitmap(bitmap, matrix, bitmapPaint)
                 }
             }
         }
     }
 
-    private fun loadBitmap(element: Element, calendar: Calendar): Bitmap? {
+    private fun getElementBitmapFile(element: Element, calendar: Calendar): File? {
         val elementResName = element.resName ?: return null
 
         return when {
             element.eType.isSticker() -> {
                 val sticker = stickerRepository.getStickerByRes(elementResName)
-                sticker?.let { resourceHolder.getStickerBitmap(it) }
+                sticker?.let { stickerRepository.getStickerFile(it) }
             }
 
             element.eType.isHand() -> {
                 val hand = handRepository.getHandByRes(elementResName)
                 val handType = if (element.eType == EType.HourHand) HandType.HOUR else HandType.MINUTE
-                hand?.let { resourceHolder.getHandBitmap(it, handType) }
+                hand?.let { handRepository.getHandFile(it, handType) }
             }
 
             element.eType.isCharacter() -> {
@@ -109,7 +123,7 @@ class TemplateVisualizer @Inject constructor(
                     else -> return null
                 }
                 val font = fontRepository.getFontByRes(elementResName)
-                font?.let { resourceHolder.getFontBitmap(it, char) }
+                font?.let { fontRepository.getFontFile(it, char) }
             }
 
             else -> null

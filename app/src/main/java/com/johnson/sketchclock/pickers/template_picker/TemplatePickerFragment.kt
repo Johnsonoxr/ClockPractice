@@ -20,6 +20,7 @@ import com.johnson.sketchclock.template_editor.EditorActivity
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 @AndroidEntryPoint
@@ -54,7 +55,7 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
         } else {
             ivPreview.setImageBitmap(null)
             ivPreview.tag = item
-            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.IO) {
+            viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Default) {
 
                 previewCache.snapshot().keys.firstOrNull { it.startsWith("${item.id}-") }?.let {
                     Log.d(TAG, "Removing redundant bitmap with key=$it")
@@ -67,7 +68,8 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
                 canvas.translate(-(Constants.TEMPLATE_WIDTH - bitmap.width) / 2f, -(Constants.TEMPLATE_HEIGHT - bitmap.height) / 2f)
                 templateVisualizer.draw(canvas, item.elements)
                 previewCache.put(item.hash, bitmap)
-                viewLifecycleOwner.lifecycleScope.launch(Dispatchers.Main) {
+
+                withContext(Dispatchers.Main) {
                     if (ivPreview.tag == item) {
                         ivPreview.setImageBitmap(bitmap)
                     }

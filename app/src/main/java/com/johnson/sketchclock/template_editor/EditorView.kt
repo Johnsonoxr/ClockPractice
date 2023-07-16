@@ -26,6 +26,7 @@ import java.lang.ref.WeakReference
 import kotlin.math.atan2
 import kotlin.math.hypot
 import kotlin.math.max
+import kotlin.system.measureNanoTime
 
 class EditorView @JvmOverloads constructor(
     context: Context,
@@ -171,7 +172,9 @@ class EditorView @JvmOverloads constructor(
 
         canvas.save()
         canvas.concat(c2v)
-        visualizer.draw(canvas, elements)
+        measureNanoTime {
+            visualizer.draw(canvas, elements)
+        }.let { Log.v(TAG, "Draw takes ${it / 1e6} ms") }
         canvas.restore()
 
         selectedElements.forEach { element ->

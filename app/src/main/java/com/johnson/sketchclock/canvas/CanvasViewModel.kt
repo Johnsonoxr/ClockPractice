@@ -17,6 +17,7 @@ import android.util.Size
 import androidx.core.graphics.toXfermode
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.johnson.sketchclock.common.BitmapUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
@@ -232,7 +233,7 @@ class CanvasViewModel @Inject constructor(
                     _file.value?.parentFile?.mkdirs()
 
                     val bmpToSave: Bitmap? = _bitmap.value?.let { bmp ->
-                        val region: Rect? = evalCropRegion(bmp)
+                        val region: Rect? = BitmapUtils.evalCropRegion(bmp)
                         when {
                             region == null -> null
                             autoCropWhenSaved && (region.width() < bmp.width || region.height() < bmp.height) ->
@@ -342,49 +343,6 @@ class CanvasViewModel @Inject constructor(
                 undoBitmapCache.put(dataList.last(), cacheBitmap)
             }
         }
-    }
-
-    private fun evalCropRegion(bitmap: Bitmap): Rect? {
-        val width = bitmap.width
-        val height = bitmap.height
-        val pixels = IntArray(width * height)
-        bitmap.getPixels(pixels, 0, width, 0, 0, width, height)
-
-        val topPixel = pixels.indexOfFirst { it != Color.TRANSPARENT }
-        if (topPixel == -1) {
-            return null
-        }
-
-        val top = topPixel / width
-        val bottom = pixels.indexOfLast { it != Color.TRANSPARENT } / width
-
-        fun findLeft(): Int {
-            for (x in 0 until width) {
-                for (y in top..bottom) {
-                    if (pixels[y * width + x] != Color.TRANSPARENT) {
-                        return x
-                    }
-                }
-            }
-            return -1
-        }
-
-        val left = findLeft()
-
-        fun findRight(): Int {
-            for (x in width - 1 downTo 0) {
-                for (y in top..bottom) {
-                    if (pixels[y * width + x] != Color.TRANSPARENT) {
-                        return x
-                    }
-                }
-            }
-            return -1
-        }
-
-        val right = findRight()
-
-        return Rect(left, top, right + 1, bottom + 1)
     }
 
     private fun decodeBitmapInProperSize(uri: Uri, maxWidth: Int, maxHeight: Int): Bitmap? {
