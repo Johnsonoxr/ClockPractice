@@ -44,7 +44,7 @@ class TemplatePickerFragment : PickerFragment<Template, ItemTemplateBinding, Tem
     }
 
     private val Template.hash: String
-        get() = "$id-$lastModified"
+        get() = "$id-$lastModified-${System.currentTimeMillis() / 60000}"
 
     override fun ItemTemplateBinding.bind(item: Template) {
         ivBookmark.visibility = if (item.bookmarked) View.VISIBLE else View.GONE

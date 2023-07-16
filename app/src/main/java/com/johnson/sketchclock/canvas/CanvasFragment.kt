@@ -9,7 +9,6 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
-import android.widget.SeekBar
 import android.widget.Toast
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -19,6 +18,7 @@ import androidx.fragment.app.Fragment
 import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.Lifecycle
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.slider.Slider
 import com.johnson.sketchclock.R
 import com.johnson.sketchclock.common.collectLatestWhenStarted
 import com.johnson.sketchclock.common.scaleIn
@@ -58,14 +58,14 @@ class CanvasFragment : Fragment() {
         viewModel.brushSize.collectLatestWhenStarted(this) { size ->
             vb.canvasView.brushSize = size
             if (!viewModel.isEraseMode.value) {
-                vb.seekbarStrokeWidth.progress = size.toInt()
+                vb.sliderStrokeWidth.value = size
             }
         }
 
         viewModel.eraseSize.collectLatestWhenStarted(this) { size ->
             vb.canvasView.eraseSize = size
             if (viewModel.isEraseMode.value) {
-                vb.seekbarStrokeWidth.progress = size.toInt()
+                vb.sliderStrokeWidth.value = size
             }
         }
 
@@ -77,7 +77,7 @@ class CanvasFragment : Fragment() {
             vb.fab1Container.addView(fab1View)
             vb.fab2Container.addView(fab2View)
             vb.canvasView.isEraseMode = isEraseMode
-            vb.seekbarStrokeWidth.progress = if (isEraseMode) viewModel.eraseSize.value.toInt() else viewModel.brushSize.value.toInt()
+            vb.sliderStrokeWidth.value = if (isEraseMode) viewModel.eraseSize.value else viewModel.brushSize.value
         }
 
         viewModel.undoable.collectLatestWhenStarted(this) { vb.fabUndo.isEnabled = it }
@@ -137,22 +137,17 @@ class CanvasFragment : Fragment() {
             viewModel.onEvent(CanvasEvent.SetBrushColor(color))
         }
 
-        vb.seekbarStrokeWidth.setOnSeekBarChangeListener(@SuppressLint("AppCompatCustomView") object : SeekBar.OnSeekBarChangeListener {
-            override fun onProgressChanged(seekBar: SeekBar?, progress: Int, fromUser: Boolean) {
-                if (!fromUser) return
+        vb.sliderStrokeWidth.addOnSliderTouchListener(object : Slider.OnSliderTouchListener {
+            override fun onStartTrackingTouch(slider: Slider) {
+            }
+
+            override fun onStopTrackingTouch(slider: Slider) {
                 if (viewModel.isEraseMode.value) {
-                    viewModel.onEvent(CanvasEvent.SetEraseSize(progress.toFloat()))
+                    viewModel.onEvent(CanvasEvent.SetEraseSize(slider.value))
                 } else {
-                    viewModel.onEvent(CanvasEvent.SetBrushSize(progress.toFloat()))
+                    viewModel.onEvent(CanvasEvent.SetBrushSize(slider.value))
                 }
             }
-
-            override fun onStartTrackingTouch(seekBar: SeekBar?) {
-            }
-
-            override fun onStopTrackingTouch(seekBar: SeekBar?) {
-            }
-
         })
     }
 
