@@ -7,9 +7,11 @@ import android.graphics.ColorMatrix
 import android.graphics.ColorMatrixColorFilter
 import android.graphics.Matrix
 import android.graphics.Paint
+import android.graphics.Path
 import android.graphics.PorterDuff
 import android.graphics.PorterDuffColorFilter
 import android.util.LruCache
+import androidx.core.graphics.withMatrix
 import com.johnson.sketchclock.common.Utils.amPmCh
 import com.johnson.sketchclock.common.Utils.day1Ch
 import com.johnson.sketchclock.common.Utils.day2Ch
@@ -77,11 +79,9 @@ class TemplateVisualizer @Inject constructor(
 
                 if (drawableRect != null) {
                     //  clip to drawable rect if it exists
-                    canvas.save()
-                    canvas.concat(matrix)
-                    canvas.clipRect(drawableRect)
-                    canvas.drawBitmap(bitmap, 0f, 0f, bitmapPaint)
-                    canvas.restore()
+                    canvas.withMatrix(matrix) {
+                        drawBitmap(bitmap, drawableRect, drawableRect, bitmapPaint)
+                    }
                 } else {
                     //  it would be faster to draw by matrix if there's no need to clip
                     canvas.drawBitmap(bitmap, matrix, bitmapPaint)
