@@ -1,6 +1,7 @@
 package com.johnson.sketchclock
 
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
@@ -32,7 +33,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val bitmap = assets.open("default_stickers/2/sticker.png").use {
-            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inMutable = true })
+            val bmp = BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inMutable = true })!!
+            Bitmap.createBitmap(bmp, 500, 0, 200, 200)
         }!!
         vb.imageView.setImageBitmap(bitmap)
 
