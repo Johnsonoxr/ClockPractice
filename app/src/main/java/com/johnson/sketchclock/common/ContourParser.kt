@@ -6,6 +6,8 @@ import android.graphics.Point
 import androidx.core.graphics.alpha
 import com.google.gson.Gson
 import java.io.File
+import kotlin.math.abs
+import kotlin.math.hypot
 
 private const val TAG = "ContourParser"
 
@@ -52,7 +54,7 @@ private fun contourToPath(contourList: List<IntArray>): Path {
     return allPath
 }
 
-private const val DISTANCE_TOLERANCE = .5f
+private const val DISTANCE_TOLERANCE = 1f
 
 object ContourParser {
 
@@ -148,11 +150,24 @@ object ContourParser {
         val startPt = Point(pt)
         val startDirection = direction
 
+        var line: Line? = null
+
         do {
             val outOfBoundary = direction.of(mat, pt.x, pt.y) != true
+
             direction = if (outOfBoundary) {
                 contourMask[pt.y][pt.x] = true
-                pts.add(Point(pt))
+
+                when {
+                    pts.isEmpty() -> pts.add(Point(pt))
+                    pts.last() == pt -> Unit
+                    line == null -> line = Line(pts.last(), pt)
+                    line.distTo(pt) > DISTANCE_TOLERANCE -> {
+                        pts.add(Point(pt))
+                        line = null
+                    }
+                }
+
                 direction.turnLeft()
             } else {
                 pt.offset(direction)
@@ -166,6 +181,17 @@ object ContourParser {
             arr[index * 2 + 1] = point.y
         }
         return arr
+    }
+
+    private data class Line(val pt1: Point, val pt2: Point) {
+        private val yDiff = (pt2.y - pt1.y).toFloat()
+        private val xDiff = (pt2.x - pt1.x).toFloat()
+        private val denominator = hypot(yDiff, xDiff)
+        private val c = (pt2.x * pt1.y - pt2.y * pt1.x).toFloat()
+        fun distTo(pt: Point): Float {
+            val numerator = abs(yDiff * pt.x - xDiff * pt.y + c)
+            return numerator / denominator
+        }
     }
 
     private fun Point.offset(direction: Direction) {
