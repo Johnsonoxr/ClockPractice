@@ -9,8 +9,8 @@ import com.johnson.sketchclock.canvas.HandCanvasActivity
 import com.johnson.sketchclock.common.GlideHelper
 import com.johnson.sketchclock.common.Hand
 import com.johnson.sketchclock.common.HandType
-import com.johnson.sketchclock.common.Utils.hourDegree
-import com.johnson.sketchclock.common.Utils.minuteDegree
+import com.johnson.sketchclock.common.CalendarUtils.hourDegree
+import com.johnson.sketchclock.common.CalendarUtils.minuteDegree
 import com.johnson.sketchclock.databinding.ItemHandBinding
 import com.johnson.sketchclock.pickers.PickerFragment
 import com.johnson.sketchclock.repository.hand.HandRepository

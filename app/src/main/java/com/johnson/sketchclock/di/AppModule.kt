@@ -72,12 +72,8 @@ class AppModule {
 
     @Provides
     @Singleton
-    fun provideBitmapResourceHolder(
-        fontRepository: FontRepository,
-        handRepository: HandRepository,
-        stickerRepository: StickerRepository
-    ): BitmapResourceHolder {
-        return BitmapResourceHolder(fontRepository, handRepository, stickerRepository)
+    fun provideBitmapResourceHolder(): BitmapResourceHolder {
+        return BitmapResourceHolder()
     }
 
     @Provides

@@ -1,5 +1,6 @@
 package com.johnson.sketchclock.common
 
+import java.io.File
 import java.io.Serializable
 
 data class Hand(
@@ -9,4 +10,11 @@ data class Hand(
     val editable: Boolean = true,
     val bookmarked: Boolean = false,
     val createTime: Long = System.currentTimeMillis(),
-) : Serializable
+) : Serializable {
+
+    private var _files: MutableMap<HandType, File> = mutableMapOf()
+
+    fun file(handType: HandType): File {
+        return _files.getOrPut(handType) { GodRepos.handRepo.getHandFile(this, handType) }
+    }
+}

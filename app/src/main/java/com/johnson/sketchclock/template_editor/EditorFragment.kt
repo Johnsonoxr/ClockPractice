@@ -185,9 +185,7 @@ class EditorFragment : Fragment() {
         }
 
         vb.fabOptionEdit.setOnClickListener {
-            val sticker = viewModel.selectedElements.value.firstOrNull()?.resName
-                ?.let { resName -> stickerRepository.getStickerByRes(resName) }
-            if (sticker != null) {
+            viewModel.selectedElements.value.firstOrNull()?.sticker?.let { sticker ->
                 startActivity(StickerCanvasActivity.createIntent(requireContext(), sticker))
             }
         }
@@ -301,9 +299,7 @@ class EditorFragment : Fragment() {
     private fun showOptionButtons(show: Boolean) {
         val elements = viewModel.selectedElements.value
 
-        val isAnEditableSticker = elements.size == 1
-                && elements.firstOrNull()?.eType == EType.Sticker
-                && elements.firstOrNull()?.resName?.let { stickerRepository.getStickerByRes(it)?.editable } == true
+        val isAnEditableSticker = elements.size == 1 && elements.firstOrNull()?.sticker?.editable == true
 
         mapOf(
             vb.fabLayerUp to true,

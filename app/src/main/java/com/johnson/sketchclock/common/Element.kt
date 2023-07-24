@@ -1,17 +1,62 @@
 package com.johnson.sketchclock.common
 
 import android.graphics.Matrix
+import com.johnson.sketchclock.common.CalendarUtils.amPmCh
+import com.johnson.sketchclock.common.CalendarUtils.day1Ch
+import com.johnson.sketchclock.common.CalendarUtils.day2Ch
+import com.johnson.sketchclock.common.CalendarUtils.hour12Hr1Ch
+import com.johnson.sketchclock.common.CalendarUtils.hour12Hr2Ch
+import com.johnson.sketchclock.common.CalendarUtils.hour1Ch
+import com.johnson.sketchclock.common.CalendarUtils.hour2Ch
+import com.johnson.sketchclock.common.CalendarUtils.minute1Ch
+import com.johnson.sketchclock.common.CalendarUtils.minute2Ch
+import com.johnson.sketchclock.common.CalendarUtils.month1Ch
+import com.johnson.sketchclock.common.CalendarUtils.month2Ch
+import java.io.File
 import java.io.Serializable
+import java.util.Calendar
 
 private const val KEY_SOFT_TINT = "soft_tint"
 private const val KEY_HARD_TINT = "hard_tint"
 
 class Element(
     val eType: EType,
-    var resName: String? = null,
+    resName: String? = null,
     private val params: MutableMap<String, String> = mutableMapOf(),
     private val matrixArray: FloatArray = FloatArray(9).apply { Matrix.IDENTITY_MATRIX.getValues(this) },
 ) : Serializable {
+
+    var resName: String? = resName
+        set(value) {
+            field = value
+            font = null
+            hand = null
+            sticker = null
+        }
+
+    @Transient
+    var font: Font? = null
+        private set
+        get() {
+            if (!eType.isCharacter()) return null
+            return field ?: resName?.let { GodRepos.fontRepo.getFontByRes(it) }?.also { field = it }
+        }
+
+    @Transient
+    var hand: Hand? = null
+        private set
+        get() {
+            if (!eType.isHand()) return null
+            return field ?: resName?.let { GodRepos.handRepo.getHandByRes(it) }?.also { field = it }
+        }
+
+    @Transient
+    var sticker: Sticker? = null
+        private set
+        get() {
+            if (!eType.isSticker()) return null
+            return field ?: resName?.let { GodRepos.stickerRepo.getStickerByRes(it) }?.also { field = it }
+        }
 
     @Transient
     private var m: Matrix? = null
@@ -44,6 +89,25 @@ class Element(
                 else -> params[KEY_HARD_TINT] = value.toString()
             }
         }
+
+    fun file(calendar: Calendar = Calendar.getInstance()): File? = when (eType) {
+        EType.Hour1 -> font?.file(calendar.hour1Ch())
+        EType.Hour2 -> font?.file(calendar.hour2Ch())
+        EType.Hour12Hr1 -> font?.file(calendar.hour12Hr1Ch())
+        EType.Hour12Hr2 -> font?.file(calendar.hour12Hr2Ch())
+        EType.Minute1 -> font?.file(calendar.minute1Ch())
+        EType.Minute2 -> font?.file(calendar.minute2Ch())
+        EType.Month1 -> font?.file(calendar.month1Ch())
+        EType.Month2 -> font?.file(calendar.month2Ch())
+        EType.Day1 -> font?.file(calendar.day1Ch())
+        EType.Day2 -> font?.file(calendar.day2Ch())
+        EType.AmPm -> font?.file(calendar.amPmCh())
+        EType.Slash -> font?.file(Character.SLASH)
+        EType.Colon -> font?.file(Character.COLON)
+        EType.HourHand -> hand?.file(HandType.HOUR)
+        EType.MinuteHand -> hand?.file(HandType.MINUTE)
+        EType.Sticker -> sticker?.file()
+    }
 
     fun contentEquals(other: Element): Boolean {
         return eType == other.eType &&

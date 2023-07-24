@@ -6,22 +6,14 @@ import android.graphics.Rect
 import android.util.Log
 import android.util.LruCache
 import android.util.Size
-import com.johnson.sketchclock.repository.font.FontRepository
-import com.johnson.sketchclock.repository.hand.HandRepository
-import com.johnson.sketchclock.repository.sticker.StickerRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import java.io.File
-import javax.inject.Inject
 
 private const val TAG = "BitmapResourceHolder"
 
-class BitmapResourceHolder @Inject constructor(
-    private val fontRepository: FontRepository,
-    private val handRepository: HandRepository,
-    private val stickerRepository: StickerRepository
-) {
+class BitmapResourceHolder {
 
     private val bitmaps = LruCache<String, Bitmap>(30)
     private val sizes = LruCache<String, Size>(1000)
@@ -55,11 +47,10 @@ class BitmapResourceHolder @Inject constructor(
     }
 
     fun getElementSize(element: Element): Size? {
-        val resName = element.resName ?: return null
         return when {
-            element.eType.isSticker() -> stickerRepository.getStickerByRes(resName)?.let { getStickerSize(it) }
-            element.eType.isHand() -> handRepository.getHandByRes(resName)?.let { Size(element.eType.width(), element.eType.height()) }
-            else -> fontRepository.getFontByRes(resName)?.let { Size(element.eType.width(), element.eType.height()) }
+            element.eType.isSticker() -> element.sticker?.let { getStickerSize(it) }
+            element.eType.isHand() -> element.hand?.let { Size(element.eType.width(), element.eType.height()) }
+            else -> element.font?.let { Size(element.eType.width(), element.eType.height()) }
         }
     }
 
@@ -69,7 +60,7 @@ class BitmapResourceHolder @Inject constructor(
         sizes[key]?.let { return it }
         bitmaps[key]?.let { return Size(it.width, it.height) }
 
-        val stickerFile = stickerRepository.getStickerFile(sticker)
+        val stickerFile = sticker.file()
         if (stickerFile.exists()) {
             val bitmapOption = BitmapFactory.Options().apply { inJustDecodeBounds = true }
             return try {
