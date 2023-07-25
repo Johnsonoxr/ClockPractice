@@ -12,6 +12,7 @@ data class Font(
     val createTime: Long = System.currentTimeMillis(),
 ) : Serializable {
 
+    @Transient
     private var _files: MutableMap<Character, File> = mutableMapOf()
 
     fun file(character: Character): File {

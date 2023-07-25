@@ -12,6 +12,7 @@ data class Sticker(
     val createTime: Long = System.currentTimeMillis(),
 ) : Serializable {
 
+    @Transient
     private var _file: File? = null
 
     fun file(): File {

@@ -12,6 +12,7 @@ data class Hand(
     val createTime: Long = System.currentTimeMillis(),
 ) : Serializable {
 
+    @Transient
     private var _files: MutableMap<HandType, File> = mutableMapOf()
 
     fun file(handType: HandType): File {
