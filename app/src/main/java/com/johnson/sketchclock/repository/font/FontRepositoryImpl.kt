@@ -36,6 +36,7 @@ class FontRepositoryImpl @Inject constructor(
         private const val KEY_LAST_MODIFIED = "last_modified"
         private const val KEY_CREATE_TIME = "create_time"
         private const val KEY_BOOKMARKED = "bookmarked"
+        private const val KEY_PARAMS = "params"
     }
 
     init {
@@ -91,6 +92,7 @@ class FontRepositoryImpl @Inject constructor(
                 KEY_LAST_MODIFIED to System.currentTimeMillis(),
                 KEY_CREATE_TIME to newFont.createTime,
                 KEY_BOOKMARKED to newFont.bookmarked,
+                KEY_PARAMS to newFont.params,
             )
         )
         descriptionFile.writeText(gsonString)
@@ -125,6 +127,7 @@ class FontRepositoryImpl @Inject constructor(
                 else -> "Default Font $index"
             }
 
+            @Suppress("UNCHECKED_CAST")
             return@map Font(
                 title = title,
                 resName = "${dir.name}/$index",
@@ -132,6 +135,7 @@ class FontRepositoryImpl @Inject constructor(
                 editable = dir == userRootDir,
                 bookmarked = descriptions?.get(KEY_BOOKMARKED) as? Boolean ?: false,
                 createTime = (descriptions?.get(KEY_CREATE_TIME) as? Double)?.toLong() ?: 0L,
+                params = (descriptions?.get(KEY_PARAMS) as? MutableMap<String, String>) ?: mutableMapOf(),
             )
         }.sortedBy { it.id }
     }

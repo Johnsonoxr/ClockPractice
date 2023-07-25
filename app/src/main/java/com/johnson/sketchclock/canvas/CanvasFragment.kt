@@ -84,7 +84,7 @@ class CanvasFragment : Fragment() {
 
         viewModel.redoable.collectLatestWhenStarted(this) { vb.fabRedo.isEnabled = it }
 
-        viewModel.fileSaved.collectLatestWhenStarted(this) { Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show() }
+        viewModel.bitmapSaved.collectLatestWhenStarted(this) { Toast.makeText(requireContext(), "Saved", Toast.LENGTH_SHORT).show() }
 
         vb.fabPaint.setOnClickListener {
             if (viewModel.isEraseMode.value) {

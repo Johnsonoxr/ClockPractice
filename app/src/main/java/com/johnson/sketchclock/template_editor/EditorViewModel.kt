@@ -163,7 +163,7 @@ class EditorViewModel @Inject constructor() : ViewModel() {
     }
 
     private fun Element.isValid(): Boolean {
-        return visualizer.resourceHolder.getElementSize(this) != null
+        return width > 0 && height > 0
     }
 
     private fun Element.deepClone(): Element {

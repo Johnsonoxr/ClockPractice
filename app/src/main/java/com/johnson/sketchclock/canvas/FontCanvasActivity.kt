@@ -112,7 +112,7 @@ class FontCanvasActivity : AppCompatActivity() {
             viewModel.onEvent(CanvasEvent.Init(centerCh.width(), centerCh.height(), fontRepository.getFontFile(font, centerCh)))
         }
 
-        viewModel.fileSaved.collectLatestWhenStarted(this) {
+        viewModel.bitmapSaved.collectLatestWhenStarted(this) {
             fontRepository.upsertFonts(listOf(font))
         }
 

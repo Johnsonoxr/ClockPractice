@@ -58,6 +58,20 @@ class Element(
             return field ?: resName?.let { GodRepos.stickerRepo.getStickerByRes(it) }?.also { field = it }
         }
 
+    val width: Int
+        get() = if (eType.isSticker()) {
+            sticker?.width ?: 0
+        } else {
+            eType.width()
+        }
+
+    val height: Int
+        get() = if (eType.isSticker()) {
+            sticker?.height ?: 0
+        } else {
+            eType.height()
+        }
+
     @Transient
     private var m: Matrix? = null
 

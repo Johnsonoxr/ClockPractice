@@ -10,6 +10,7 @@ data class Hand(
     val editable: Boolean = true,
     val bookmarked: Boolean = false,
     val createTime: Long = System.currentTimeMillis(),
+    val params: MutableMap<String, String> = mutableMapOf(),
 ) : Serializable {
 
     @Transient

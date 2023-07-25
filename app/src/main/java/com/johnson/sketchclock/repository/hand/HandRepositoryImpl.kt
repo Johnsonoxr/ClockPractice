@@ -36,6 +36,7 @@ class HandRepositoryImpl @Inject constructor(
         private const val KEY_LAST_MODIFIED = "last_modified"
         private const val KEY_CREATE_TIME = "create_time"
         private const val KEY_BOOKMARKED = "bookmarked"
+        private const val KEY_PARAMS = "params"
     }
 
     init {
@@ -91,6 +92,7 @@ class HandRepositoryImpl @Inject constructor(
                 KEY_LAST_MODIFIED to System.currentTimeMillis(),
                 KEY_CREATE_TIME to newHand.createTime,
                 KEY_BOOKMARKED to newHand.bookmarked,
+                KEY_PARAMS to newHand.params
             )
         )
         descriptionFile.writeText(gsonString)
@@ -125,6 +127,7 @@ class HandRepositoryImpl @Inject constructor(
                 else -> "Default Hand $index"
             }
 
+            @Suppress("UNCHECKED_CAST")
             return@map Hand(
                 title = title,
                 resName = "${dir.name}/$index",
@@ -132,6 +135,7 @@ class HandRepositoryImpl @Inject constructor(
                 editable = dir == userRootDir,
                 bookmarked = descriptions?.get(KEY_BOOKMARKED) as? Boolean ?: false,
                 createTime = (descriptions?.get(KEY_CREATE_TIME) as? Double)?.toLong() ?: 0L,
+                params = (descriptions?.get(KEY_PARAMS) as? MutableMap<String, String>) ?: mutableMapOf()
             )
         }.sortedBy { it.id }
     }

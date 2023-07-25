@@ -125,7 +125,7 @@ class HandCanvasActivity : AppCompatActivity() {
             )
         }
 
-        viewModel.fileSaved.collectLatestWhenStarted(this) {
+        viewModel.bitmapSaved.collectLatestWhenStarted(this) {
             handRepository.upsertHands(listOf(hand))
         }
 

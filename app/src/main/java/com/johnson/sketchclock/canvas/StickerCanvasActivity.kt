@@ -60,7 +60,11 @@ class StickerCanvasActivity : AppCompatActivity() {
             viewModel.onEvent(CanvasEvent.Init(Constants.STICKER_WIDTH, Constants.STICKER_HEIGHT, stickerFile, autoCrop = true))
         }
 
-        viewModel.fileSaved.collectLatestWhenStarted(this) { stickerRepository.upsertStickers(listOf(sticker)) }
+        viewModel.bitmapSaved.collectLatestWhenStarted(this) { bitmap ->
+            sticker.width = bitmap?.width ?: 0
+            sticker.height = bitmap?.height ?: 0
+            stickerRepository.upsertStickers(listOf(sticker))
+        }
 
         onBackPressedDispatcher.addCallback(onBackPressedCallback)
 

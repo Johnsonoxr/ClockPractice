@@ -55,8 +55,8 @@ class CanvasViewModel @Inject constructor(
         }
     }
 
-    private val _fileSaved = MutableSharedFlow<File?>()
-    val fileSaved: SharedFlow<File?> = _fileSaved
+    private val _bitmapSaved = MutableSharedFlow<Bitmap?>()
+    val bitmapSaved: SharedFlow<Bitmap?> = _bitmapSaved
 
     private val _bitmapUpdated: MutableSharedFlow<Unit> = MutableSharedFlow()
     val bitmapUpdated: SharedFlow<Unit> = _bitmapUpdated
@@ -267,7 +267,7 @@ class CanvasViewModel @Inject constructor(
                     undoBitmapCache.evictAll()
                     _undoPathDataList.value = emptyList()
                     _redoPathDataList.value = emptyList()
-                    _fileSaved.emit(_file.value)
+                    _bitmapSaved.emit(bmpToSave)
                 }
             }
 

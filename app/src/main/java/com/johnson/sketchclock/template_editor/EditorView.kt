@@ -314,12 +314,12 @@ class EditorView @JvmOverloads constructor(
         }
     }
 
-    private fun Element.guideLineCorners(): FloatArray? {
-        var elementSize = viewModelRef?.get()?.visualizer?.resourceHolder?.getElementSize(this) ?: return null
-        if (elementSize.width < 100 || elementSize.height < 100) {
-            //  Make sure the element is not too small for drawing guide lines
-            elementSize = Size(max(elementSize.width, 100), max(elementSize.height, 100))
-        }
+    private fun Element.guideLineCorners(): FloatArray {
+        //  Make sure the element is not too small for drawing guide lines
+        val elementSize = Size(
+            maxOf(width, 100),
+            maxOf(height, 100)
+        )
         val corners = floatArrayOf(
             -elementSize.width / 2f, -elementSize.height / 2f,
             elementSize.width / 2f, -elementSize.height / 2f,
@@ -331,11 +331,11 @@ class EditorView @JvmOverloads constructor(
     }
 
     private fun Element.isInClickRegion(x: Float, y: Float): Boolean {
-        var elementSize = viewModelRef?.get()?.visualizer?.resourceHolder?.getElementSize(this) ?: return false
-        if (elementSize.width < 100 || elementSize.height < 100) {
-            //  Make sure the element is not too small for user to select
-            elementSize = Size(max(elementSize.width, 100), max(elementSize.height, 100))
-        }
+        //  Make sure the element is not too small for drawing guide lines
+        val elementSize = Size(
+            maxOf(width, 100),
+            maxOf(height, 100)
+        )
         val inv = Matrix().apply { matrix().invert(this) }
         val pt = floatArrayOf(x, y).apply { inv.mapPoints(this) }
         return pt[0] >= -elementSize.width / 2f && pt[0] <= elementSize.width / 2f &&

@@ -35,6 +35,7 @@ class StickerRepositoryImpl @Inject constructor(
         private const val KEY_LAST_MODIFIED = "last_modified"
         private const val KEY_CREATE_TIME = "create_time"
         private const val KEY_BOOKMARKED = "bookmarked"
+        private const val KEY_PARAMS = "params"
 
         private const val DESCRIPTION_FILE = "description.txt"
         private const val STICKER_FILE = "sticker.png"
@@ -90,7 +91,8 @@ class StickerRepositoryImpl @Inject constructor(
                 KEY_NAME to newSticker.title,
                 KEY_LAST_MODIFIED to System.currentTimeMillis(),
                 KEY_CREATE_TIME to newSticker.createTime,
-                KEY_BOOKMARKED to newSticker.bookmarked
+                KEY_BOOKMARKED to newSticker.bookmarked,
+                KEY_PARAMS to newSticker.params
             )
         )
         File(newSticker.dir, DESCRIPTION_FILE).writeText(gsonString)
@@ -124,13 +126,15 @@ class StickerRepositoryImpl @Inject constructor(
                 dir == defaultRootDir -> "Default #$id"
                 else -> "Custom #$id"
             }
+            @Suppress("UNCHECKED_CAST")
             return@map Sticker(
                 title = title,
                 resName = "${dir.name}/$id",
                 lastModified = (description?.get(KEY_LAST_MODIFIED) as? Double)?.toLong() ?: 0L,
                 editable = dir == userRootDir,
                 bookmarked = (description?.get(KEY_BOOKMARKED) as? Boolean) ?: false,
-                createTime = (description?.get(KEY_CREATE_TIME) as? Double)?.toLong() ?: 0L
+                createTime = (description?.get(KEY_CREATE_TIME) as? Double)?.toLong() ?: 0L,
+                params = (description?.get(KEY_PARAMS) as? MutableMap<String, String>) ?: mutableMapOf()
             )
         }.sortedBy { it.id }
     }
