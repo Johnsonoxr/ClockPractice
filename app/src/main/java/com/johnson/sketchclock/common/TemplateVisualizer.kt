@@ -19,7 +19,7 @@ import javax.inject.Inject
 private const val TAG = "TemplateVisualizer"
 
 class TemplateVisualizer @Inject constructor(
-    val resourceHolder: BitmapResourceHolder
+    private val resourceHolder: BitmapResourceHolder
 ) {
 
     private val bitmapPaint = Paint()
@@ -41,18 +41,17 @@ class TemplateVisualizer @Inject constructor(
                 val softTint = element.softTintColor
 
                 matrix.set(element.matrix())
+                when (element.eType) {
+                    EType.HourHand -> matrix.preRotate(calendar.hourDegree())
+                    EType.MinuteHand -> matrix.preRotate(calendar.minuteDegree())
+                    else -> {}
+                }
                 matrix.preTranslate(-bitmap.width / 2f, -bitmap.height / 2f)
 
                 bitmapPaint.colorFilter = when {
                     hardTint != null -> getHardColorFilter(hardTint)
                     softTint != null -> getSoftColorFilter(softTint)
                     else -> null
-                }
-
-                if (element.eType == EType.HourHand) {
-                    matrix.preRotate(calendar.hourDegree(), bitmap.width / 2f, bitmap.height / 2f)
-                } else if (element.eType == EType.MinuteHand) {
-                    matrix.preRotate(calendar.minuteDegree(), bitmap.width / 2f, bitmap.height / 2f)
                 }
 
                 //  The rect of bitmap which is not transparent and worth drawing

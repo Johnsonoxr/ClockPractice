@@ -17,16 +17,20 @@ import android.util.AttributeSet
 import android.util.Log
 import android.util.Size
 import android.util.SizeF
+import androidx.core.graphics.withMatrix
 import com.johnson.sketchclock.R
+import com.johnson.sketchclock.common.CalendarUtils.hourDegree
+import com.johnson.sketchclock.common.CalendarUtils.minuteDegree
 import com.johnson.sketchclock.common.Constants
 import com.johnson.sketchclock.common.ControlView
+import com.johnson.sketchclock.common.EType
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.getAttrColor
+import com.johnson.sketchclock.common.loadContourPath
 import java.lang.ref.WeakReference
+import java.util.Calendar
 import kotlin.math.atan2
 import kotlin.math.hypot
-import kotlin.math.max
-import kotlin.system.measureNanoTime
 
 class EditorView @JvmOverloads constructor(
     context: Context,
@@ -45,6 +49,7 @@ class EditorView @JvmOverloads constructor(
 
     private val relativeMatrixMap = mutableMapOf<Element, Matrix>()
     private val path = Path()
+    private val tmpMatrix = Matrix()
 
     private var selection: Selection? = null
     private var cachedGroupMatrix: Matrix? = null
@@ -113,7 +118,7 @@ class EditorView @JvmOverloads constructor(
             return
         }
 
-        val corners = selectedElements.mapNotNull { it.guideLineCorners()?.toList() }.flatten().chunked(2).map { PointF(it[0], it[1]) }
+        val corners = selectedElements.map { it.corners().toList() }.flatten().chunked(2).map { PointF(it[0], it[1]) }
 
         if (corners.isEmpty()) {
             selection = null
@@ -158,8 +163,8 @@ class EditorView @JvmOverloads constructor(
         }
 
         val cxy = floatArrayOf(viewX, viewY).apply { v2c.mapPoints(this) }
-        val clickedElements = elements.filter { it.isInClickRegion(cxy[0], cxy[1]) }
-        when (val clickedElement = clickedElements.minByOrNull { it.distToCenter(cxy[0], cxy[1]) - 1e-5 * elements.indexOf(it) }) {
+
+        when (val clickedElement = elements.lastOrNull { it.isClickingContour(cxy[0], cxy[1]) }) {
             null -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(emptyList()))
             in selectedElements -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements - clickedElement))
             else -> viewModelRef?.get()?.onEvent(EditorEvent.SetSelectedElements(selectedElements + clickedElement))
@@ -170,24 +175,26 @@ class EditorView @JvmOverloads constructor(
         val elements = viewModelRef?.get()?.elements?.value ?: return
         val visualizer = viewModelRef?.get()?.visualizer ?: return
 
-        canvas.save()
-        canvas.concat(c2v)
-        measureNanoTime {
-            visualizer.draw(canvas, elements)
-        }.let { Log.v(TAG, "draw elements spend ${it / 1e6} ms") }
-        canvas.restore()
+        val calendar = Calendar.getInstance()
+
+        canvas.withMatrix(c2v) {
+            visualizer.draw(canvas, elements, calendar.timeInMillis)
+        }
 
         selectedElements.forEach { element ->
-            val corners = element.guideLineCorners() ?: return@forEach
-            c2v.mapPoints(corners)
-            path.apply {
-                reset()
-                moveTo(corners[0], corners[1])
-                for (i in 1 until 4) {
-                    lineTo(corners[i * 2], corners[i * 2 + 1])
-                }
-                close()
+
+            tmpMatrix.set(c2v)
+            tmpMatrix.preConcat(element.matrix())
+            when (element.eType) {
+                EType.HourHand -> tmpMatrix.preRotate(calendar.hourDegree())
+                EType.MinuteHand -> tmpMatrix.preRotate(calendar.minuteDegree())
+                else -> Unit
             }
+            tmpMatrix.preTranslate(-element.width.toFloat() / 2, -element.height.toFloat() / 2)
+
+            path.reset()
+            element.contour().transform(tmpMatrix, path)
+
             canvas.drawPath(path, elementShadowPaint)
             canvas.drawPath(path, elementRectPaint)
         }
@@ -314,7 +321,17 @@ class EditorView @JvmOverloads constructor(
         }
     }
 
-    private fun Element.guideLineCorners(): FloatArray {
+    private val cachedContours = mutableMapOf<String, Path>()
+    private val Element.contourKey: String
+        get() = file()?.let { "${it.path}_${it.lastModified()}" } ?: ""
+
+    private fun Element.contour(): Path {
+        return cachedContours.getOrPut(this.contourKey) {
+            this.file()?.loadContourPath() ?: Path().apply { addRect(0f, 0f, width.toFloat(), height.toFloat(), Path.Direction.CW) }
+        }
+    }
+
+    private fun Element.corners(): FloatArray {
         //  Make sure the element is not too small for drawing guide lines
         val elementSize = Size(
             maxOf(width, 100),
@@ -330,21 +347,21 @@ class EditorView @JvmOverloads constructor(
         return corners
     }
 
-    private fun Element.isInClickRegion(x: Float, y: Float): Boolean {
-        //  Make sure the element is not too small for drawing guide lines
-        val elementSize = Size(
-            maxOf(width, 100),
-            maxOf(height, 100)
-        )
-        val inv = Matrix().apply { matrix().invert(this) }
-        val pt = floatArrayOf(x, y).apply { inv.mapPoints(this) }
-        return pt[0] >= -elementSize.width / 2f && pt[0] <= elementSize.width / 2f &&
-                pt[1] >= -elementSize.height / 2f && pt[1] <= elementSize.height / 2f
-    }
+    private fun Element.isClickingContour(x: Float, y: Float): Boolean {
+        val contourMatrix = Matrix(matrix()).apply {
+            when (eType) {
+                EType.HourHand -> preRotate(Calendar.getInstance().hourDegree())
+                EType.MinuteHand -> preRotate(Calendar.getInstance().minuteDegree())
+                else -> Unit
+            }
+            preTranslate(-width / 2f, -height / 2f)
+        }
+        val contourMatrixInv = Matrix().apply { contourMatrix.invert(this) }
+        val pt = floatArrayOf(x, y).apply { contourMatrixInv.mapPoints(this) }
 
-    private fun Element.distToCenter(x: Float, y: Float): Float {
-        val center = floatArrayOf(0f, 0f).apply { matrix().mapPoints(this) }
-        return hypot(x - center[0], y - center[1])
+        val circlePath = Path().apply { addCircle(pt[0], pt[1], 30f, Path.Direction.CW) }
+        val intersectSuccess = circlePath.op(contour(), Path.Op.INTERSECT)
+        return intersectSuccess && !circlePath.isEmpty
     }
 
     private inner class Selection(val rect: RectF, val matrix: Matrix) {

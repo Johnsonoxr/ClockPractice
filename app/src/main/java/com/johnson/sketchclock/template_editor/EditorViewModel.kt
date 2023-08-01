@@ -7,7 +7,6 @@ import com.google.gson.Gson
 import com.johnson.sketchclock.common.Element
 import com.johnson.sketchclock.common.Template
 import com.johnson.sketchclock.common.TemplateVisualizer
-import com.johnson.sketchclock.repository.sticker.StickerRepository
 import com.johnson.sketchclock.repository.template.TemplateRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableSharedFlow
@@ -25,9 +24,6 @@ class EditorViewModel @Inject constructor() : ViewModel() {
 
     @Inject
     lateinit var templateRepository: TemplateRepository
-
-    @Inject
-    lateinit var stickerRepository: StickerRepository
 
     @Inject
     lateinit var visualizer: TemplateVisualizer

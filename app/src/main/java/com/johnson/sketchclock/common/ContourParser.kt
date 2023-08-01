@@ -1,8 +1,11 @@
 package com.johnson.sketchclock.common
 
+import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Path
 import android.graphics.Point
+import android.util.Log
 import androidx.core.graphics.alpha
 import com.google.gson.Gson
 import java.io.File
@@ -54,6 +57,22 @@ private fun contourToPath(contourList: List<IntArray>): Path {
     return allPath
 }
 
+fun parseContourRecursively(context: Context, dir: File) {
+    dir.listFiles()?.forEach { file ->
+        if (file.isDirectory) {
+            parseContourRecursively(context, file)
+        } else if (file.exists() && !file.contourFile().exists()) {
+            try {
+                val bitmap = BitmapFactory.decodeFile(file.absolutePath) ?: return@forEach
+                file.saveContour(bitmap)
+                Log.d(TAG, "Saved contour file: ${file.contourFile().absolutePath}")
+            } catch (e: Exception) {
+                Log.e(TAG, "Failed to decode bitmap: ${file.absolutePath}")
+            }
+        }
+    }
+}
+
 private const val DISTANCE_TOLERANCE = 1f
 
 object ContourParser {
@@ -65,7 +84,7 @@ object ContourParser {
 
     fun parseContour(bitmap: Bitmap): List<IntArray> {
         val edgeMask = Array(bitmap.height) { BooleanArray(bitmap.width) }
-        val nonTransparentMat: Array<BooleanArray> = diffuse(bitmap)
+        val nonTransparentMat: Array<BooleanArray> = dilation(bitmap)
 
         val contourList = mutableListOf<IntArray>()
 
@@ -79,7 +98,7 @@ object ContourParser {
         return contourList
     }
 
-    private fun diffuse(bitmap: Bitmap, steps: Int = 5): Array<BooleanArray> {
+    private fun dilation(bitmap: Bitmap, steps: Int = 5): Array<BooleanArray> {
         val width = bitmap.width
         val height = bitmap.height
 

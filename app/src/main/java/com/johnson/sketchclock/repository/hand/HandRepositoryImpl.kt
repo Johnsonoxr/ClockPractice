@@ -6,6 +6,8 @@ import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.johnson.sketchclock.common.Hand
 import com.johnson.sketchclock.common.HandType
+import com.johnson.sketchclock.common.parseContourRecursively
+import com.johnson.sketchclock.repository.AssetCopy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -41,7 +43,7 @@ class HandRepositoryImpl @Inject constructor(
 
     init {
         GlobalScope.launch(Dispatchers.IO) {
-            copyAssetFilesIntoDirRecursively(DEFAULT_DIR, defaultRootDir)
+            AssetCopy.copyAssetFilesIntoDirRecursively(context, DEFAULT_DIR, defaultRootDir)
 
             userRootDir.mkdirs()
             userRootDir.listFiles { pathname -> pathname?.name?.startsWith(".") == true }?.forEach {
@@ -50,6 +52,9 @@ class HandRepositoryImpl @Inject constructor(
             }
 
             _hands.value = loadHandList()
+
+            parseContourRecursively(context, defaultRootDir)
+            parseContourRecursively(context, userRootDir)
         }
     }
 
@@ -162,21 +167,4 @@ class HandRepositoryImpl @Inject constructor(
 
     private val Hand.deletedDir: File
         get() = if (isUser) File(userRootDir, ".$id") else File(defaultRootDir, ".$id")
-
-    private fun copyAssetFilesIntoDirRecursively(assetDir: String, destDir: File) {
-        context.assets.list(assetDir)?.forEach { assetFile ->
-            val assetPath = "$assetDir/$assetFile"
-            val destFile = File(destDir, assetFile)
-            if (context.assets.list(assetPath)?.isNotEmpty() == true) {
-                destFile.mkdirs()
-                copyAssetFilesIntoDirRecursively(assetPath, destFile)
-            } else {
-                context.assets.open(assetPath).use { inputStream ->
-                    destFile.outputStream().use { outputStream ->
-                        inputStream.copyTo(outputStream)
-                    }
-                }
-            }
-        }
-    }
 }

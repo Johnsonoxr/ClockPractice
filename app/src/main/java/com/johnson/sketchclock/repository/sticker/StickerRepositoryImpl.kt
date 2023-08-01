@@ -5,6 +5,8 @@ import android.util.Log
 import com.google.gson.GsonBuilder
 import com.google.gson.ToNumberPolicy
 import com.johnson.sketchclock.common.Sticker
+import com.johnson.sketchclock.common.parseContourRecursively
+import com.johnson.sketchclock.repository.AssetCopy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -43,7 +45,7 @@ class StickerRepositoryImpl @Inject constructor(
 
     init {
         GlobalScope.launch(Dispatchers.IO) {
-            copyAssetFilesIntoDirRecursively(DEFAULT_DIR, defaultRootDir)
+            AssetCopy.copyAssetFilesIntoDirRecursively(context, DEFAULT_DIR, defaultRootDir)
 
             userRootDir.mkdirs()
             userRootDir.listFiles { file -> file?.name?.startsWith(".") == true }?.forEach {
@@ -52,6 +54,9 @@ class StickerRepositoryImpl @Inject constructor(
             }
 
             _stickers.value = loadStickerList()
+
+            parseContourRecursively(context, defaultRootDir)
+            parseContourRecursively(context, userRootDir)
         }
     }
 
@@ -161,21 +166,4 @@ class StickerRepositoryImpl @Inject constructor(
 
     private val Sticker.deletedDir: File
         get() = if (isUser) File(userRootDir, ".$id") else File(defaultRootDir, ".$id")
-
-    private fun copyAssetFilesIntoDirRecursively(assetDir: String, destDir: File) {
-        context.assets.list(assetDir)?.forEach { assetFile ->
-            val assetPath = "$assetDir/$assetFile"
-            val destFile = File(destDir, assetFile)
-            if (context.assets.list(assetPath)?.isNotEmpty() == true) {
-                destFile.mkdirs()
-                copyAssetFilesIntoDirRecursively(assetPath, destFile)
-            } else {
-                context.assets.open(assetPath).use { inputStream ->
-                    destFile.outputStream().use { outputStream ->
-                        inputStream.copyTo(outputStream)
-                    }
-                }
-            }
-        }
-    }
 }
